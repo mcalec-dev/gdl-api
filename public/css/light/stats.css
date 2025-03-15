@@ -1,0 +1,81 @@
+body {
+  font-family: 'Arial', sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+.collection-card {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 15px;
+  border: 1px solid #dee2e6;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin: 10px 0;
+}
+.stat-label {
+  color: #444444;
+  font-size: 14px;
+}
+.file-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.file-type {
+  background: #e0e0e0;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  color: #1a1a1a;
+}
+.loading {
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+  color: #444444;
+}
+h1, h2 {
+  color: #1a1a1a;
+}
+.refresh-time {
+  color: #444444;
+  font-size: 14px;
+  text-align: right;
+  margin-top: 20px;
+}
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #e9ecef;
+  border-radius: 2px;
+  margin-top: 5px;
+}
+.progress-value {
+  height: 100%;
+  background: #0056b3;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}

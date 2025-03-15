@@ -1,0 +1,144 @@
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #121212;
+  color: #ffffff;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.breadcrumb {
+  background: #1e1e1e;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.breadcrumb a {
+  color: #66b3ff;
+  text-decoration: none;
+}
+.breadcrumb a:hover {
+  text-decoration: none;
+  color: #99ccff;
+}
+.breadcrumb span {
+  color: #666666;
+  margin: 0 8px;
+}
+.file-browser {
+  background: #1e1e1e;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.file-list {
+  display: grid;
+  gap: 10px;
+}
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 4px;
+  background: #2d2d2d;
+  transition: background-color 0.2s;
+  border: 1px solid #333333;
+  cursor: pointer;
+}
+.file-item:hover {
+  background: #3d3d3d;
+}
+.file-item.directory {
+  border-left: 4px solid #66b3ff;
+  cursor: pointer;
+  user-select: none;
+}
+.file-item.file {
+  border-left: 4px solid #4CAF50;
+}
+.file-icon {
+  margin-right: 12px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.file-details {
+  flex: 1;
+}
+.file-name {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 500;
+  pointer-events: auto;
+}
+.file-name:hover {
+  text-decoration: none;
+}
+.file-meta {
+  font-size: 12px;
+  color: #888888;
+  margin-top: 4px;
+}
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #888888;
+}
+.error {
+  color: #ff6666;
+  text-align: center;
+  padding: 20px;
+}
+.welcome-message {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #333333;
+}
+.welcome-message h2 {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+.welcome-message p {
+  color: #b0b0b0;
+  margin: 0;
+}
+.file-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+.file-icon.directory {
+  color: #66b3ff;
+}
+.file-icon.image {
+  color: #4CAF50;
+}
+.file-icon.video {
+  color: #FF5722;
+}
+.file-icon.audio {
+  color: #9C27B0;
+}
+.file-icon.document {
+  color: #FFC107;
+}
+.file-icon.other {
+  color: #757575;
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  .file-item {
+    padding: 8px;
+  }
+  .file-meta {
+    font-size: 11px;
+  }
+}

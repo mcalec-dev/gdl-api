@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg">
+  <link rel="stylesheet" href="/gdl/css/dark/index.css">
+  <link rel="stylesheet" href="/gdl/css/theme-toggle.css">
+  <title>Gallery-DL API</title>
+</head>
+<body>
+  <div class="content">
+    <h1>Gallery-DL API</h1>
+    <p>
+      <p><b>I suggest you to check my main site,</b> <a href="https://mcalec.dev" target="_blank">mcalec.dev</a></p>
+      Contact me at:<br>
+      hello[at]mcalec[dot]dev<br>OR<br>
+      privacy[at]mcalec[dot]dev
+    </p>
+    <p>Welcome to the Gallery-DL API. Available endpoints and features:</p>
+    <table>
+      <tr>
+        <th>Endpoint/Page</th>
+        <th>Description</th>
+        <th>Link</th>
+      </tr>
+      <tr>
+        <td><code>/gdl/search</code></td>
+        <td>Search interface for collections</td>
+        <td><a href="/gdl/search">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/stats</code></td>
+        <td>View detailed statistics dashboard</td>
+        <td><a href="/gdl/stats">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/random</code></td>
+        <td>View random images interface</td>
+        <td><a href="/gdl/random">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/collections</code></td>
+        <td>List all collections (JSON)</td>
+        <td><a href="/gdl/api/collections">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/collections/:collectionName</code></td>
+        <td>List all galleries in a collection (JSON)</td>
+        <td><em>dynamic</em></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/files/:collectionName/:path/:filename</code></td>
+        <td>Access individual files</td>
+        <td><em>dynamic</em></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/search?q=searchterm</code></td>
+        <td>Search API endpoint (JSON)</td>
+        <td><a href="/gdl/api/search?q=example">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/stats</code></td>
+        <td>Get collection statistics (JSON)</td>
+        <td><a href="/gdl/api/stats">link</a></td>
+      </tr>
+      <tr>
+        <td><code>/gdl/api/random</code></td>
+        <td>Get random image (JSON)</td>
+        <td><a href="/gdl/api/random">link</a></td>
+      </tr>
+    </table>
+    <h2>API Usage</h2>
+    <p>The API supports both JSON responses and direct file access. All endpoints return proper CORS headers and support rate limiting.</p>
+    <h2>Rate Limits</h2>
+    <p>API requests are limited based on server configuration. Current limits:</p>
+    <ul>
+      <li>Time Window: <code id="rateLimitWindow">15</code> minutes</li>
+      <li>Max Requests: <code id="rateLimitMax">100</code> requests per window</li>
+    </ul>
+
+    <script>
+    // Add this script to dynamically fetch and display rate limits
+    async function updateRateLimits() {
+      try {
+        const response = await fetch('/gdl/api/search?q=test');
+        const headers = response.headers;
+        const windowMs = parseInt(headers.get('X-RateLimit-Reset')) || 900000;
+        const maxRequests = parseInt(headers.get('X-RateLimit-Limit')) || 100;
+        
+        document.getElementById('rateLimitWindow').textContent = Math.round(windowMs / 60000);
+        document.getElementById('rateLimitMax').textContent = maxRequests;
+      } catch (error) {
+        console.error('Failed to fetch rate limits:', error);
+      }
+    }
+
+    updateRateLimits();
+    </script>
+  </div>
+  <script defer src="/gdl/js/theme-toggle.js"></script>
+  <footer>
+    <div class="footer-content">
+      <div class="footer-copyright">
+        McAlec Development © 2025 McAlec
+      </div>
+      <div class="footer-links">
+        <a href="https://old.mcalec.dev/legal/license/" target="_blank">License</a>
+        <a href="https://old.mcalec.dev/legal/credits/" target="_blank">Credits</a>
+        <a href="https://old.mcalec.dev/legal/terms/" target="_blank">Terms</a>
+        <a href="https://old.mcalec.dev/legal/privacy/" target="_blank">Privacy</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg">
+  <link rel="stylesheet" href="/gdl/css/dark/random.css">
+  <link rel="stylesheet" href="/gdl/css/theme-toggle.css">
+  <title>Random Media Viewer</title>
+</head>
+<body>
+  <h1>Random Media Viewer</h1>
+  <div class="controls">
+    <p>Click the button to display a random image or video from the API</p>
+    <button id="loadImageBtn" class="button">Load Random Media</button>
+  </div>
+  <div class="image-container" id="imageContainer">
+    <div id="loading" class="loading">Click the button to load media</div>
+    <div class="image-info" id="imageInfo" style="display: none;">
+      <span>Click to open in new tab</span>
+    </div>
+  </div>
+  <script defer src="/gdl/js/random.js"></script>
+  <script defer src="/gdl/js/theme-toggle.js"></script>
+</body>
+</html>
