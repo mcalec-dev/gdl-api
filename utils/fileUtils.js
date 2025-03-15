@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { EXCLUDED_DIRS, EXCLUDED_FILES, ALLOWED_EXTENSIONS, MAX_DEPTH } = require('../config');
 const { fsCache } = require('./cacheUtils');
+const debug = require('debug')('gdl-api:fileUtils');
 
 async function safeReadJson(filePath) {
   try {
@@ -14,13 +15,25 @@ async function safeReadJson(filePath) {
 }
 
 function isExcluded(dirName) {
-  return EXCLUDED_DIRS.some(excludedDir => {
+  const excludedDirs = EXCLUDED_DIRS.map(dir => dir.trim()).filter(Boolean);
+  
+  const isExcluded = excludedDirs.some(excludedDir => {
     if (excludedDir.includes('*')) {
-      const pattern = new RegExp('^' + excludedDir.replace(/\*/g, '.*') + '$');
-      return pattern.test(dirName);
+      const regex = new RegExp('^' + excludedDir.replace(/\*/g, '.*') + '$', 'i');
+      const matches = regex.test(dirName);
+      if (matches) {
+        debug(`Directory "${dirName}" excluded by pattern "${excludedDir}"`);
+      }
+      return matches;
     }
-    return dirName === excludedDir;
-  }) || dirName.toLowerCase() === 'pinterest';
+    const matches = dirName.toLowerCase() === excludedDir.toLowerCase();
+    if (matches) {
+      debug(`Directory "${dirName}" excluded by exact match "${excludedDir}"`);
+    }
+    return matches;
+  });
+
+  return isExcluded;
 }
 
 function hasAllowedExtension(filename) {
@@ -111,11 +124,25 @@ async function getAllDirectoriesAndFiles(dirPath, relativePath = '', depth = 0) 
   }
 }
 
+async function getCollections(basePath) {
+    try {
+        const dirs = await fs.readdir(basePath, { withFileTypes: true });
+        return dirs
+            .filter(dirent => dirent.isDirectory() && !isExcluded(dirent.name))
+            .map(dirent => dirent.name)
+            .sort();
+    } catch (error) {
+        console.error('Error reading collections directory:', error);
+        throw error;
+    }
+}
+
 module.exports = {
   safeReadJson,
   isExcluded,
   hasAllowedExtension,
   isFileExcluded,
   getAllDirectories,
-  getAllDirectoriesAndFiles
+  getAllDirectoriesAndFiles,
+  getCollections
 };

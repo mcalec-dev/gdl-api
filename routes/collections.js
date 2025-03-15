@@ -76,28 +76,30 @@ router.get('/api/search', async (req, res) => {
 // Optimize collections endpoint with caching
 router.get('/api/collections', async (req, res) => {
   try {
-    const cacheKey = 'collections-list';
-    let collections = fsCache.get(cacheKey);
-
-    if (!collections) {
-      const items = await fs.readdir(GALLERY_DL_DIR, { withFileTypes: true });
-      collections = items
-        .filter(dirent => dirent.isDirectory() && !isExcluded(dirent.name))
-        .map(dirent => ({
-          name: dirent.name,
-          path: `/api/collections/${normalizeAndEncodePath(dirent.name)}`
-        }));
-
-      fsCache.set(cacheKey, collections);
-    }
+    const dirs = await fs.readdir(GALLERY_DL_DIR, { withFileTypes: true });
+    
+    const collections = dirs
+      .filter(dirent => dirent.isDirectory() && !isExcluded(dirent.name))
+      .map(dirent => ({
+        name: dirent.name,
+        type: 'directory',
+        isCollection: true
+      }));
 
     res.json({
-      count: collections.length,
-      collections
+      collections: collections,
+      count: collections.length
     });
+
   } catch (error) {
-    console.error('Error reading collections:', error);
-    res.status(500).json({ error: 'Failed to read collections' });
+    console.error('Error getting collections:', error, {
+      path: GALLERY_DL_DIR,
+      exists: fs.existsSync(GALLERY_DL_DIR)
+    });
+    res.status(500).json({ 
+      error: 'Failed to get collections',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

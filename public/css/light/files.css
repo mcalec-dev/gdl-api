@@ -178,3 +178,14 @@ a:hover {
     font-size: 11px;
   }
 }
+
+.empty-message {
+  text-align: center;
+  padding: 40px;
+  color: #666666;
+}
+
+.empty-message p {
+  margin: 0;
+  font-size: 16px;
+}

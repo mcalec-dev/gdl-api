@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const { BASE_PATH } = require('./config');
+const fs = require('fs').promises;
+const { PORT, BASE_PATH, GALLERY_DL_DIR } = require('./config');
 const { clearCaches } = require('./utils/cacheUtils');
 
 // Load environment variables
@@ -12,8 +13,6 @@ const app = express();
 
 // Trust proxy - required for Cloudflare and rate limiting
 app.set('trust proxy', true);
-
-const PORT = process.env.PORT || 3030;
 
 // Middleware
 app.use(cors());
@@ -92,8 +91,29 @@ process.on('SIGTERM', () => {
   });
 });
 
-// Start the server
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Gallery-DL API server running at http://127.0.0.1:${PORT}${BASE_PATH}`);
-  console.log(`Using Cloudflare tunnel at https://api.mcalec.dev${BASE_PATH}`);
+// Add this before app.listen
+async function verifyConfiguration() {
+  try {
+    await fs.access(GALLERY_DL_DIR);
+    console.log(`Gallery-DL directory verified: ${GALLERY_DL_DIR}`);
+  } catch (error) {
+    console.error(`ERROR: Gallery-DL directory not accessible: ${GALLERY_DL_DIR}`);
+    console.error('Please check your GALLERY_DL_DIR configuration');
+    process.exit(1);
+  }
+}
+
+// Update the server startup
+async function startServer() {
+  await verifyConfiguration();
+  
+  app.listen(PORT, '127.0.0.1', () => {
+    console.log(`Gallery-DL API server running at http://127.0.0.1:${PORT}${BASE_PATH}`);
+    console.log(`Using Cloudflare tunnel at https://api.mcalec.dev${BASE_PATH}`);
+  });
+}
+
+startServer().catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });

@@ -57,87 +57,112 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateBreadcrumb(path);
 
     try {
-      let data;
-      if (!path) {
-        // Load collections for home page
-        const response = await fetch(`${apiBasePath}/collections`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const collectionsData = await response.json();
-        data = {
-          items: collectionsData.collections.map(collection => ({
-            name: collection.name,
-            type: 'directory',
-            isCollection: true
-          }))
-        };
-      } else {
-        // Load directory contents
-        const response = await fetch(`${apiBasePath}/collections${path}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        data = await response.json();
-      }
+        let response;
+        let data;
 
-      let html = '';
-      
-      // Add parent directory link if not at root
-      if (path) {
-        const parentPath = path.split('/').slice(0, -1).join('/');
-        html += `
-          <div class="file-item directory">
-            <div class="file-icon directory">${icons.directory}</div>
-            <div class="file-details">
-              <a href="${basePath}${parentPath}" class="file-name">..</a>
-              <div class="file-meta">Parent Directory</div>
-            </div>
-          </div>
-        `;
-      } else {
+        if (!path) {
+            // Load collections for home page
+            response = await fetch(`${apiBasePath}/collections`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`);
+            }
+            data = await response.json();
+            
+            // Set default empty array if collections is missing
+            if (!data.collections) {
+                data.collections = [];
+            }
+        } else {
+            // Load directory contents
+            response = await fetch(`${apiBasePath}/collections${path}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`);
+            }
+            data = await response.json();
+            
+            // Set default empty array if items is missing
+            if (!data.items) {
+                data.items = [];
+            }
+        }
+
+        let html = '';
+
         // Add welcome message for home page
-        html += `
-          <div class="welcome-message">
-            <h2>Gallery-DL Collections</h2>
-            <p>Select a collection to browse its contents:</p>
-          </div>
-        `;
-      }
+        if (!path) {
+            html += `
+                <div class="welcome-message">
+                    <h2>Gallery-DL Collections</h2>
+                    <p>Select a collection to browse its contents:</p>
+                </div>
+            `;
+        } else {
+            // Add parent directory link if not at root
+            const parentPath = path.split('/').slice(0, -1).join('/');
+            html += `
+                <div class="file-item directory" onclick="window.location.href='${basePath}${parentPath}'">
+                    <div class="file-icon directory">${icons.directory}</div>
+                    <div class="file-details">
+                        <a href="${basePath}${parentPath}" class="file-name" onclick="event.stopPropagation()">..</a>
+                        <div class="file-meta">Parent Directory</div>
+                    </div>
+                </div>
+            `;
+        }
 
-      // Sort items: directories first, then files
-      const sortedItems = data.items.sort((a, b) => {
-        if (a.type === b.type) return a.name.localeCompare(b.name);
-        return a.type === 'directory' ? -1 : 1;
-      });
+        // Get the correct array to sort
+        const items = path ? data.items : data.collections;
 
-      sortedItems.forEach(item => {
-        const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);
-        const itemPath = item.type === 'directory' ? 
-          `${basePath}${path}/${item.name}` : 
-          `${apiBasePath}/files${path}/${item.name}`;
+        // Only sort if we have items
+        if (Array.isArray(items) && items.length > 0) {
+            const sortedItems = items.sort((a, b) => {
+                if (a.type === b.type) return a.name.localeCompare(b.name);
+                return a.type === 'directory' ? -1 : 1;
+            });
 
-        html += `
-          <div class="file-item ${item.type}" 
-               onclick="${item.type === 'directory' ? 
-                  `window.location.href='${itemPath}'` : 
-                  `window.open('${itemPath}', '_blank')`}">
-            <div class="file-icon ${itemType}">${icons[itemType]}</div>
-            <div class="file-details">
-              <a href="${itemPath}" 
-                 class="file-name" 
-                 ${item.type === 'file' ? 'target="_blank"' : ''} 
-                 onclick="event.stopPropagation()">${item.name}</a>
-              <div class="file-meta">
-                ${item.isCollection ? 'Collection' : 
-                  (item.type === 'directory' ? 'Directory' : 
-                  `File • ${formatSize(item.size || 0)}`)}
-              </div>
-            </div>
-          </div>
-        `;
-      });
+            sortedItems.forEach(item => {
+                const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);
+                const itemPath = item.type === 'directory' ? 
+                    `${basePath}${path}/${item.name}` : 
+                    `${apiBasePath}/files${path}/${item.name}`;
 
-      fileList.innerHTML = html;
+                html += `
+                    <div class="file-item ${item.type}" 
+                         onclick="${item.type === 'directory' ? 
+                            `window.location.href='${itemPath}'` : 
+                            `window.open('${itemPath}', '_blank')`}">
+                        <div class="file-icon ${itemType}">${icons[itemType]}</div>
+                        <div class="file-details">
+                            <a href="${itemPath}" 
+                               class="file-name" 
+                               ${item.type === 'file' ? 'target="_blank"' : ''} 
+                               onclick="event.stopPropagation()">${item.name}</a>
+                            <div class="file-meta">
+                                ${item.isCollection ? 'Collection' : 
+                                  (item.type === 'directory' ? 'Directory' : 
+                                  `File • ${formatSize(item.size || 0)}`)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html += `
+                <div class="empty-message">
+                    <p>No items found in this ${path ? 'directory' : 'collection'}.</p>
+                </div>
+            `;
+        }
+
+        fileList.innerHTML = html;
     } catch (error) {
-      console.error('Error loading directory:', error);
-      fileList.innerHTML = '<div class="error">Error loading directory contents</div>';
+        console.error('Error loading directory:', error);
+        fileList.innerHTML = `<div class="error">
+            Error loading directory contents<br>
+            <small>${error.message}</small>
+        </div>`;
     }
   }
 

@@ -142,3 +142,14 @@ body {
     font-size: 11px;
   }
 }
+
+.empty-message {
+    text-align: center;
+    padding: 40px;
+    color: #888888;
+}
+
+.empty-message p {
+    margin: 0;
+    font-size: 16px;
+}
