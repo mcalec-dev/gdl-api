@@ -4,12 +4,40 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { fsCache, searchCache } = require('../utils/cacheUtils');
 const { buildSearchIndex, searchFiles } = require('../utils/searchUtils');
+const { generateThumbnail } = require('../utils/imageUtils');
+const debug = require('debug')('gdl-api:collections');
 const router = express.Router();
 
 // Update the config import to include BASE_PATH and RATE_LIMIT
 const { GALLERY_DL_DIR, EXCLUDED_DIRS, EXCLUDED_FILES, ALLOWED_EXTENSIONS, MAX_DEPTH, BASE_PATH, RATE_LIMIT } = require('../config');
-const { isExcluded, hasAllowedExtension, isFileExcluded, getAllDirectories, getAllDirectoriesAndFiles } = require('../utils/fileUtils');
+const { isExcluded, hasAllowedExtension, isFileExcluded, getAllDirectories, getAllDirectoriesAndFiles, isPathExcluded } = require('../utils/fileUtils');
 const { normalizePath, normalizeAndEncodePath } = require('../utils/pathUtils');
+
+// Add this function after the existing imports
+const sharp = require('sharp');
+
+// Add this middleware at the top of the router
+router.use((req, res, next) => {
+  const path = req.path;
+  
+  if (!path.startsWith('/api/files/') && !path.startsWith('/api/collections/')) {
+    return next();
+  }
+
+  const relativePath = path
+    .replace('/api/files/', '')
+    .replace('/api/collections/', '')
+    .replace(/^\/+/, '');
+  
+  if (isPathExcluded(relativePath)) {
+    debug(`Access denied to excluded path: ${relativePath}`);
+    return res.status(403).json({
+      error: 'Access denied',
+      message: 'This content is not accessible'
+    });
+  }
+  next();
+});
 
 // Update the rate limiter configuration
 const apiLimiter = rateLimit({
@@ -18,15 +46,17 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    const retryAfter = Math.ceil(req.rateLimit.resetTime / 1000);
+    // Calculate reset time properly
+    const resetTime = new Date(Date.now() + RATE_LIMIT.windowMs);
+    
     res.status(429).json({
       error: 'Too many requests, please try again later.',
-      retryAfter,
+      retryAfter: Math.ceil(RATE_LIMIT.windowMs / 1000),
       rateLimit: {
         windowMs: RATE_LIMIT.windowMs,
         maxRequests: RATE_LIMIT.maxRequests,
         remainingRequests: req.rateLimit.remaining,
-        resetTime: new Date(Date.now() + req.rateLimit.resetTime).toISOString()
+        resetTime: resetTime.toISOString()
       }
     });
   },
@@ -79,7 +109,13 @@ router.get('/api/collections', async (req, res) => {
     const dirs = await fs.readdir(GALLERY_DL_DIR, { withFileTypes: true });
     
     const collections = dirs
-      .filter(dirent => dirent.isDirectory() && !isExcluded(dirent.name))
+      .filter(dirent => {
+        const isNotExcluded = !isPathExcluded(dirent.name);
+        if (!isNotExcluded) {
+          debug(`Filtered out excluded collection: ${dirent.name}`);
+        }
+        return dirent.isDirectory() && isNotExcluded;
+      })
       .map(dirent => ({
         name: dirent.name,
         type: 'directory',
@@ -92,13 +128,9 @@ router.get('/api/collections', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting collections:', error, {
-      path: GALLERY_DL_DIR,
-      exists: fs.existsSync(GALLERY_DL_DIR)
-    });
+    console.error('Error getting collections:', error);
     res.status(500).json({ 
-      error: 'Failed to get collections',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: 'Failed to get collections'
     });
   }
 });
@@ -241,18 +273,71 @@ router.get('/api/collections/:collectionName/*', async (req, res) => {
   }
 });
 
+// Add image processing middleware before the file serving route
 router.get('/api/files/:collectionName/*', async (req, res) => {
   const { collectionName } = req.params;
   const subPath = req.params[0] || '';
   const filePath = path.join(GALLERY_DL_DIR, collectionName, subPath);
+  const { x } = req.query; // Get x parameter from query
 
   try {
+    // Check if file/directory is excluded
+    if (isPathExcluded(path.relative(GALLERY_DL_DIR, filePath))) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'This content is not accessible'
+      });
+    }
+
     const stats = await fs.stat(filePath);
+    
     if (!stats.isFile()) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    res.sendFile(filePath);
+    // Check if file is excluded
+    if (isFileExcluded(path.basename(filePath))) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'This file is not accessible'
+      });
+    }
+
+    // Check if it's an image by extension
+    const imageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const ext = path.extname(filePath).toLowerCase();
+    const isImage = imageExts.includes(ext);
+
+    // If not an image or no resize parameter, send original file
+    if (!isImage || !x) {
+      return res.sendFile(filePath);
+    }
+
+    // Parse percentage value (remove % and convert to float)
+    const scale = parseFloat(x.replace('%', '')) / 100;
+    if (isNaN(scale) || scale <= 0) {
+      return res.status(400).json({ error: 'Invalid scale value' });
+    }
+
+    // Process image with sharp
+    const image = sharp(filePath);
+    const metadata = await image.metadata();
+
+    // Calculate new dimensions based on percentage
+    const newWidth = Math.round(metadata.width * scale);
+    const newHeight = Math.round(metadata.height * scale);
+
+    // Resize image
+    const transform = image.resize(newWidth, newHeight, {
+      withoutEnlargement: false // Allow enlargement since we're using percentages
+    });
+
+    // Set appropriate content type
+    res.type(`image/${ext.slice(1)}`);
+    
+    // Stream the processed image
+    transform.pipe(res);
+
   } catch (error) {
     if (error.code === 'ENOENT') {
       return res.status(404).json({ error: 'File not found' });
@@ -420,6 +505,58 @@ router.post('/api/cache/clear', apiLimiter, (req, res) => {
     res.json({ message: 'Caches cleared successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to clear caches' });
+  }
+});
+
+// Update the collections/* route handler
+
+router.get('/api/collections/*', async (req, res) => {
+    try {
+        const relativePath = req.params[0] || '';
+        const fullPath = path.join(GALLERY_DL_DIR, relativePath);
+        
+        if (!fs.existsSync(fullPath)) {
+            return res.status(404).json({ error: 'Directory not found' });
+        }
+
+        const items = await getAllDirectoriesAndFiles(fullPath);
+        debug(`Processing ${items.length} items in ${fullPath}`);
+
+        const processedItems = await Promise.all(items.map(async item => {
+            if (item.type === 'file') {
+                const ext = path.extname(item.name).toLowerCase();
+                if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) {
+                    try {
+                        const thumbnailUrl = await generateThumbnail(item.fullPath);
+                        if (thumbnailUrl) {
+                            debug(`Thumbnail created for: ${item.name}`);
+                            return {
+                                ...item,
+                                thumbnailUrl
+                            };
+                        }
+                    } catch (error) {
+                        console.error(`Failed to generate thumbnail for: ${item.name}`, error);
+                    }
+                }
+            }
+            return item;
+        }));
+
+        res.json({ items: processedItems });
+    } catch (error) {
+        console.error('Error reading directory:', error);
+        res.status(500).json({ error: 'Failed to read directory' });
+    }
+});
+
+router.get('/api/thumbnail/*', async (req, res) => {
+  try {
+    const thumbnailPath = path.join(CACHE_DIR, req.params[0]);
+    res.sendFile(thumbnailPath);
+  } catch (error) {
+    console.error('Error serving thumbnail:', error);
+    res.status(500).send('Failed to serve thumbnail');
   }
 });
 

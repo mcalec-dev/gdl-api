@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const debug = require('debug')('gdl-api:exclusions');
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +27,10 @@ const RATE_LIMIT = {
   maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || 100, 10)
 };
 
+// Log exclusion patterns on startup
+debug('Excluded directories:', EXCLUDED_DIRS);
+debug('Excluded files:', EXCLUDED_FILES);
+
 module.exports = {
   PORT,
   BASE_PATH,
@@ -34,5 +39,6 @@ module.exports = {
   EXCLUDED_FILES,
   ALLOWED_EXTENSIONS,
   MAX_DEPTH,
-  RATE_LIMIT
+  RATE_LIMIT,
+  debug
 };

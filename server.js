@@ -57,6 +57,9 @@ app.get(`${BASE_PATH}/files/*`, (req, res) => {
 // Serve static files from the "public" directory under BASE_PATH
 app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
 
+// Add this near your other static routes
+app.use(`${BASE_PATH}/thumbnails`, express.static(path.join(__dirname, 'public', 'thumbnails')));
+
 // Import routes
 const collectionsRouter = require('./routes/collections');
 

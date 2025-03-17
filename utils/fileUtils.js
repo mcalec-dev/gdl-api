@@ -14,26 +14,25 @@ async function safeReadJson(filePath) {
   }
 }
 
+// Update these functions
 function isExcluded(dirName) {
-  const excludedDirs = EXCLUDED_DIRS.map(dir => dir.trim()).filter(Boolean);
+  if (!dirName) return true;
   
-  const isExcluded = excludedDirs.some(excludedDir => {
-    if (excludedDir.includes('*')) {
-      const regex = new RegExp('^' + excludedDir.replace(/\*/g, '.*') + '$', 'i');
-      const matches = regex.test(dirName);
-      if (matches) {
-        debug(`Directory "${dirName}" excluded by pattern "${excludedDir}"`);
-      }
-      return matches;
+  // Normalize path separators and trim
+  const normalized = dirName.replace(/\\/g, '/').trim();
+  
+  return EXCLUDED_DIRS.some(pattern => {
+    // Normalize pattern
+    pattern = pattern.trim().replace(/\\/g, '/');
+    
+    if (pattern.includes('*')) {
+      // Convert glob pattern to regex
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$', 'i');
+      return regex.test(normalized);
     }
-    const matches = dirName.toLowerCase() === excludedDir.toLowerCase();
-    if (matches) {
-      debug(`Directory "${dirName}" excluded by exact match "${excludedDir}"`);
-    }
-    return matches;
+    
+    return normalized.toLowerCase() === pattern.toLowerCase();
   });
-
-  return isExcluded;
 }
 
 function hasAllowedExtension(filename) {
@@ -41,13 +40,24 @@ function hasAllowedExtension(filename) {
   return ALLOWED_EXTENSIONS.includes(ext);
 }
 
+// Update these functions
 function isFileExcluded(fileName) {
-  return EXCLUDED_FILES.some(excludedFile => {
-    if (excludedFile.includes('*')) {
-      const pattern = new RegExp('^' + excludedFile.replace(/\*/g, '.*') + '$');
-      return pattern.test(fileName);
+  if (!fileName) return true;
+  
+  // Normalize and trim filename
+  const normalized = fileName.replace(/\\/g, '/').trim();
+  
+  return EXCLUDED_FILES.some(pattern => {
+    // Normalize pattern
+    pattern = pattern.trim().replace(/\\/g, '/');
+    
+    if (pattern.includes('*')) {
+      // Convert glob pattern to regex
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$', 'i');
+      return regex.test(normalized);
     }
-    return fileName === excludedFile;
+    
+    return normalized.toLowerCase() === pattern.toLowerCase();
   });
 }
 
@@ -79,43 +89,58 @@ async function getAllDirectories(dirPath, relativePath = '', depth = 0) {
   }
 }
 
+// Update the getAllDirectoriesAndFiles function
 async function getAllDirectoriesAndFiles(dirPath, relativePath = '', depth = 0) {
+  if (depth >= MAX_DEPTH) return [];
+
   const cacheKey = `dir-files-${dirPath}-${depth}`;
   const cached = fsCache.get(cacheKey);
   if (cached) return cached;
 
-  if (depth >= MAX_DEPTH) return [];
-  
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    const dirs = entries.filter(entry => entry.isDirectory() && !isExcluded(entry.name));
-    const files = entries.filter(entry => entry.isFile() && hasAllowedExtension(entry.name) && !isFileExcluded(entry.name));
-    
-    let results = dirs.map(dir => {
-      const dirRelativePath = relativePath ? `${relativePath}/${dir.name}` : dir.name;
-      return {
-        type: 'directory',
-        name: dir.name,
-        path: dirRelativePath,
-        fullPath: path.join(dirPath, dir.name)
-      };
-    });
-    
-    results = results.concat(files.map(file => {
-      const fileRelativePath = relativePath ? `${relativePath}/${file.name}` : file.name;
-      return {
-        type: 'file',
-        name: file.name,
-        path: fileRelativePath,
-        fullPath: path.join(dirPath, file.name)
-      };
-    }));
-    
-    for (const dir of dirs) {
-      const subDirsAndFiles = await getAllDirectoriesAndFiles(path.join(dirPath, dir.name), `${relativePath}/${dir.name}`, depth + 1);
-      results = results.concat(subDirsAndFiles);
+    let results = [];
+
+    for (const entry of entries) {
+      const entryRelativePath = path.join(relativePath, entry.name);
+      
+      // Skip if path is excluded
+      if (isPathExcluded(entryRelativePath)) {
+        debug(`Excluded path: ${entryRelativePath}`);
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        if (!isExcluded(entry.name)) {
+          const fullPath = path.join(dirPath, entry.name);
+          results.push({
+            type: 'directory',
+            name: entry.name,
+            path: entryRelativePath,
+            fullPath: fullPath
+          });
+
+          // Recursively get contents
+          const subItems = await getAllDirectoriesAndFiles(
+            fullPath,
+            entryRelativePath,
+            depth + 1
+          );
+          results = results.concat(subItems);
+        }
+      } else if (entry.isFile()) {
+        if (hasAllowedExtension(entry.name) && !isFileExcluded(entry.name)) {
+          const fullPath = path.join(dirPath, entry.name);
+          results.push({
+            type: 'file',
+            name: entry.name,
+            path: entryRelativePath,
+            fullPath: fullPath
+          });
+        }
+      }
     }
-    
+
     fsCache.set(cacheKey, results);
     return results;
   } catch (error) {
@@ -137,6 +162,26 @@ async function getCollections(basePath) {
     }
 }
 
+// Update the isPathExcluded function
+function isPathExcluded(pathStr) {
+  if (!pathStr) return true;
+
+  // Normalize path
+  const normalized = pathStr.replace(/\\/g, '/').trim();
+  const parts = normalized.split('/').filter(Boolean);
+
+  // Check each path component against exclusion rules
+  return parts.some(part => {
+    // Check directory exclusions
+    if (isExcluded(part)) return true;
+
+    // Check file exclusions
+    if (isFileExcluded(part)) return true;
+
+    return false;
+  });
+}
+
 module.exports = {
   safeReadJson,
   isExcluded,
@@ -144,5 +189,6 @@ module.exports = {
   isFileExcluded,
   getAllDirectories,
   getAllDirectoriesAndFiles,
-  getCollections
+  getCollections,
+  isPathExcluded
 };
