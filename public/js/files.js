@@ -289,3 +289,61 @@ document.addEventListener('click', (e) => {
         window.open(e.target.dataset.fullsize, '_blank');
     }
 });
+
+function createThumbnailElement(file, path) {
+    const container = document.createElement('div');
+    container.className = 'thumbnail-container';
+    
+    // Check if path contains '/thumbnails/'
+    const isInThumbnailDir = path.includes('/thumbnails/');
+    
+    if (file.type === 'image') {
+        const img = document.createElement('img');
+        img.src = file.url;
+        img.alt = file.name;
+        img.loading = 'lazy';
+        
+        // Open image in same tab
+        img.onclick = (e) => {
+            e.preventDefault();
+            window.location.href = file.url;
+        };
+        
+        container.appendChild(img);
+    } else if (file.type === 'video') {
+        const video = document.createElement('video');
+        video.src = file.url;
+        video.preload = 'metadata';
+        video.muted = true;
+        
+        // Enable hover to play
+        video.addEventListener('mouseenter', () => {
+            video.play();
+        });
+        
+        video.addEventListener('mouseleave', () => {
+            video.pause();
+            video.currentTime = 0;
+        });
+        
+        // Open video in same tab
+        video.onclick = (e) => {
+            e.preventDefault();
+            window.location.href = file.url;
+        };
+        
+        container.appendChild(video);
+    }
+
+    // Add blue bar for thumbnail directories
+    if (isInThumbnailDir) {
+        container.classList.add('thumbnail-directory');
+    }
+
+    const label = document.createElement('div');
+    label.className = 'thumbnail-label';
+    label.textContent = file.name;
+    container.appendChild(label);
+
+    return container;
+}

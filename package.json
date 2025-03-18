@@ -1,10 +1,10 @@
 {
-  "name": "gallery-dl-api",
+  "name": "gdl-api",
   "version": "1.0.0",
   "description": "RESTful API for gallery-dl downloads",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --expose-gc --optimize-for-size --max-old-space-size=2048 server.js",
     "dev": "nodemon server.js"
   },
   "keywords": [
@@ -16,15 +16,19 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
+    "debug": "^4.3.4",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.5.0",
+    "express-rate-limit": "^7.1.5",
     "lunr": "^2.3.9",
     "memory-cache": "^0.2.0",
     "node-cache": "^5.1.2",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

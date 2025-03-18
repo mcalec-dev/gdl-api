@@ -327,10 +327,21 @@ router.get('/api/files/:collectionName/*', async (req, res) => {
     const newWidth = Math.round(metadata.width * scale);
     const newHeight = Math.round(metadata.height * scale);
 
-    // Resize image
-    const transform = image.resize(newWidth, newHeight, {
-      withoutEnlargement: false // Allow enlargement since we're using percentages
-    });
+    // Configure resize options based on scale
+    const resizeOptions = {
+      width: newWidth,
+      height: newHeight,
+      withoutEnlargement: false // Allow enlargement since we want to support upscaling
+    };
+
+    // Add Lanczos4 kernel for upscaling when scale > 100%
+    if (scale > 1) {
+      resizeOptions.kernel = sharp.kernel.lanczos3;
+      resizeOptions.position = 'center';
+    }
+
+    // Resize image with the configured options
+    const transform = image.resize(resizeOptions);
 
     // Set appropriate content type
     res.type(`image/${ext.slice(1)}`);

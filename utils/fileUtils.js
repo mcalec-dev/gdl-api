@@ -19,19 +19,19 @@ function isExcluded(dirName) {
   if (!dirName) return true;
   
   // Normalize path separators and trim
-  const normalized = dirName.replace(/\\/g, '/').trim();
+  const normalized = dirName.toLowerCase().trim().replace(/\\/g, '/');
   
   return EXCLUDED_DIRS.some(pattern => {
     // Normalize pattern
-    pattern = pattern.trim().replace(/\\/g, '/');
+    pattern = pattern.toLowerCase().trim().replace(/\\/g, '/');
     
     if (pattern.includes('*')) {
       // Convert glob pattern to regex
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$', 'i');
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
       return regex.test(normalized);
     }
     
-    return normalized.toLowerCase() === pattern.toLowerCase();
+    return normalized === pattern;
   });
 }
 
@@ -45,19 +45,19 @@ function isFileExcluded(fileName) {
   if (!fileName) return true;
   
   // Normalize and trim filename
-  const normalized = fileName.replace(/\\/g, '/').trim();
+  const normalized = fileName.toLowerCase().trim().replace(/\\/g, '/');
   
   return EXCLUDED_FILES.some(pattern => {
     // Normalize pattern
-    pattern = pattern.trim().replace(/\\/g, '/');
+    pattern = pattern.toLowerCase().trim().replace(/\\/g, '/');
     
     if (pattern.includes('*')) {
       // Convert glob pattern to regex
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$', 'i');
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
       return regex.test(normalized);
     }
     
-    return normalized.toLowerCase() === pattern.toLowerCase();
+    return normalized === pattern;
   });
 }
 
@@ -167,19 +167,29 @@ function isPathExcluded(pathStr) {
   if (!pathStr) return true;
 
   // Normalize path
-  const normalized = pathStr.replace(/\\/g, '/').trim();
-  const parts = normalized.split('/').filter(Boolean);
+  const normalized = pathStr.replace(/\\/g, '/').trim().toLowerCase();
 
-  // Check each path component against exclusion rules
-  return parts.some(part => {
-    // Check directory exclusions
-    if (isExcluded(part)) return true;
+  // Check against directory exclusions
+  if (EXCLUDED_DIRS.some(pattern => {
+    const normalizedPattern = pattern.toLowerCase().trim().replace(/\\/g, '/');
+    if (normalizedPattern.includes('*')) {
+      const regex = new RegExp('^' + normalizedPattern.replace(/\*/g, '.*') + '$');
+      return regex.test(normalized);
+    }
+    return normalized === normalizedPattern;
+  })) return true;
 
-    // Check file exclusions
-    if (isFileExcluded(part)) return true;
+  // Check against file exclusions
+  if (EXCLUDED_FILES.some(pattern => {
+    const normalizedPattern = pattern.toLowerCase().trim().replace(/\\/g, '/');
+    if (normalizedPattern.includes('*')) {
+      const regex = new RegExp('^' + normalizedPattern.replace(/\*/g, '.*') + '$');
+      return regex.test(normalized);
+    }
+    return normalized === normalizedPattern;
+  })) return true;
 
-    return false;
-  });
+  return false;
 }
 
 module.exports = {

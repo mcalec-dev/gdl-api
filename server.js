@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { PORT, BASE_PATH, GALLERY_DL_DIR } = require('./config');
 const { clearCaches } = require('./utils/cacheUtils');
+const { logMemoryUsage } = require('./utils/memoryUtils');
 
 // Load environment variables
 dotenv.config();
@@ -16,7 +17,8 @@ app.set('trust proxy', true);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Custom middleware to handle /random/ endpoint
 app.get(`${BASE_PATH}/random`, (req, res) => {
@@ -66,6 +68,11 @@ const collectionsRouter = require('./routes/collections');
 // Use routes with BASE_PATH
 app.use(BASE_PATH, collectionsRouter);
 
+// Basic route
+app.get('/', (req, res) => {
+    res.json({ message: 'API is working' });
+});
+
 // Error handling middleware
 app.use((req, res, next) => {
   console.log(`404 Not Found: ${req.method} ${req.originalUrl}`); 
@@ -85,6 +92,23 @@ setInterval(() => {
   clearCaches();
   console.log('Caches cleared for memory management');
 }, 3600000);
+
+// Add after your existing memory management section
+setInterval(() => {
+  try {
+    if (global.gc) {
+      global.gc();
+      console.log('Manual garbage collection triggered');
+    }
+  } catch (e) {
+    console.log('Garbage collection not exposed');
+  }
+}, 1800000); // Run every 30 minutes
+
+// Add after your existing memory management section
+setInterval(() => {
+  logMemoryUsage();
+}, 900000); // Log every 15 minutes
 
 // Add graceful shutdown
 process.on('SIGTERM', () => {
