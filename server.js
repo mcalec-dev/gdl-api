@@ -3,7 +3,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs').promises;
-const { PORT, BASE_PATH, GALLERY_DL_DIR } = require('./config');
+const logger = require('morgan');
+const debug = require('debug')('gdl-api:server');
+const { PORT, HOST, CORS_ORIGIN, BASE_PATH, GALLERY_DL_DIR } = require('./config');
 const { clearCaches } = require('./utils/cacheUtils');
 const { logMemoryUsage } = require('./utils/memoryUtils');
 
@@ -12,11 +14,16 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy - required for Cloudflare and rate limiting
-app.set('trust proxy', true);
+// Configure trust proxy before other middleware
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
-// Middleware
-app.use(cors());
+// Middleware setup
+app.use(logger('dev'));
+app.use(cors({
+  origin: CORS_ORIGIN,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
@@ -63,10 +70,42 @@ app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
 app.use(`${BASE_PATH}/thumbnails`, express.static(path.join(__dirname, 'public', 'thumbnails')));
 
 // Import routes
-const collectionsRouter = require('./routes/collections');
+const routes = require('./routes');
 
-// Use routes with BASE_PATH
-app.use(BASE_PATH, collectionsRouter);
+// Mount all routes under BASE_PATH
+app.use(BASE_PATH, routes);
+
+// Add debug middleware to log all registered routes
+app.use((req, res, next) => {
+  debug(`${req.method} ${req.url}`);
+  next();
+});
+
+// Add after routes are mounted
+app._router.stack.forEach(middleware => {
+    if (middleware.route) {
+        console.log(`Route: ${middleware.route.path}`);
+    } else if (middleware.name === 'router') {
+        middleware.handle.stack.forEach(handler => {
+            if (handler.route) {
+                console.log(`${BASE_PATH}${handler.route.path}`);
+            }
+        });
+    }
+});
+
+// Add after routes are mounted
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(middleware.route.path);
+  } else if (middleware.name === 'router') {
+    middleware.handle.stack.forEach((handler) => {
+      if (handler.route) {
+        console.log(`${BASE_PATH}${handler.route.path}`);
+      }
+    });
+  }
+});
 
 // Basic route
 app.get('/', (req, res) => {
@@ -83,8 +122,10 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  debug(err.stack);
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+  });
 });
 
 // Memory management - clear caches every hour
@@ -134,9 +175,10 @@ async function verifyConfiguration() {
 async function startServer() {
   await verifyConfiguration();
   
-  app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Gallery-DL API server running at http://127.0.0.1:${PORT}${BASE_PATH}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Gallery-DL API server running at http://${HOST}:${PORT}${BASE_PATH}`);
     console.log(`Using Cloudflare tunnel at https://api.mcalec.dev${BASE_PATH}`);
+    debug(`Server is running in ${process.env.NODE_ENV} mode`);
   });
 }
 
@@ -144,3 +186,20 @@ startServer().catch(error => {
   console.error('Failed to start server:', error);
   process.exit(1);
 });
+
+module.exports = app;
+
+// Debug helper to print routes
+function printRoutes(app) {
+  function print(path, layer) {
+    if (layer.route) {
+      layer.route.stack.forEach(r => {
+        const method = Object.keys(r.route.methods)[0].toUpperCase();
+        debug(`${method} ${path}${r.route.path}`);
+      });
+    } else if (layer.name === 'router' && layer.handle.stack) {
+      layer.handle.stack.forEach(stackItem => print(path + layer.regexp.source.slice(2, -2), stackItem));
+    }
+  }
+  app._router.stack.forEach(layer => print('', layer));
+}

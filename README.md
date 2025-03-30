@@ -1,6 +1,6 @@
 # gdl-api
 
-**IF YOU NEED YOUR CONTENT REMOVED: privacy[at]mcalec[dot]dev**
+**CONTENT REMOVAL: removals[at]mcalec[dot]dev**
 
 A quick RESTful API I made for my gallery-dl downloads.  
 

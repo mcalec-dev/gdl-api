@@ -1,12 +1,13 @@
 const dotenv = require('dotenv');
 const debug = require('debug')('gdl-api:exclusions');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
 
 const PORT = process.env.PORT || 3030;
 const BASE_PATH = process.env.BASE_PATH || '/gdl';
-const GALLERY_DL_DIR = process.env.GALLERY_DL_DIR || '/path/to/your/gallery-dl/downloads';
+const GALLERY_DL_DIR = process.env.GALLERY_DL_DIR || path.join(__dirname, 'downloads');
 const YT_DLP_DIR = process.env.YT_DLP_DIR || 'G:/yt-dlp/downloads';
 
 if (!GALLERY_DL_DIR) {
@@ -19,29 +20,31 @@ if (!YT_DLP_DIR) {
   process.exit(1);
 }
 
-// Parse the JSON arrays from environment variables
-function parseEnvArray(envVar, defaultValue = []) {
+// Helper function to safely parse JSON strings from environment variables
+const parseJsonEnv = (envVar, defaultValue = []) => {
+  if (!envVar) return defaultValue;
+  
   try {
-    // Remove any whitespace and ensure proper JSON format
-    const cleaned = envVar ? envVar.trim().replace(/\n\s*/g, '') : '[]';
-    return JSON.parse(cleaned);
-  } catch (error) {
-    console.error(`Error parsing environment variable: ${error.message}`);
+    // Try to parse it as JSON
+    return JSON.parse(envVar);
+  } catch (err) {
+    // If it fails, log an error and return the default
+    console.error(`Error parsing environment variable: ${err.message}`);
     return defaultValue;
   }
-}
+};
 
 // Parse exclusion lists
-const EXCLUDED_DIRS = parseEnvArray(process.env.EXCLUDED_DIRS, []);
-const EXCLUDED_FILES = parseEnvArray(process.env.EXCLUDED_FILES, []);
-const ALLOWED_EXTENSIONS = parseEnvArray(process.env.ALLOWED_EXTENSIONS, []);
+const EXCLUDED_DIRS = parseJsonEnv(process.env.EXCLUDED_DIRS, []);
+const EXCLUDED_FILES = parseJsonEnv(process.env.EXCLUDED_FILES, []);
+const ALLOWED_EXTENSIONS = parseJsonEnv(process.env.ALLOWED_EXTENSIONS, []);
 
-const MAX_DEPTH = parseInt(process.env.MAX_DEPTH || '10', 10);
+const MAX_DEPTH = parseInt(process.env.MAX_DEPTH || '15', 10);
 
 // Add rate limit configuration
 const RATE_LIMIT = {
   windowMs: (process.env.RATE_LIMIT_WINDOW_MINUTES || 15) * 60 * 1000,
-  maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || 100, 10)
+  maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || 7500, 10)
 };
 
 // Add YT-DLP specific configurations
@@ -69,5 +72,6 @@ module.exports = {
   debug,
   YT_DLP_DIR,
   YT_DLP_ALLOWED_DIRS,
-  YT_DLP_ALLOWED_EXTENSIONS
+  YT_DLP_ALLOWED_EXTENSIONS,
+  PAGE_SIZE: parseInt(process.env.PAGE_SIZE) || 50
 };

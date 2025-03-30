@@ -47,7 +47,7 @@ a:hover {
 }
 .breadcrumb {
   background: #ffffff;
-  padding: 12px;
+  padding: 12px 16px;
   border-radius: 4px;
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -71,21 +71,24 @@ a:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .file-list {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .file-item {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 12px;
   border-radius: 4px;
   background: #ffffff;
   transition: background-color 0.2s;
-  border: 1px solid #e9ecef;
+  border: 1px solid #e0e0e0;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .file-item:hover {
   background: #f8f9fa;
+  transform: translateY(-1px);
 }
 .file-item.directory {
   border-left: 4px solid #0066cc;
@@ -102,6 +105,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  color: #0066cc;
 }
 .file-details {
   flex: 1;
@@ -190,8 +195,9 @@ a:hover {
 .file-list.grid-view {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  gap: 16px;
+  padding: 16px;
+  margin-top: 15px;
 }
 .grid-view .file-item {
   flex-direction: column;
@@ -202,10 +208,13 @@ a:hover {
   background: #ffffff;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .grid-view .file-item:hover {
   transform: translateY(-2px);
+}
+.grid-view .file-item:hover .file-preview {
+  transform: scale(1.05);
 }
 .grid-view .file-icon {
   margin: 0 0 10px 0;
@@ -238,21 +247,30 @@ a:hover {
 .grid-view .file-details {
   padding: 8px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   position: absolute;
   bottom: 0;
+  height: 40px;
   border-top: 1px solid #e9ecef;
 }
 .grid-view .file-name {
-  font-size: 14px;
-  white-space: nowrap;
+  font-size: 12px;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
   color: #333333;
+  margin-bottom: 2px;
 }
 .grid-view .file-meta {
   font-size: 11px;
   color: #666666;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 .grid-view .file-item.image .file-icon,
 .grid-view .file-item.video .file-icon {
@@ -263,9 +281,14 @@ a:hover {
   flex-direction: row;
 }
 .grid-view .file-item.directory .file-icon {
-  width: 24px;
-  height: 24px;
-  margin-right: 12px;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
 }
 .grid-view .file-item.directory .file-details {
   position: static;
@@ -316,7 +339,14 @@ a:hover {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    cursor: pointer;
+}
+
+.file-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
 }
 
 .file-preview {
@@ -327,6 +357,7 @@ a:hover {
     object-fit: contain;
     opacity: 1;
     transition: opacity 0.3s ease;
+    background: transparent;
 }
 
 .file-preview.loading {
@@ -377,37 +408,6 @@ a:hover {
 /* Hide icon once image is loaded */
 .grid-view .file-item .file-preview:not(.loading) ~ .file-icon {
     opacity: 0;
-}
-
-.grid-view .file-details {
-    padding: 8px;
-    width: 100%;
-    background: #ffffff;
-    position: absolute;
-    bottom: 0;
-    height: 40px;
-    border-top: 1px solid #e9ecef;
-}
-
-.grid-view .file-name {
-    font-size: 12px;
-    overflow-wrap: break-word;
-    word-break: break-all;
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    color: #333333;
-    margin-bottom: 2px;
-}
-
-.grid-view .file-meta {
-    font-size: 11px;
-    color: #666666;
-    overflow-wrap: break-word;
-    word-break: break-all;
 }
 
 .files-grid {
@@ -471,4 +471,113 @@ a:hover {
 
 .thumbnail-container:hover .thumbnail-label {
     opacity: 1;
+}
+
+.video-preview-container {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-preview.video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    cursor: pointer;
+}
+
+.grid-view .file-item:hover .file-preview.video {
+    transform: scale(1.05);
+}
+
+/* Remove the play button overlay */
+.video-preview-container::before {
+    display: none;
+}
+
+/* Update video and gif preview container styles */
+.video-preview-container,
+.gif-preview-container {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Update preview styles for both video and gif */
+.file-preview.video,
+.file-preview.gif {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Add hover effect for both */
+.grid-view .file-item:hover .file-preview.video,
+.grid-view .file-item:hover .file-preview.gif {
+    transform: scale(1.05);
+}
+
+/* Remove any play button overlays */
+.video-preview-container::before,
+.gif-preview-container::before {
+    display: none;
+}
+
+/* Add to your existing light theme CSS */
+.sort-toolbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #ffffff;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+    position: relative;
+    z-index: 100;
+    width: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.sort-button {
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    color: #333333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    min-width: 100px;
+    justify-content: space-between;
+}
+
+.sort-button:hover {
+    background: #e9ecef;
+}
+
+.sort-button[data-active="true"] {
+    background: #e9ecef;
+    border-color: #ced4da;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }

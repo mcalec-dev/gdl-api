@@ -11,7 +11,7 @@ body {
 }
 .breadcrumb {
   background: #1e1e1e;
-  padding: 12px;
+  padding: 12px 16px;
   border-radius: 4px;
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -35,14 +35,16 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 .file-list {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .file-list.grid-view {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  gap: 16px;
+  padding: 16px;
+  margin-top: 15px;
 }
 .grid-view .file-item {
   flex-direction: column;
@@ -53,10 +55,13 @@ body {
   background: #2d2d2d;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .grid-view .file-item:hover {
   transform: translateY(-2px);
+}
+.grid-view .file-item:hover .file-preview {
+  transform: scale(1.05);
 }
 .grid-view .file-icon {
   margin: 0 0 10px 0;
@@ -121,15 +126,17 @@ body {
 .file-item {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 12px;
   border-radius: 4px;
   background: #2d2d2d;
   transition: background-color 0.2s;
-  border: 1px solid #333333;
+  border: 1px solid #404040;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .file-item:hover {
   background: #3d3d3d;
+  transform: translateY(-1px);
 }
 .file-item.directory {
   border-left: 4px solid #66b3ff;
@@ -173,6 +180,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #66b3ff;
 }
 .file-details {
   flex: 1;
@@ -530,4 +538,147 @@ video.file-preview {
 
 .thumbnail-container:hover .thumbnail-label {
     opacity: 1;
+}
+
+/* Update preview container and file icon styles */
+.preview-container {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.file-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+}
+
+.grid-view .file-item.directory .file-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+}
+
+.file-icon {
+    background: transparent;
+}
+
+.video-preview-container {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-preview.video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    cursor: pointer;
+}
+
+.grid-view .file-item:hover .file-preview.video {
+    transform: scale(1.05);
+}
+
+/* Remove the play button overlay */
+.video-preview-container::before {
+    display: none;
+}
+
+/* Update video and gif preview container styles */
+.video-preview-container,
+.gif-preview-container {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Update preview styles for both video and gif */
+.file-preview.video,
+.file-preview.gif {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Add hover effect for both */
+.grid-view .file-item:hover .file-preview.video,
+.grid-view .file-item:hover .file-preview.gif {
+    transform: scale(1.05);
+}
+
+/* Remove any play button overlays */
+.video-preview-container::before,
+.gif-preview-container::before {
+    display: none;
+}
+
+/* Add to your existing dark theme CSS */
+.sort-toolbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #2d2d2d;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #404040;
+    position: relative;
+    z-index: 100;
+    width: auto;
+}
+
+.sort-button {
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    background: #3d3d3d;
+    border: 1px solid #4d4d4d;
+    border-radius: 4px;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    min-width: 100px;
+    justify-content: space-between;
+}
+
+.sort-button:hover {
+    background: #4d4d4d;
+}
+
+.sort-button[data-active="true"] {
+    background: #505050;
+    border-color: #666666;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }

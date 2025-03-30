@@ -1,62 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/x-icon" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg">
-  <link rel="stylesheet" href="/gdl/css/dark/stats.css">
-  <link rel="stylesheet" href="/gdl/css/theme-toggle.css">
-  <title>Gallery-DL Stats</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/gdl/css/theme-toggle.css">
+    <link rel="stylesheet" href="/gdl/css/dark/stats.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>Gallery-DL API Stats</title>
 </head>
 <body>
-  <h1>Gallery-DL Statistics</h1>
-  <div id="loading" class="loading">Loading statistics...</div>
-  <div id="stats-content" style="display: none;">
-    <div class="stats-container">
-      <div class="card">
-        <h2>Overview</h2>
-        <div>
-          <div class="stat-label">Total Items</div>
-          <div class="stat-value" id="total-items">0</div>
+    <div class="container">
+        <h1>Gallery-DL API Statistics</h1>
+        
+        <div id="loading" class="loading">Loading statistics...</div>
+        <div id="error" class="error-message" style="display: none;"></div>
+
+        <div id="stats-content" class="stats-grid" style="display: none;">
+            <div class="stat-card">
+                <h3>Total Collections</h3>
+                <div class="stat-value" id="total-directories">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Files</h3>
+                <div class="stat-value" id="total-files">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Size</h3>
+                <div class="stat-value" id="total-size">-</div>
+            </div>
+
+            <div class="stat-card full-width">
+                <h3>File Types Distribution</h3>
+                <div class="file-types-grid" id="file-types"></div>
+            </div>
+
+            <div class="stat-card full-width">
+                <h3>System Statistics</h3>
+                <div class="directory-list" id="directory-list"></div>
+            </div>
         </div>
-        <div>
-          <div class="stat-label">Total Size</div>
-          <div class="stat-value" id="total-size">0 B</div>
-        </div>
-        <div>
-          <div class="stat-label">Files</div>
-          <div class="stat-value" id="total-files">0</div>
-        </div>
-        <div>
-          <div class="stat-label">Directories</div>
-          <div class="stat-value" id="total-dirs">0</div>
-        </div>
-      </div>
-      <div class="card">
-        <h2>File Types</h2>
-        <div class="file-types" id="file-types"></div>
-      </div>
-      <div class="card">
-        <h2>Summary</h2>
-        <div>
-          <div class="stat-label">Total Collections</div>
-          <div class="stat-value" id="total-collections">0</div>
-        </div>
-        <div>
-          <div class="stat-label">Average Files per Collection</div>
-          <div class="stat-value" id="avg-files">0</div>
-        </div>
-        <div>
-          <div class="stat-label">Most Common File Type</div>
-          <div class="stat-value" id="common-type">-</div>
-        </div>
-      </div>
     </div>
-    <h2>Collections</h2>
-    <div class="collection-grid" id="collections"></div>
-    <div class="refresh-time" id="refresh-time"></div>
-  </div>
-  <script defer src="/gdl/js/stats.js"></script>
-  <script defer src="/gdl/js/theme-toggle.js"></script>
+
+    <script src="js/theme-toggle.js"></script>
+    <script src="js/stats.js"></script>
 </body>
 </html>

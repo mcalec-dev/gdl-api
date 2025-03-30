@@ -34,7 +34,7 @@ async function generateThumbnail(filePath) {
 
         // Instead of generating and storing thumbnails, return a URL with query params
         const fileUrl = filePath.replace(GALLERY_DL_DIR, '/gdl/api/files');
-        return `${fileUrl}?w=200&h=200`;
+        return `${fileUrl}`;
 
     } catch (error) {
         console.error(`Thumbnail generation failed for: ${filePath}`, error);

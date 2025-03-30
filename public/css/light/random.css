@@ -36,8 +36,6 @@ h1 {
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
   display: inline-block;
-  min-width: calc(50vw - 180px);
-  min-height: 50vh;
   max-width: 90vw;
   max-height: calc(90vh - 120px);
   transition: all 0.3s ease;
@@ -103,8 +101,6 @@ img {
 }
 @media (max-width: 600px) {
   .image-container {
-    min-width: calc(90vw - 20px);
-    min-height: 50vh;
     max-width: 90vw;
     max-height: calc(90vh - 120px);
   }

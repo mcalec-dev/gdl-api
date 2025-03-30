@@ -19,6 +19,7 @@ const clearCaches = () => {
   fsCache.flushAll();
   searchCache.flushAll();
   memoryCache.clear();
+  // Remove the fsCache.clear() call since it doesn't exist
 };
 
 module.exports = {
