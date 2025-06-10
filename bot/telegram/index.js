@@ -1,9 +1,10 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(botToken, { polling: true });
 const debug = require('debug')('gdl-api:bot:telegram');
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 let randomImageResponse = null;
 const fetchRandomImage = async () => {
   try {

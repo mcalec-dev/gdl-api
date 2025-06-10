@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "v0.2.0",
+  "version": "v0.2.1",
   "description": "Gallery-DL API",
   "scripts": {
     "server": "set DEBUG=gdl-api:* && node server.js",
@@ -34,9 +34,6 @@
     "express-session": "^1.18.1",
     "figlet": "^1.8.1",
     "glob": "^11.0.2",
-    "lru-cache": "^11.1.0",
-    "lunr": "^2.3.9",
-    "memory-cache": "^0.2.0",
     "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
     "node-telegram-bot-api": "^0.66.0",
