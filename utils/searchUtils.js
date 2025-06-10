@@ -1,148 +1,53 @@
-const lunr = require('lunr');
-const { getAllDirectoriesAndFiles } = require('./fileUtils');
-const { searchCache } = require('./cacheUtils');
-const path = require('path');
 const fs = require('fs').promises;
-const { GALLERY_DL_DIR } = require('../config');
+const path = require('path');
+const debug = require('debug')('gdl-api:search');
+const { MAX_DEPTH, GALLERY_DL_DIR } = require('../config');
+const { isExcluded } = require('./fileUtils');
 
-// Cache warmup interval (5 minutes)
-const CACHE_WARMUP_INTERVAL = 5 * 60 * 1000;
-
-// Initialize search index in background
-async function initializeSearchIndex(basePath) {
+async function* walkAndSearchFiles(dir, query, permission, limit = 1000, depth = 0) {
+  if (depth >= (typeof MAX_DEPTH !== 'undefined' ? MAX_DEPTH : 10)) return;
+  let count = 0;
   try {
-    await buildSearchIndex(basePath);
-    console.log('Search index initialized');
-  } catch (error) {
-    console.error('Failed to initialize search index:', error);
-  }
-}
+    const entries = await fs.readdir(dir, {
+      withFileTypes: true
+    });
+    for (const entry of entries) {
+      if (count >= limit) return;
 
-async function buildSearchIndex(basePath) {
-  // Check if index exists in cache
-  let searchIndex = searchCache.get('fileIndex');
-  if (searchIndex) {
-    return searchIndex;
-  }
+      const fullPath = path.join(dir, entry.name);
+      const relativePath = path.relative(GALLERY_DL_DIR, fullPath);
+      if (await isExcluded(relativePath, permission)) continue;
 
-  console.time('buildSearchIndex');
-  const items = await getAllDirectoriesAndFiles(basePath);
-  
-  // Process items in batches for better memory usage
-  const batchSize = 1000;
-  const documents = [];
-  
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    
-    for (const item of batch) {
-      const pathParts = item.path.split('/').filter(Boolean);
-      const collection = pathParts[0];
-      const isCollection = pathParts.length === 1 && item.type === 'directory';
-      
-      const doc = {
-        id: item.path,
-        name: item.name,
-        path: item.path,
-        type: item.type,
-        ext: path.extname(item.name).toLowerCase(),
-        collection: collection,
-        isCollection: isCollection,
-        pathSegments: pathParts.join(' '),
-        parentDir: path.dirname(item.path).split('/').pop(),
-      };
+      const lowerCaseQuery = query.toLowerCase();
+      const lowerCaseName = entry.name.toLowerCase();
+      const lowerCaseRelativePath = relativePath.toLowerCase();
 
-      // Try to read metadata from adjacent .json file if it exists
-      if (item.type === 'file') {
-        try {
-          const metadataPath = item.fullPath.replace(/\.[^/.]+$/, '.json');
-          const metadataExists = await fs.access(metadataPath)
-            .then(() => true)
-            .catch(() => false);
-
-          if (metadataExists) {
-            const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
-            doc.metadata = metadata;
-            doc.metadataText = JSON.stringify(metadata); // For full-text search
-          }
-        } catch (error) {
-          console.warn(`Failed to read metadata for ${item.path}:`, error);
-        }
+      if (lowerCaseName.includes(lowerCaseQuery) || lowerCaseRelativePath.includes(lowerCaseQuery)) {
+        const stats = await fs.stat(fullPath);
+        yield {
+          path: fullPath,
+          name: entry.name,
+          size: entry.isDirectory() ? 0 : stats.size,
+          modified: stats.mtime,
+          type: entry.isDirectory() ? 'directory' : 'file'
+        };
+        count++;
+        if (count >= limit) return;
       }
 
-      documents.push(doc);
+      if (entry.isDirectory()) {
+        for await (const result of walkAndSearchFiles(fullPath, query, permission, limit - count, depth + 1)) {
+          yield result;
+          count++;
+          if (count >= limit) return;
+        }
+      }
     }
-  }
-
-  // Build optimized search index
-  searchIndex = lunr(function() {
-    this.field('name', { boost: 10 });
-    this.field('collection', { boost: 8 });
-    this.field('parentDir', { boost: 5 });
-    this.field('pathSegments', { boost: 3 });
-    this.field('type', { boost: 2 });
-    this.field('ext');
-    this.field('metadataText');
-
-    // Add metadata field if available
-    this.field('metadata', { boost: 4 });
-
-    // Store reference to document
-    this.ref('id');
-
-    // Optimize tokenizer for paths
-    this.tokenizer.separator = /[\s/\-_]+/;
-
-    documents.forEach(doc => {
-      this.add(doc);
-    });
-  });
-
-  // Store in cache
-  searchCache.set('documents', documents);
-  searchCache.set('fileIndex', searchIndex);
-  
-  console.timeEnd('buildSearchIndex');
-  return searchIndex;
-}
-
-function searchFiles(query, index) {
-  if (!index) throw new Error('Search index not initialized');
-  
-  // Get cached documents
-  const documents = searchCache.get('documents');
-  if (!documents) throw new Error('Documents not found in cache');
-
-  // Clean and prepare query
-  const cleanQuery = query.trim().toLowerCase();
-  
-  try {
-    console.time('search');
-    const results = index.search(cleanQuery);
-    console.timeEnd('search');
-
-    return results
-      .filter(result => result.score > 0.01) // Filter low relevance results
-      .map(result => {
-        const doc = documents.find(d => d.id === result.ref);
-        return doc ? { ...doc, score: result.score } : null;
-      })
-      .filter(Boolean);
   } catch (error) {
-    console.error('Search error:', error);
-    return [];
+    debug('Error during search:', error);
   }
 }
-
-// Warm up cache periodically
-setInterval(() => {
-  initializeSearchIndex(GALLERY_DL_DIR).catch(error => {
-    console.error('Failed to warm up search index:', error);
-  });
-}, CACHE_WARMUP_INTERVAL);
 
 module.exports = {
-  buildSearchIndex,
-  searchFiles,
-  initializeSearchIndex
+  walkAndSearchFiles
 };

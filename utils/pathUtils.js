@@ -1,40 +1,43 @@
-/**
- * Utilities for path and string normalization
- */
 const path = require('path');
 
-/**
- * Normalizes a string by trimming and using Unicode normalization
- */
 const normalizeString = (str) => {
-    if (typeof str !== 'string') return '';
-    return str.trim().normalize('NFC');
+  if (typeof str !== 'string') return '';
+  return str.trim().normalize('NFC');
 };
 
-/**
- * Normalizes a path by converting backslashes and cleaning up slashes
- */
+
 const normalizePath = (pathStr) => {
-    if (typeof pathStr !== 'string') return '';
-    return pathStr
-        .replace(/\\/g, '/')    // Convert Windows backslashes
-        .replace(/\/+/g, '/')   // Replace multiple slashes
-        .trim();
+  if (typeof pathStr !== 'string') return '';
+  return pathStr
+    .replace(/\\/g, '/') // Convert Windows backslashes
+    .replace(/\/+/g, '/') // Replace multiple slashes
+    .trim();
 };
 
-/**
- * Normalizes and encodes a path for URL usage
- */
 const normalizeAndEncodePath = (pathStr) => {
-    if (typeof pathStr !== 'string') return '';
-    const normalized = normalizePath(pathStr);
-    return normalized.split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
+  if (typeof pathStr !== 'string') return '';
+  const normalized = normalizePath(pathStr);
+  return normalized.split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+};
+
+const isSubPath = (childPath, parentPath) => {
+  // Normalize both paths to use forward slashes and resolve any '..' or '.' segments
+  const normalizedChild = path.resolve(childPath).replace(/\\/g, '/');
+  const normalizedParent = path.resolve(parentPath).replace(/\\/g, '/');
+
+  // Ensure parent path ends with a slash so we don't match partial directory names
+  const normalizedParentWithSlash = normalizedParent.endsWith('/') ?
+    normalizedParent :
+    normalizedParent + '/';
+
+  return normalizedChild.startsWith(normalizedParentWithSlash) || normalizedChild === normalizedParent;
 };
 
 module.exports = {
-    normalizeString,
-    normalizePath,
-    normalizeAndEncodePath
+  normalizeString,
+  normalizePath,
+  normalizeAndEncodePath,
+  isSubPath
 };

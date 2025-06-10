@@ -1,5 +1,6 @@
+@import url('https://cdn.mcalec.dev/web/css/font/roboto.min.css');
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   margin: 0;
   padding: 20px;
   text-align: center;
@@ -16,13 +17,13 @@ h1 {
   color: #ffffff;
   width: 100%;
   margin-top: 0;
+  margin-bottom: 0;
   font-size: 32px;
 }
 .controls {
   width: 100%;
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;
+  margin-top: 15px;
+  margin-bottom: 15px;
   align-items: center;
   gap: 10px;
 }
@@ -30,27 +31,44 @@ h1 {
   margin: 0;
   color: #e0e0e0;
 }
+.controls button {
+  display: inline-block;
+  align-items: center;
+  text-align: center;
+}
 .image-container {
   margin: 0 auto;
   position: relative;
   background-color: #1e1e1e;
-  border-radius: 8px;
   overflow: hidden;
+  border: none;
+  border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   display: inline-block;
   max-width: 90vw;
-  max-height: calc(90vh - 120px);
-  transition: all 0.3s ease;
+  max-height: calc(100vh - 125px);
+  transition: all 0.25s ease-in-out;
 }
 .image-container.has-image {
   cursor: pointer;
 }
 img {
   max-width: 100%;
-  max-height: calc(90vh - 120px);
+  max-height: 100%;
+  border-radius: 12px;
+  border: none;
   display: block;
   margin: 0 auto;
-  object-fit: contain;
+  object-fit: cover;
+}
+video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  border: none;
+  display: block;
+  margin: 0 auto;
+  object-fit: cover;
 }
 .loading {
   position: absolute;
@@ -59,10 +77,11 @@ img {
   transform: translate(-50%, -50%);
   font-size: 18px;
   color: #ffffff;
-  background-color: rgba(30, 30, 30, 0.95);
-  padding: 10px;
+  opacity: 0.85;
+  background-color: #000000;
+  padding: 1vw;
   border-radius: 4px;
-  z-index: 1;
+  z-index: 9999;
 }
 .button {
   background-color: #0066cc;
@@ -75,8 +94,8 @@ img {
   font-size: 16px;
   margin: 10px 2px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  border-radius: 8px;
+  transition: background-color 0.25s;
 }
 .button:hover {
   background-color: #0052a3;
@@ -90,24 +109,31 @@ img {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: #000000;
   color: #ffffff;
   padding: 8px;
   text-align: center;
   font-size: 14px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease-in-out;
+}
+.image-info span {
+  opacity: 100;
+  gap: 1vh;
+  margin: 0;
+  padding: 0;
 }
 .image-container:hover .image-info {
-  opacity: 1;
+  opacity: 0.85;
+  transition: opacity 0.25s ease-in-out;
 }
 @media (max-width: 600px) {
   .image-container {
     max-width: 90vw;
-    max-height: calc(90vh - 120px);
+    max-height: calc(100vh - 120px);
   }
   img {
     max-width: 100%;
-    max-height: calc(90vh - 160px);
+    max-height: calc(100vh - 120px);
   }
 }

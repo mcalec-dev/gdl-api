@@ -3,24 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/gdl/css/dark/files.css">
-  <link rel="stylesheet" href="/gdl/css/theme-toggle.css">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="/gdl/css/min/dark/files.min.css">
+  <link rel="stylesheet" href="/gdl/css/min/dark/footer.min.css">
+  <link rel="stylesheet" href="/gdl/css/min/consent-popup.min.css">
+  <link rel="icon" type="image/x-icon" href="/gdl/favicon.ico">
   <title>File Browser</title>
 </head>
 <body>
+  <script src="/gdl/js/min/consent-popup.min.js"></script>
   <div class="container">
+    <div id="popup-viewer" class="popup-viewer">
+      <button id="close-popup" class="close-popup"><span>×</span></button>
+      <button id="prev-image" class="nav-button prev-button"><span>‹</span></button>
+      <button id="next-image" class="nav-button next-button"><span>›</span></button>
+      <div class="popup-container">
+        <img id="popup-image" class="popup-image" src="" alt="">
+        <video id="popup-video" class="popup-video" src="" alt="" controls autoplay></video>
+      </div>
+      <div class="image-info">
+        <div id="image-title" class="image-title"></div>
+        <div id="image-counter" class="image-counter"></div>
+      </div>
+    </div>
     <div class="breadcrumb" id="breadcrumb">
-      <a href="/gdl/files">Home</a>
+      <a href="/gdl/files/">Files</a>
     </div>
     <div class="file-browser">
+      <div class="sort-toolbar"></div>
       <div class="file-list" id="fileList">
         <div class="loading">Loading...</div>
       </div>
     </div>
   </div>
-  <script defer src="/gdl/js/files.js"></script>
-  <script defer src="/gdl/js/theme-toggle.js"></script>
+  <script defer src="/gdl/js/min/files.min.js"></script>
+  <footer>
+    <div class="footer-content">
+      <div class="footer-copyright">
+        McAlec Development © 2025
+      </div>
+      <div class="footer-links">
+        <a href="//old.mcalec.dev/legal/license/" rel="noopener" target="_blank">License</a>
+        <a href="//old.mcalec.dev/legal/credits/" rel="noopener" target="_blank">Credits</a>
+        <a href="//mcalec.dev/legal/terms/" rel="noopener" target="_blank">Terms</a>
+        <a href="//mcalec.dev/legal/privacy/" rel="noopener" target="_blank">Privacy</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

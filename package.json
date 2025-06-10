@@ -1,39 +1,59 @@
 {
   "name": "gdl-api",
-  "version": "1.0.0",
+  "version": "v0.2.0",
   "description": "Gallery-DL API",
-  "main": "server.js",
   "scripts": {
-    "start": "node startup.js",
-    "dev": "set DEBUG=gdl-api:* && nodemon startup.js",
-    "start:api": "node server.js",
-    "start:bot": "node discord/index.js"
+    "server": "set DEBUG=gdl-api:* && node server.js",
+    "lint": "eslint",
+    "discord": "set DEBUG=gdl-api:* && node bot/discord/index.js",
+    "invite": "set DEBUG=gdl-api:* && node bot/discord/invite.js",
+    "minify": "set DEBUG=gdl-api:* && node minify.js",
+    "telegram": "set DEBUG=gdl-api:* && node bot/telegram/index.js"
   },
   "keywords": [
-    "gallery-dl",
+    "gdl",
     "api",
-    "rest"
+    "gallery-dl",
+    "discord",
+    "bot"
   ],
-  "author": "",
+  "author": "McAlec",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.8.4",
+    "axios": "^1.9.0",
+    "bcryptjs": "^3.0.2",
+    "chalk": "^4.1.2",
+    "clean-css": "^5.3.3",
     "cors": "^2.8.5",
-    "debug": "^4.4.0",
+    "debug": "^4.4.1",
     "discord.js": "^14.18.0",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.5.0",
+    "eslint-plugin-jsonc": "^2.20.1",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "figlet": "^1.8.1",
+    "glob": "^11.0.2",
+    "lru-cache": "^11.1.0",
     "lunr": "^2.3.9",
     "memory-cache": "^0.2.0",
     "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
-    "sharp": "^0.33.5"
+    "node-telegram-bot-api": "^0.66.0",
+    "sharp": "^0.34.1",
+    "terser": "^5.41.0"
   },
   "devDependencies": {
+    "@eslint/css": "^0.8.1",
+    "@eslint/js": "^9.28.0",
+    "@eslint/json": "^0.12.0",
+    "@types/figlet": "^1.7.0",
+    "eslint": "^9.28.0",
+    "eslint-plugin-json": "^4.0.1",
+    "globals": "^16.2.0",
     "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=23.0.0"
   }
 }

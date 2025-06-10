@@ -1,27 +1,32 @@
-const { Client, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
 const debug = require('debug')('gdl-api:discord');
-const config = require('../config');
 
-// Create Discord client
+// Update client configuration
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages
+    ],
+    allowedMentions: { parse: ['users'] },
+    partials: ['CHANNEL']  // Required for DM support
 });
 
-// Define commands
+// Update command configuration
 const commands = [
     new SlashCommandBuilder()
         .setName('random')
         .setDescription('Get a random image from the gallery')
+        .setDMPermission(true)          // Enable DMs
+        .setDefaultMemberPermissions(null)  // Available to everyone
         .toJSON()
 ];
 
 // Use API configuration from main config
 const API_BASE_URL = 'https://api.mcalec.dev/gdl/api';
+const ALT_API_BASE_URL = 'https://alt-api.mcalec.dev/gdl/api';
 
 // Command prefix
 const PREFIX = '!';
@@ -50,28 +55,48 @@ const getActionRow = () => {
 
 // Add helper function to build URL with scale
 function buildImageUrl(baseUrl, scale) {
-    const url = new URL(baseUrl, 'https://api.mcalec.dev/');
+    // If it's a full URL, use it directly
+    const url = baseUrl.startsWith('http') 
+        ? new URL(baseUrl)
+        : new URL(baseUrl, API_BASE_URL); // Fallback to primary URL
+        
     url.searchParams.set('x', scale);
     return url.toString();
 }
 
 // Function to fetch random image
 async function getRandomImage() {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/random`);
-        debug('Random image response:', response.data);
-        
-        // Ensure the URL is properly formatted
-        const imageData = response.data;
-        if (!imageData.url.startsWith('http')) {
-            imageData.url = `https://api.mcalec.dev${imageData.url}`;
+    const urls = [API_BASE_URL, ALT_API_BASE_URL];
+    let lastError = null;
+
+    for (const baseUrl of urls) {
+        try {
+            debug(`Attempting to fetch from ${baseUrl}/random`);
+            const response = await axios.get(`${baseUrl}/random`, { 
+                timeout: 60 * 1000, // 60 seconds timeout
+            });
+            
+            debug(`Successfully fetched from ${baseUrl}`);
+            const imageData = response.data;
+            
+            // If the URL is relative, make it absolute
+            if (imageData.url && !imageData.url.startsWith('http')) {
+                const apiDomain = new URL(baseUrl).origin;
+                imageData.url = `${apiDomain}${imageData.url}`;
+                debug(`Converted relative URL to absolute: ${imageData.url}`);
+            }
+            
+            return imageData;
+        } catch (error) {
+            debug(`Failed to fetch from ${baseUrl}:`, error.message);
+            debug(`Response status:`, error.response?.status);
+            debug(`Response data:`, error.response?.data);
+            lastError = error;
         }
-        
-        return imageData;
-    } catch (error) {
-        debug('Error fetching random image:', error);
-        throw error;
     }
+
+    debug('All API endpoints failed');
+    throw new Error(`Failed to fetch image from all endpoints: ${lastError?.message}`);
 }
 
 // Add helper function to check if file is video
@@ -82,6 +107,12 @@ function isVideoFile(filename) {
 
 // Update the sendImageEmbed function
 async function sendImageEmbed(interaction, imageData) {
+    // Validate interaction is still valid
+    if (!interaction.webhook) {
+        debug('Interaction is no longer valid');
+        return;
+    }
+
     const imageUrl = new URL(imageData.url, 'https://api.mcalec.dev/').toString();
     const isVideo = isVideoFile(imageData.file);
     
@@ -90,13 +121,14 @@ async function sendImageEmbed(interaction, imageData) {
         .setTitle(imageData.file)
         .setURL(imageUrl)
         .addFields(
-            { name: 'Collection', value: imageData.collection, inline: true },
+            { name: 'Author', value: imageData.author, inline: true },
+            { name: 'Platform', value: imageData.collection, inline: true },
             { name: 'Size', value: `${Math.round(imageData.size / 1024)} KB`, inline: true },
             { name: 'Type', value: isVideo ? 'Video' : 'Image', inline: true },
             { name: 'Scale', value: `${currentScale}%`, inline: true }
         )
         .setTimestamp()
-        .setFooter({ text: 'Gallery-DL Random Image' });
+        .setFooter({ text: `Gallery-DL Random Image | Requested by ${interaction.user.tag}` });
 
     if (!isVideo) {
         embed.setImage(imageUrl);
@@ -106,39 +138,32 @@ async function sendImageEmbed(interaction, imageData) {
 
     try {
         if (isVideo) {
-            if (interaction.deferred) {
-                await interaction.editReply({ content: `Video: ${imageUrl}` });
-                await interaction.followUp({ embeds: [embed], components: [actionRow] });
-            } else {
-                await interaction.reply({ content: `Video: ${imageUrl}` });
-                await interaction.followUp({ embeds: [embed], components: [actionRow] });
+            await interaction.editReply({ content: `Video: ${imageUrl}` })
+                .catch(() => debug('Failed to edit reply with video'));
+                
+            if (interaction.webhook) {
+                await interaction.followUp({ embeds: [embed], components: [actionRow] })
+                    .catch(() => debug('Failed to send follow-up embed'));
             }
         } else {
-            if (interaction.deferred) {
-                await interaction.editReply({ embeds: [embed], components: [actionRow] });
-            } else {
-                await interaction.reply({ embeds: [embed], components: [actionRow] });
-            }
+            await interaction.editReply({ embeds: [embed], components: [actionRow] })
+                .catch(() => debug('Failed to edit reply with embed'));
         }
     } catch (error) {
         debug('Error sending embed:', error);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                content: 'Error fetching random image. Please try again later.',
-                flags: [1 << 6]
-            });
-        } else {
+        
+        if (interaction.webhook) {
             await interaction.editReply({
                 content: 'Error fetching random image. Please try again later.',
                 components: []
-            });
+            }).catch(() => debug('Failed to send error response'));
         }
     }
 }
 
 // Event handlers
 client.once(Events.ClientReady, () => {
-    console.log('Discord bot is ready!');
+  debug('Discord bot is ready!');
 });
 
 // Update the MessageCreate event handler
@@ -149,7 +174,6 @@ client.on(Events.MessageCreate, async message => {
     
     if (command === 'random') {
         debug(`User ${message.author.tag} ran command: ${message.content}`);
-        console.log(`[Command] ${message.author.tag} used !random in #${message.channel.name}`);
         
         const loadingMessage = await message.reply('Loading...');
         
@@ -163,15 +187,15 @@ client.on(Events.MessageCreate, async message => {
                 .setTitle(imageData.file)
                 .setURL(imageUrl)
                 .addFields(
-                    { name: 'Collection', value: imageData.collection, inline: true },
+                    { name: 'Author', value: imageData.author, inline: true },
+                    { name: 'Platform', value: imageData.collection, inline: true },
                     { name: 'Size', value: `${Math.round(imageData.size / 1024)} KB`, inline: true },
                     { name: 'Type', value: isVideo ? 'Video' : 'Image', inline: true },
                     { name: 'Scale', value: '100%', inline: true }
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Gallery-DL Random Image' });
+                .setFooter({ text: `Gallery-DL Random Image | Requested by ${message.author.tag}` });
 
-            // Only set image for non-video files
             if (!isVideo) {
                 embed.setImage(imageUrl);
             }
@@ -179,17 +203,25 @@ client.on(Events.MessageCreate, async message => {
             const actionRow = getActionRow();
             
             if (isVideo) {
-                await loadingMessage.edit(`Video: ${imageUrl}`);
-                await message.channel.send({ embeds: [embed], components: [actionRow] });
+                // For videos, send a new message and delete the loading message
+                await message.channel.send({ 
+                    content: `Video: ${imageUrl}`,
+                    embeds: [embed], 
+                    components: [actionRow] 
+                });
+                await loadingMessage.delete();
             } else {
+                // For images, edit the loading message with the embed
                 await loadingMessage.edit({ 
+                    content: null, // Remove the "Loading..." text
                     embeds: [embed], 
                     components: [actionRow] 
                 });
             }
         } catch (error) {
-            debug('Error handling random command:', error);
-            await loadingMessage.edit('Error fetching random image. Please try again later.');
+            debug('Error handling random command:', error.message);
+            debug('Full error:', error);
+            await loadingMessage.edit(`Error fetching random image: ${error.message}`);
         }
     }
 });
@@ -200,6 +232,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
     try {
         if (interaction.isButton()) {
+            // Get the original user from the footer text
+            const footer = interaction.message.embeds[0].footer.text;
+            const originalUser = footer.split('Requested by ')[1];
+            
+            // Check if the interaction user is the original user
+            if (interaction.user.tag !== originalUser) {
+                await interaction.reply({ 
+                    content: 'This is not your message to interact with!',
+                    ephemeral: true 
+                });
+                return;
+            }
+
             await interaction.deferUpdate();
             
             let imageData;
@@ -207,15 +252,15 @@ client.on(Events.InteractionCreate, async interaction => {
 
             switch (interaction.customId) {
                 case 'scaleUp':
-                    newScale = Math.min(500, currentScale + 50); // Cap at 400%
+                    newScale = Math.min(500, currentScale + 50);
                     imageData = interaction.message.embeds[0];
                     break;
                 case 'scaleDown':
-                    newScale = Math.max(25, currentScale - 25); // Min at 25%
+                    newScale = Math.max(25, currentScale - 25);
                     imageData = interaction.message.embeds[0];
                     break;
                 case 'regenerate':
-                    newScale = 100; // Reset scale for new image
+                    newScale = 100;
                     imageData = await getRandomImage();
                     break;
             }
@@ -235,13 +280,14 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setTitle(interaction.customId === 'regenerate' ? imageData.file : imageData.title)
                 .setURL(imageUrl)
                 .addFields(
-                    { name: 'Collection', value: interaction.customId === 'regenerate' ? imageData.collection : interaction.message.embeds[0].fields[0].value, inline: true },
-                    { name: 'Size', value: interaction.customId === 'regenerate' ? `${Math.round(imageData.size / 1024)} KB` : interaction.message.embeds[0].fields[1].value, inline: true },
+                    { name: 'Author', value: interaction.customId === 'regenerate' ? imageData.author : interaction.message.embeds[0].fields[0].value, inline: true },
+                    { name: 'Platform', value: interaction.customId === 'regenerate' ? imageData.collection : interaction.message.embeds[0].fields[1].value, inline: true },
+                    { name: 'Size', value: interaction.customId === 'regenerate' ? `${Math.round(imageData.size / 1024)} KB` : interaction.message.embeds[0].fields[2].value, inline: true },
                     { name: 'Type', value: isVideo ? 'Video' : 'Image', inline: true },
                     { name: 'Scale', value: `${currentScale}%`, inline: true }
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Gallery-DL Random Image' });
+                .setFooter({ text: `Gallery-DL Random Image | Requested by ${originalUser}` });
 
             if (!isVideo) {
                 embed.setImage(imageUrl);
@@ -290,5 +336,10 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-// Export the client
-module.exports = { client, commands };
+// Export the client and required functions
+module.exports = { 
+  client, 
+  commands,
+  getRandomImage,
+  sendImageEmbed 
+};

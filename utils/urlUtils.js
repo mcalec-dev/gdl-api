@@ -1,17 +1,34 @@
 const path = require('path');
+const { BASE_PATH } = require('../config');
+const debug = require('debug')('gdl-api:urlUtils');
 
-function normalizeUrl(req, relativePath, isDirectory = false) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const normalizedPath = relativePath.replace(/\\/g, '/');
-    
-    // Add trailing slash for directories if not present
-    const dirPath = isDirectory && !normalizedPath.endsWith('/') ? 
-        normalizedPath + '/' : normalizedPath;
-        
-    return {
-        uri: `/gdl/api/files/${dirPath}`,
-        url: `${baseUrl}/gdl/api/files/${dirPath}`
-    };
+function normalizeUrl(req, relativePath) {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const baseUrl = `${protocol}://${host}`;
+  const dirPath = path.resolve(relativePath).replace(/\\/g, '/');
+  const normalizedPath = dirPath.replace(/F:\/gdl-api\//i, '');
+  return {
+    path: `${BASE_PATH}/api/files/${normalizedPath.replace(/^F:\/gallery-dl\//i, '')}`,
+    url: `${baseUrl}${BASE_PATH}/api/files/${normalizedPath.replace(/^F:\/gallery-dl\//i, '')}`
+  };
 }
-
-module.exports = { normalizeUrl };
+function getAPIUrl(req) {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const apiURL = `${protocol}://${host}${BASE_PATH}/api`;
+  debug('Generated API URL:', apiURL);
+  return apiURL;
+}
+function getHostUrl(req) {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const hostURL = `${protocol}://${host}${BASE_PATH}`;
+  debug('Generated host URL:', hostURL);
+  return hostURL;
+}
+module.exports = { 
+  normalizeUrl,
+  getAPIUrl,
+  getHostUrl,
+};

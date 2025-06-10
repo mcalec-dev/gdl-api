@@ -1,5 +1,7 @@
+@import url('https://cdn.mcalec.dev/web/css/font/roboto.min.css');
+
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -32,7 +34,7 @@ pre {
 pre code {
   background: none;
   padding: 0;
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: 'Consolas', 'Monaco', 'Roboto Mono', monospace;
 }
 h1, h2, h3 {
   color: #ffffff;
@@ -57,51 +59,4 @@ th {
 }
 td {
   color: #ffffff;
-}
-footer {
-  background-color: #0d0d0d;
-  color: #ffffff;
-  padding: 20px;
-  margin-top: auto;
-}
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.footer-links {
-  display: flex;
-  gap: 20px;
-}
-.footer-links a {
-  color: #ffffff;
-  text-decoration: none;
-  font-size: 14px;
-}
-.footer-links a:hover {
-  color: #007bff;
-  text-decoration: underline;
-}
-.footer-copyright {
-  font-size: 14px;
-  color: #ffffff;
-}
-a {
-  color: #66b3ff;
-}
-a:hover {
-  color: #99ccff;
-}
-@media (max-width: 600px) {
-  .footer-content {
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
-  }
-  .footer-links {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
 }
