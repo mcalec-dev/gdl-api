@@ -1,10 +1,15 @@
 const dotenv = require('dotenv');
+const path = require('path');
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(botToken, { polling: true });
 const debug = require('debug')('gdl-api:bot:telegram');
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+if (!botToken) {
+  console.error('TELEGRAM_BOT_TOKEN is not set in the environment variables');
+  process.exit(1);
+}
 let randomImageResponse = null;
 const fetchRandomImage = async () => {
   try {

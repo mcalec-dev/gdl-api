@@ -3,19 +3,17 @@
 .env
 .env.bak
 .DS_Store
-package-lock.json
-Thumbs.db
 ecosystem.config.js
 ecosystem.config.js.bak
 package-lock.json
 run.bat
 favicon.png
 favicon.svg
+Thumbs.db
 
 /.vscode/
 /node_modules/
 /logs/
 /dist/
 /db/
-/blocked/
 min/

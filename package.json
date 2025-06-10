@@ -3,6 +3,7 @@
   "version": "v0.2.1",
   "description": "Gallery-DL API",
   "scripts": {
+    "start": "set DEBUG=gdl-api:* && node server.js",
     "server": "set DEBUG=gdl-api:* && node server.js",
     "lint": "eslint",
     "discord": "set DEBUG=gdl-api:* && node bot/discord/index.js",
