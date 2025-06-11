@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { validateUser } = require('../../utils/authUtils');
 const { getAPIUrl } = require('../../utils/urlUtils');
-const debug = require('debug')('gdl-api:auth');
+const debug = require('debug')('gdl-api:api:auth');
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   debug(`Login attempt for user: ${username}`);

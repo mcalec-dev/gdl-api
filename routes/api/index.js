@@ -7,7 +7,7 @@ const searchRouter = require('./search');
 const statsRouter = require('./stats');
 const authRouter = require('./auth');
 const { getAPIUrl } = require('../../utils/urlUtils');
-const debug = require('debug')('gdl-api:routes');
+const debug = require('debug')('gdl-api:api:routes');
 
 debug('Initializing API routes');
 

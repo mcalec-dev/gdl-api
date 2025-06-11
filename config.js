@@ -13,10 +13,10 @@ const NODE_ENV = process.env.NODE_ENV;
 debug('Node environment:', NODE_ENV);
 const PORT = process.env.PORT; 
 debug('Port:', PORT);
-const BASE_PATH = process.env.BASE_PATH; 
-debug('Base path:', BASE_PATH);
 const HOST = process.env.NODE_ENV === 'production' ? process.env.HOST : process.env.ALT_HOST; 
 debug('Host:', HOST);
+const BASE_PATH = process.env.BASE_PATH; 
+debug('Base path:', BASE_PATH);
 const GALLERY_DL_DIR = process.env.GALLERY_DL_DIR; 
 debug('Gallery-dl directory:', GALLERY_DL_DIR);
 const DISALLOWED_DIRS = parseJsonEnv(process.env.DISALLOWED_DIRS); 
@@ -25,8 +25,8 @@ const DISALLOWED_FILES = parseJsonEnv(process.env.DISALLOWED_FILES);
 debug('Disallowed files:', DISALLOWED_FILES);
 const DISALLOWED_EXTENSIONS = parseJsonEnv(process.env.DISALLOWED_EXTENSIONS);
 debug('Disallowed extensions:', DISALLOWED_EXTENSIONS);
-const MAX_DEPTH = process.env.MAX_DEPTH; 
-debug('Max depth:', MAX_DEPTH);
+const DB_DIR = process.env.DB_DIR; 
+debug('Database directory:', DB_DIR);
 const SESSION_SECRET = process.env.SESSION_SECRET; 
 debug('Session secret:', SESSION_SECRET);
 const RATE_LIMIT = { 
@@ -43,7 +43,6 @@ module.exports = {
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
-  MAX_DEPTH,
   SESSION_SECRET,
   RATE_LIMIT,
   debug

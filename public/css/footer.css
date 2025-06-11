@@ -1,11 +1,11 @@
 footer {
   background-color: #0d0d0d;
   color: #ffffff;
-  padding: 20px;
-  margin-top: auto;
+  margin: auto;
 }
 .footer-content {
   max-width: 1200px;
+  padding: 20px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;

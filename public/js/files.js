@@ -4,8 +4,8 @@ const basePath = '/gdl/files';
 const apiBasePath = '/gdl/api/files';
 const icons = {
   directory: '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
-  image: '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-.55 0-1 .45-1 1v14c0 1.1.9 2 2 2h14c1.1 0-2-.9-2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
-  video: '<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
+  image: '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-.55 0-1 .45-1 1v14c0 1.1.89 2 2 2h14c1.1 0-2-.9-2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
+  video: '<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 1.1.89 2 2 2H18c1.1 0-2-.9-2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>',
   other: '<svg viewBox="0 0 24 24"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>'
 };
 let currentDirectoryData = null;
@@ -13,6 +13,8 @@ let currentImageIndex = 0;
 let currentImageList = [];
 let currentSort = 'name';
 let currentSortDir = 'none';
+let currentFetchController = null;
+let imageLoadControllers = new Map();
 const SORT_STATES = {
   name: 'none',
   size: 'none',
@@ -137,8 +139,18 @@ function sortContents(contents, sortBy, direction) {
     return direction === 'asc' ? comparison : -comparison;
   });
 }
-async function loadDirectory(path = '') {
+async function loadDirectory(path = '', callback) {
   try {
+    // Abort any ongoing fetch request
+    if (currentFetchController) {
+      currentFetchController.abort();
+    }
+    // Cancel ongoing image loads
+    cancelImageLoads();
+
+    currentFetchController = new AbortController();
+    const { signal } = currentFetchController;
+
     // Clean and normalize path        
     path = path ? decodeURIComponent(path) : '';
     if (path) {
@@ -147,186 +159,45 @@ async function loadDirectory(path = '') {
         .replace(/\/+/g, '/')
         .replace(/^\/|\/$/g, '');
     }
-    fileList.innerHTML = '<div class="loading"><span>Loading...</span></div>';
+    
+    // Show loading indicator without affecting layout
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.className = 'loading';
+    loadingIndicator.innerHTML = '<span>Loading...</span>';
+    fileList.appendChild(loadingIndicator);
+
     updateBreadcrumb(path);
     const apiPath = path ? `/${path}/` : '';
     if (!currentDirectoryData || currentDirectoryData.path !== path) {
-      const response = await fetch(`${apiBasePath}${apiPath}`);
+      const response = await fetch(`${apiBasePath}${apiPath}`, { signal });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Unknown error occurred');
       }
       currentDirectoryData = { path, contents: data.contents };
     }
+    
+    // Remove loading indicator before rendering new contents
+    fileList.removeChild(loadingIndicator);
+
     // Check if in a collection or root
     const isRoot = !path;
     const shouldUseGridView = !isRoot && currentDirectoryData.contents.some(item => item.type === 'file');
     fileList.classList.toggle('grid-view', shouldUseGridView);
 
-    function getSortIcon(state) {
-      switch (state) {
-        case 'asc':
-          return '↑';
-        case 'desc':
-          return '↓';
-        default:
-          return '↕';
-      }
-    }
-    let html = '';
-    // Render the sort toolbar separately
-    const sortToolbarHtml = `
-            <button class="sort-button" data-sort="name">
-                <span>Name</span>
-                <span class="sort-icon">${getSortIcon(SORT_STATES.name)}</span>
-            </button>
-            <button class="sort-button" data-sort="size">
-                <span>Size</span>
-                <span class="sort-icon">${getSortIcon(SORT_STATES.size)}</span>
-            </button>
-            <button class="sort-button" data-sort="type">
-                <span>Type</span>
-                <span class="sort-icon">${getSortIcon(SORT_STATES.type)}</span>
-            </button>
-            <button class="sort-button" data-sort="modified">
-                <span>Modified</span>
-                <span class="sort-icon">${getSortIcon(SORT_STATES.modified)}</span>
-            </button>
-        `;
-    // Update the sort-toolbar content
-    document.querySelector('.sort-toolbar').innerHTML = sortToolbarHtml; // Add sorted contents
-    const sortedContents = sortContents(currentDirectoryData.contents, currentSort, currentSortDir);
-    sortedContents.forEach(item => {
-      const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);
-      // Construct path from parent path and item name
-      const itemPath = path ? `${path}/${item.name}` : item.name;
-      let previewUrl = item.type === 'file' ? `${item.url || `/gdl/api/files/${itemPath}`}` : null;
-      // Conditionally append '?x=50' only for images (excluding GIFs)
-      if (previewUrl && itemType === 'image' && !item.name.toLowerCase().endsWith('.gif')) {
-        previewUrl += '?x=50';
-      }
-      html += `
-                <div class="file-item ${item.type}" data-path="${itemPath}">
-                    ${previewUrl ? `
-                        ${itemType === 'video' ? `
-                            <div class="video-preview-container">
-                                <video 
-                                    class="file-preview video" 
-                                    src="${previewUrl}" 
-                                    preload="metadata"
-                                    onmouseover="this.play(); this.muted=false;" 
-                                    onmouseout="this.pause(); this.currentTime=0; this.muted=true;"
-                                ></video>
-                            </div>
-                        ` : itemType === 'image' ? `
-                            <div class="preview-container">
-                                <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}">
-                            </div>
-                        ` : `
-                            <div class="file-icon ${itemType}">${icons[itemType]}</div>
-                        `}
-                    ` : `
-                        <div class="file-icon ${itemType}">${icons[itemType]}</div>
-                    `}
-                    <div class="file-details">
-                        <div class="file-name">${item.name}</div>
-                        <div class="file-meta">
-                            <span>${formatDate(item.modified) }</span><br>
-                            <span>${item.type === 'file' ? formatSize(item.size) : 'Directory'}</span>
-                        </div>
-                    </div>
-                </div>`;
-    });
-    fileList.innerHTML = html;
-    // Add event listeners for sort buttons
-    document.querySelectorAll('.sort-button').forEach(button => {
-      button.addEventListener('click', () => {
-        const sortBy = button.dataset.sort;
-        // Update sort states
-        Object.keys(SORT_STATES).forEach(key => {
-          if (key !== sortBy) SORT_STATES[key] = 'none';
-        });
-        // Cycle through sort states
-        if (SORT_STATES[sortBy] === 'none') {
-          SORT_STATES[sortBy] = 'desc'; // Start with descending order
-        } else if (SORT_STATES[sortBy] === 'desc') {
-          SORT_STATES[sortBy] = 'asc'; // Then go to ascending order
-        } else {
-          SORT_STATES[sortBy] = 'none'; // Reset to default (none)
-        }
-        // Update active state and icons
-        document.querySelectorAll('.sort-button').forEach(btn => {
-          const isActive = btn.dataset.sort === sortBy && SORT_STATES[sortBy] !== 'none';
-          btn.setAttribute('data-active', isActive);
-          const btnIcon = btn.querySelector('.sort-icon');
-          btnIcon.textContent = getSortIcon(SORT_STATES[btn.dataset.sort]);
-        });
-        currentSort = sortBy;
-        currentSortDir = SORT_STATES[sortBy];
-        // Store current path before reloading
-        const currentPath = window.location.pathname
-          .replace(new RegExp(`^${basePath}/?`), '')
-          .replace(/\/+/g, '/')
-          .replace(/^\/|\/$/g, '');
-        loadDirectory(currentPath);
-      });
-    });
-    // Update click handlers
-    fileList.querySelectorAll('.file-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const itemPath = item.dataset.path;
-        if (item.classList.contains('directory')) {
-          e.preventDefault();
-          // Use generateBrowseUrl to avoid path duplication
-          const navPath = generateBrowseUrl(itemPath);
-          window.history.pushState({
-            path: `${itemPath}/`,
-            sortBy: currentSort,
-            sortDir: currentSortDir
-          }, '', navPath);
-          loadDirectory(itemPath);
-        }
-      });
-    });
-    // Add event listener for image click
-    document.querySelectorAll('.file-item.file').forEach((item) => {
-      const fileType = getFileType(item.dataset.path);
-      if (fileType === 'image' || fileType === 'video') {
-        item.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        
-          // Build media list from current directory
-          const allMedia = Array.from(document.querySelectorAll('.file-item.file')).filter(el => 
-            ['image', 'video'].includes(getFileType(el.dataset.path))
-          );
-        
-          currentImageList = allMedia.map(media => {
-            const itemPath = media.dataset.path;
-            const originalUrl = media.querySelector('.file-preview')?.src?.split('?')[0] || `/gdl/api/files/${itemPath}`;
-            return {
-              url: originalUrl,
-              name: itemPath.split('/').pop(),
-              path: itemPath,
-              type: getFileType(itemPath)
-            };
-          });
-        
-          currentImageIndex = allMedia.findIndex(media => media === item);
-          showImagePopup(currentImageIndex);
-        });
-      }
-    });
-    if (shouldUseGridView) {
-      setupLazyLoading();
-    }
+    // Render directory contents
     renderDirectory(currentDirectoryData.contents, path);
+    if (callback) {
+      callback();
+    }
   } catch (error) {
-    fileList.innerHTML = `
+    if (error.name !== 'AbortError') {
+      fileList.innerHTML = `
         <div class="error">
             Error loading directory contents<br>
             <small>${error.message}</small>
         </div>`;
+    }
   }
 }
 function setupFileClickHandlers() {
@@ -398,8 +269,17 @@ function setupLazyLoading() {
       if (entry.isIntersecting) {
         const img = entry.target;
         if (img.dataset.src) {
+          const controller = new AbortController();
+          imageLoadControllers.set(img, controller);
           img.src = img.dataset.src;
-          img.classList.remove('loading');
+          img.onload = () => {
+            img.classList.remove('loading');
+            imageLoadControllers.delete(img);
+          };
+          img.onerror = () => {
+            img.classList.add('error');
+            imageLoadControllers.delete(img);
+          };
           observer.unobserve(img);
         }
       }
@@ -413,29 +293,40 @@ function setupLazyLoading() {
   });
 }
 
+// Cancel all ongoing image loads
+function cancelImageLoads() {
+  imageLoadControllers.forEach((controller, img) => {
+    controller.abort();
+    img.src = ''; // Clear the src to stop loading
+    img.classList.add('loading'); // Reset to loading state
+  });
+  imageLoadControllers.clear();
+}
+
 function generateBrowseUrl(path) {
   // Construct proper URL
   return path ? `${basePath}/${path}/` : basePath;
 }
 
 function handleDirectoryClick(event) {
-  event.preventDefault();
-  const target = event.target.closest('a');
+  // Ensure the click originated from a directory link
+  const target = event.target.closest('.file-item.directory a');
   if (!target) return;
+
+  event.preventDefault();
   const newPath = target.getAttribute('href');
   if (!newPath) return;
+
   // Clean the path before loading
   const cleanPath = newPath.replace(new RegExp(`^${basePath}/?`), '');
-  loadDirectory(cleanPath);
+  loadDirectory(cleanPath, () => {
+    // Callback to scroll to top after directory is loaded
+    window.scrollTo(0, 0);
+  });
   history.pushState({
     path: cleanPath
   }, '', newPath);
 }
-// Handle popstate events (browser back/forward)
-window.addEventListener('popstate', (event) => {
-  const path = event.state?.path || '';
-  loadDirectory(path);
-});
 function showImagePopup(index) {
   if (index < 0 || index >= currentImageList.length) return;
   
@@ -474,21 +365,33 @@ function showImagePopup(index) {
 function setupImagePopupEvents() {
   const popupViewer = document.getElementById('popup-viewer');
   const closeButton = document.getElementById('close-popup');
+  const newTabButton = document.getElementById('open-new-tab');
   const prevButton = document.getElementById('prev-image');
   const nextButton = document.getElementById('next-image');
-  
+  const popupImage = document.getElementById('popup-image');
+  const popupVideo = document.getElementById('popup-video');
+
+  // Open image in new tab
+  newTabButton.addEventListener('click', () => {
+    const item = currentImageList[currentImageIndex];
+    window.open(item.url, '_blank');
+  });
+
   // Close popup
   closeButton.addEventListener('click', () => {
-    const popupVideo = document.getElementById('popup-video');
     if (!popupVideo.paused) {
       popupVideo.pause();
     }
+    popupImage.src = ''; // Reset image URL
+    popupVideo.src = ''; // Reset video URL
     popupViewer.style.display = 'none';
   });
   
   // Close on background click
   popupViewer.addEventListener('click', (e) => {
     if (e.target === popupViewer) {
+      popupImage.src = ''; // Reset image URL
+      popupVideo.src = ''; // Reset video URL
       popupViewer.style.display = 'none';
     }
   });
@@ -515,6 +418,8 @@ function setupImagePopupEvents() {
           if (!popupVideo.paused) {
             popupVideo.pause();
           }
+          popupImage.src = ''; // Reset image URL
+          popupVideo.src = ''; // Reset video URL
           popupViewer.style.display = 'none';
           break;
         case 'ArrowLeft':
@@ -530,7 +435,40 @@ function setupImagePopupEvents() {
       }
     }
   });
+
+  // Image zoom toggle
+  let isZoomed = false;
+  popupImage.addEventListener('click', (e) => {
+    if (isZoomed) {
+      popupImage.classList.remove('zoomed');
+      popupImage.style.transform = 'none'; // Reset zoom
+      popupImage.style.cursor = 'zoom-in';
+      isZoomed = false;
+    } else {
+      const rect = popupImage.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      const zoomFactor = 2.5; // Adjust zoom factor as needed
+      
+      popupImage.classList.add('zoomed');
+      popupImage.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
+      popupImage.style.transform = `scale(${zoomFactor})`;
+      popupImage.style.cursor = 'zoom-out';
+      isZoomed = true;
+    }
+  });
+
+  popupImage.addEventListener('mousemove', (e) => {
+    if (isZoomed) {
+      const rect = popupImage.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+
+      popupImage.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
+    }
+  });
 }
+
 function setupSortButtons() {
   document.querySelectorAll('.sort-button').forEach(button => {
     button.addEventListener('click', () => {
@@ -587,11 +525,12 @@ function renderDirectory(contents, path) {
                 preload="metadata"
                 onmouseover="this.play(); this.muted=false;" 
                 onmouseout="this.pause(); this.currentTime=0; this.muted=true;"
+                draggable="false"
               ></video>
             </div>
           ` : itemType === 'image' ? `
             <div class="preview-container">
-              <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}">
+              <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
             </div>
           ` : `
             <div class="file-icon ${itemType}">${icons[itemType]}</div>

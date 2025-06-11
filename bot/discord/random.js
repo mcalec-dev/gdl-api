@@ -1,6 +1,7 @@
 const { Client, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
-const debug = require('debug')('gdl-api:discord');
+const debug = require('debug')('gdl-api:bot:discord');
+const { HOST, BASE_PATH } = require('../../config')
 
 // Update client configuration
 const client = new Client({
@@ -25,8 +26,8 @@ const commands = [
 ];
 
 // Use API configuration from main config
-const API_BASE_URL = 'https://api.mcalec.dev/gdl/api';
-const ALT_API_BASE_URL = 'https://alt-api.mcalec.dev/gdl/api';
+const API_BASE_URL = `${HOST}${BASE_PATH}/api`;
+const ALT_API_BASE_URL = `${HOST}${BASE_PATH}/api`;
 
 // Command prefix
 const PREFIX = '!';

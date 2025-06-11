@@ -1,4 +1,4 @@
-const debug = require('debug')('gdl-api:discord');
+const debug = require('debug')('gdl-api:bot:discord');
 const dotenv = require('dotenv');
 const path = require('path');
 const { Events } = require('discord.js');
@@ -8,14 +8,14 @@ const { deployCommands } = require('./deploy-commands');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 client.once(Events.ClientReady, async (c) => {
-  console.log(`[Bot] Logged in as ${c.user.tag}`);
+  debug(`Logged in as ${c.user.tag}`);
     try {
       await deployCommands();
-      console.log(`[Bot] Global commands registered successfully`);
+      debug(`Global commands registered successfully`);
     } catch (error) {
-    debug('[Bot] Failed to register global commands:', error);
+    debug('Failed to register global commands:', error);
   }
-  console.log(`[Bot] Serving ${c.guilds.cache.size} guilds and DMs`);
+  debug(`Serving ${c.guilds.cache.size} guilds`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {

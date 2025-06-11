@@ -3,7 +3,7 @@ const path = require('path');
 const router = express.Router();
 const { walkAndSearchFiles } = require('../../utils/searchUtils');
 const { GALLERY_DL_DIR } = require('../../config');
-const debug = require('debug')('gdl-api:search');
+const debug = require('debug')('gdl-api:api:search');
 const { normalizeUrl } = require('../../utils/urlUtils');
 const { normalizePath } = require('../../utils/pathUtils');
 

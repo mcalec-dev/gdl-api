@@ -134,7 +134,7 @@ body {
   padding: 12px;
   background: #2d2d2d;
   border: 1px solid #404040;
-  cursor: pointer;
+  pointer-events: visible;
   position: relative;
   width: 100%;
   box-sizing: border-box;
@@ -154,6 +154,12 @@ body {
   padding: 8px;
   margin-right: 8px;
   overflow: hidden;
+}
+.file-item.directory {
+  cursor: pointer;
+}
+.file-item.file {
+  cursor: help;
 }
 .file-item.file .file-details {
   display: none;
@@ -209,7 +215,11 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  user-select: none;
   opacity: 0;
+}
+.file-preview.loading {
+  visibility: hidden;
 }
 .grid-view .file-preview:not(.loading),
 .grid-view .file-preview[src^="http"] {
@@ -281,20 +291,6 @@ body {
 .file-icon.document { color: #FFC107; }
 .file-icon.other { color: #757575; }
 
-/* Misc Styles */
-.loading, .error, .empty-message {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  text-align: center;
-  padding: 20px;
-  color: #bbbbbb;
-  transform: translate(-50%, -50%);
-}
-.error {
-  color: #ff6666;
-}
-
 /* Video and GIF Preview Styles */
 .video-preview-container,
 .gif-preview-container {
@@ -331,8 +327,10 @@ body {
   backdrop-filter: blur(3px);
 }
 .popup-container {
-  max-width: 90%;
-  max-height: 80vh;
+  max-width: 85%;
+  max-height: 90vh;
+  width: 100%;
+  height: 100%;
   background: transparent;
   display: flex;
   align-items: center;
@@ -349,17 +347,14 @@ body {
   border: none;
   display: block;
   margin: 0 auto;
+  user-select: none;
+  pointer-events: visible;
+  cursor: default;
   object-fit: contain;
+  flex-shrink: 0;
 }
-.popup-viewer img video {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  border: none;
-  display: block;
-  margin: 0 auto;
-  object-fit: contain;
+.popup-image {
+  cursor: zoom-in;
 }
 .popup-viewer span {
   width: 30px;
@@ -369,6 +364,23 @@ body {
   position: absolute;
   top: 20px;
   right: 20px;
+  width: 50px;
+  height: 50px;
+  background: rgba(45, 45, 45, 0.9);
+  border: 1px solid #404040;
+  border-radius: 50%;
+  color: var(--text-color);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+.open-new-tab {
+  position: absolute;
+  top: 20px;
+  right: 80px;
   width: 50px;
   height: 50px;
   background: rgba(45, 45, 45, 0.9);
@@ -434,6 +446,23 @@ body {
 .image-counter {
   color: #bbbbbb;
   font-size: 12px;
+}
+
+/* Misc Styles */
+.loading, .error, .empty-message {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  text-align: center;
+  background: #000000;
+  padding: 50%;
+  color: #bbbbbb;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+.error {
+  color: #ff6666;
 }
 
 /* Responsive Styles */

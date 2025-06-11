@@ -44,6 +44,7 @@ module.exports = defineConfig([
         localStorage: 'readonly',
         history: 'readonly',
         URL: 'readonly',
+        AbortController: 'readonly',
       }
     }
   },

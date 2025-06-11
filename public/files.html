@@ -14,11 +14,12 @@
   <div class="container">
     <div id="popup-viewer" class="popup-viewer">
       <button id="close-popup" class="close-popup"><span>×</span></button>
+      <button id="open-new-tab" class="open-new-tab"><span>↗</span></button>
       <button id="prev-image" class="nav-button prev-button"><span>‹</span></button>
       <button id="next-image" class="nav-button next-button"><span>›</span></button>
       <div class="popup-container">
-        <img id="popup-image" class="popup-image" src="" alt="">
-        <video id="popup-video" class="popup-video" src="" alt="" controls autoplay></video>
+        <img id="popup-image" class="popup-image" src="" alt="" draggable="false">
+        <video id="popup-video" class="popup-video" src="" alt="" draggable="false" controls autoplay></video>
       </div>
       <div class="image-info">
         <div id="image-title" class="image-title"></div>
@@ -30,12 +31,13 @@
     </div>
     <div class="file-browser">
       <div class="sort-toolbar"></div>
-      <div class="file-list" id="fileList">
+      <div id="fileList" class="file-list">
         <div class="loading">Loading...</div>
       </div>
     </div>
   </div>
   <script defer src="/gdl/js/min/files.min.js"></script>
+  <!--
   <footer>
     <div class="footer-content">
       <div class="footer-copyright">
@@ -49,5 +51,6 @@
       </div>
     </div>
   </footer>
+  -->
 </body>
 </html>
