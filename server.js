@@ -4,7 +4,7 @@ const cors = require('cors');
 const server = require('http').createServer(app);
 const path = require('path');
 const fs = require('fs').promises;
-const logger = require('morgan');
+const morgan = require('morgan');
 const session = require('express-session');
 const debug = require('debug')('gdl-api:server');
 const chalk = require('chalk');
@@ -27,8 +27,19 @@ app.use(session({
     httpOnly: true
   }
 }));
+morgan.token('full-url', (req) => `${req.protocol}://${req.get('host')}${req.originalUrl}`);
+morgan.token('client-ip', (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress);
+morgan.token('user-agent', (req) => req.get('user-agent'))
+app.use(morgan((tokens, req, res) => {
+  return [
+    debug(chalk.green(`IP: ${tokens['client-ip'](req, res)}`)),
+    debug(`${tokens.method(req, res)} ${tokens['full-url'](req, res)}`),
+    debug(chalk.yellow(`Status: ${tokens.status(req, res)}`)),
+    debug(chalk.red(`Response Time: ${tokens['response-time'](req, res)} ms`)),
+    debug(chalk.gray(`User-Agent: ${tokens['user-agent'](req, res)}`))
+  ]
+}));
 app.use(express.json({ limit: '1mb' }));
-app.use(logger('dev'));
 app.use((req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=180'); next(); });
 app.use(BASE_PATH, express.static(path.join(__dirname, 'public'), {
   etag: true,
@@ -36,7 +47,7 @@ app.use(BASE_PATH, express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
 }));
 app.use(`${BASE_PATH}/api`, async (req, res, next) => {
-  if ((req.headers['user-agent'] || '').toLowerCase().includes('discordbot')) { 
+  if ((req.headers['user-agent']).toLowerCase().includes('discordbot')) { 
     return next();
   }
   if (req.path.startsWith('/auth/')) { 
@@ -101,7 +112,7 @@ const displayBanner = () => {
   console.log(`${chalk.gray('⚡ ')} ${chalk.white('Status:')}  ${chalk.green('Online')}`);
   console.log(`${chalk.gray('✨ ')} ${chalk.white('Mode:')}  ${chalk.green(NODE_ENV)}`);
   console.log(`${chalk.gray('🔗 ')} ${chalk.white('URL:')}  ${chalk.green(`https://${HOST}${BASE_PATH}/`)}`);
-  console.log(`${chalk.gray('⚙️  ')} ${chalk.white('Port:')}  ${chalk.green(PORT)}`);
+  console.log(`${chalk.gray('⚙️ ')} ${chalk.white('Port:')}  ${chalk.green(PORT)}`);
   console.log(`${chalk.gray('📂 ')} ${chalk.white('Directory:')}  ${chalk.green(`${GALLERY_DL_DIR}/`)}`);
   console.log(chalk.dim('━'.repeat(60)));
 }

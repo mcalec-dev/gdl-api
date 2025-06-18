@@ -3,12 +3,20 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const debug = require('debug')('gdl-api:api:random');
-const { GALLERY_DL_DIR } = require('../../config');
+const { GALLERY_DL_DIR, DISALLOWED_DIRS, DISALLOWED_FILES, DISALLOWED_EXTENSIONS } = require('../../config');
 const { hasAllowedExtension, isExcluded } = require('../../utils/fileUtils');
 const { getUserPermission } = require('../../utils/authUtils');
 const NodeCache = require('node-cache');
 
 const fileListCache = new NodeCache({ stdTTL: 3600 * 24, checkperiod: 3600 }); // 24 hours TTL, check every hour
+
+// Helper function to check if a file is disallowed based on its extension
+const isDisallowedExtension = (filename) => {
+  const ext = path.extname(filename).toLowerCase();
+  return DISALLOWED_EXTENSIONS.some(disallowedExt =>
+    ext === disallowedExt.toLowerCase() || ext === `.${disallowedExt.toLowerCase()}`
+  );
+};
 
 // Function to refresh the cache periodically
 async function refreshCache() {
@@ -17,7 +25,7 @@ async function refreshCache() {
   for (const permission of permissions) {
     const cacheKey = `fileList_${permission}`;
     try {
-      const files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, permission); // Reset depth to 0
+      const files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, permission);
       fileListCache.set(cacheKey, files);
       debug(`Cache refreshed for ${cacheKey}`);
     } catch (error) {
@@ -33,12 +41,12 @@ refreshCache().then(() => {
 });
 setInterval(refreshCache, 30 * 60 * 1000);
 
-async function getCachedFileList(isAuthenticated, permission) {
-  const cacheKey = `fileList_${isAuthenticated}_${permission}`;
+async function getCachedFileList(permission) {
+  const cacheKey = `fileList_${permission}`;
   let files = fileListCache.get(cacheKey);
   if (files === undefined) {
     try {
-      files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, isAuthenticated, permission); // Reset depth to 0
+      files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, permission);
       fileListCache.set(cacheKey, files);
       debug(`Cache created for ${cacheKey}`);
     } catch (error) {
@@ -49,8 +57,8 @@ async function getCachedFileList(isAuthenticated, permission) {
   return files;
 }
 
-async function getRandomImagePath(isAuthenticated, permission) {
-  const files = await getCachedFileList(isAuthenticated, permission);
+async function getRandomImagePath(permission) {
+  const files = await getCachedFileList(permission);
   if (files.length === 0) {
     throw new Error('No files available');
   }
@@ -59,10 +67,9 @@ async function getRandomImagePath(isAuthenticated, permission) {
 }
 
 router.get('/', async (req, res) => {
-  const isAuthenticated = req.session && req.session.authenticated;
   try {
     const permission = await getUserPermission(req);
-    const randomImage = await getRandomImagePath(isAuthenticated, permission);
+    const randomImage = await getRandomImagePath(permission);
 
     // Get file stats only for the selected random image
     const stats = await fs.stat(randomImage.path);
@@ -72,6 +79,7 @@ router.get('/', async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const collection = pathParts[0];
     const author = pathParts[1] || '';
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json({
       file: path.basename(randomImage.path),
       path: `/gdl/api/files/${relativePath}`,
@@ -92,7 +100,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-async function getAllImagesInDirectory(dir, results = [], depth = 0, isAuthenticated = false, permission = 'default') {
+async function getAllImagesInDirectory(dir, results = [], depth = 0, permission = 'default') {
   if (depth >= 10) return results; // Increase the depth limit to 10
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -106,16 +114,20 @@ async function getAllImagesInDirectory(dir, results = [], depth = 0, isAuthentic
         const fullPath = path.join(dir, entry.name);
         const relativePath = path.relative(GALLERY_DL_DIR, fullPath);
 
-        if (await isExcluded(relativePath, isAuthenticated, permission)) {
+        // Check if the entry should be excluded using the same logic as files.js
+        if (await isExcluded(relativePath, permission) ||
+            DISALLOWED_DIRS.includes(entry.name) ||
+            (entry.isFile() && (DISALLOWED_FILES.includes(entry.name) || isDisallowedExtension(entry.name)))) {
+          debug(`Excluded entry: ${entry.name}`);
           return null; // Skip excluded entries
         }
 
         if (entry.isDirectory()) {
           // If it's a directory, recursively call this function
-          return getAllImagesInDirectory(fullPath, results, depth + 1, isAuthenticated, permission);
+          return getAllImagesInDirectory(fullPath, results, depth + 1, permission);
         }
 
-        if (entry.isFile() && hasAllowedExtension(fullPath, isAuthenticated)) {
+        if (entry.isFile() && hasAllowedExtension(fullPath, permission)) {
           try {
             const stats = await fs.stat(fullPath);
             // If it's a file and has an allowed extension, return the file info

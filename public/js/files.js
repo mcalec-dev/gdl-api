@@ -201,40 +201,29 @@ async function loadDirectory(path = '', callback) {
   }
 }
 function setupFileClickHandlers() {
-  fileList.querySelectorAll('.file-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      const itemPath = item.dataset.path;
-      if (item.classList.contains('directory')) {
-        e.preventDefault();
-        const navPath = generateBrowseUrl(itemPath);
-        window.history.pushState({ path: `${itemPath}/`, sortBy: currentSort, sortDir: currentSortDir }, '', navPath);
-        loadDirectory(itemPath);
-      } else if (item.classList.contains('file')) {
-        const fileType = getFileType(itemPath);
-        if (fileType === 'image' || fileType === 'video') {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const allMedia = Array.from(document.querySelectorAll('.file-item.file')).filter(el => 
-            ['image', 'video'].includes(getFileType(el.dataset.path))
-          );
-          
-          currentImageList = allMedia.map(media => {
-            const mediaPath = media.dataset.path;
-            const originalUrl = media.querySelector('.file-preview')?.src?.split('?')[0] || `/gdl/api/files/${mediaPath}`;
-            return {
-              url: originalUrl,
-              name: mediaPath.split('/').pop(),
-              path: mediaPath,
-              type: getFileType(mediaPath)
-            };
-          });
-          
-          currentImageIndex = allMedia.findIndex(media => media === item);
-          showImagePopup(currentImageIndex);
-        }
-      }
-    });
+  const fileList = document.getElementById('fileList');
+  fileList.addEventListener('click', event => {
+    const media = event.target.closest('.file-item[data-type="image"], .file-item[data-type="video"]');
+    if (media) {
+      event.preventDefault();
+      // Create a list of media items with minimal info, avoiding immediate loading
+      currentImageList = Array.from(fileList.querySelectorAll('.file-item[data-type="image"], .file-item[data-type="video"]'))
+        .map(media => {
+          const preview = media.querySelector('img, video');
+          const mediaPath = media.dataset.path;
+          const encodedPath = mediaPath.split('/').map(part => encodeURIComponent(part)).join('/');
+          return {
+            name: mediaPath.split('/').pop(),
+            path: mediaPath,
+            type: getFileType(mediaPath),
+            // Store info needed to construct URL when needed
+            encodedPath,
+            previewSrc: preview?.dataset.src?.split('?')[0] || null
+          };
+        });
+      currentImageIndex = currentImageList.findIndex(item => item.path === media.dataset.path);
+      showImagePopup(currentImageIndex);
+    }
   });
 }
 // Handle browser navigation
@@ -264,69 +253,113 @@ const currentPath = initialLocation === basePath || initialLocation === `${baseP
 loadDirectory(currentPath);
 
 function setupLazyLoading() {
-  const observer = new IntersectionObserver((entries) => {
+  // Disconnect any existing observers
+  if (window.lazyLoadObserver) {
+    window.lazyLoadObserver.disconnect();
+  }
+
+  window.lazyLoadObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-        if (img.dataset.src) {
+      const element = entry.target;
+        if (entry.isIntersecting) {
+        // Only load if not already loaded
+        if (element.classList.contains('loading') && element.dataset.src && !element.src) {
           const controller = new AbortController();
-          imageLoadControllers.set(img, controller);
-          img.src = img.dataset.src;
-          img.onload = () => {
-            img.classList.remove('loading');
-            imageLoadControllers.delete(img);
-          };
-          img.onerror = () => {
-            img.classList.add('error');
-            imageLoadControllers.delete(img);
-          };
-          observer.unobserve(img);
+          imageLoadControllers.set(element, controller);
+          
+          if (element.tagName.toLowerCase() === 'video') {
+            // For videos, load metadata first
+            element.preload = 'metadata';
+            element.src = element.dataset.src;
+            element.muted = true;
+            element.classList.remove('loading');
+            imageLoadControllers.delete(element);
+          } else {
+            // For images
+            element.src = element.dataset.src;
+            element.onload = () => {
+              element.classList.remove('loading');
+              imageLoadControllers.delete(element);
+            };
+            element.onerror = () => {
+              console.error('Failed to load:', element.dataset.src);
+              element.classList.remove('loading');
+              element.classList.add('error');
+              imageLoadControllers.delete(element);
+            };
+          }
+        }
+      } else {
+        // When element leaves viewport
+        if (!element.classList.contains('zoomed')) { // Don't unload zoomed images
+          if (element.tagName.toLowerCase() === 'video') {
+            element.pause();
+            element.currentTime = 0;
+            element.removeAttribute('src');
+            element.preload = 'none';
+            element.load(); // Force browser to reset video
+          } else {
+            element.removeAttribute('src');
+          }
+          element.classList.add('loading');
         }
       }
     });
   }, {
-    rootMargin: '50px 0px',
+    rootMargin: '50px 0px', // Load items just before they enter the viewport
     threshold: 0.1
   });
-  document.querySelectorAll('img.file-preview.loading').forEach(img => {
-    observer.observe(img);
+
+  // Start observing all preview elements
+  document.querySelectorAll('.file-preview').forEach(element => {
+    window.lazyLoadObserver.observe(element);
   });
 }
 
 // Cancel all ongoing image loads
 function cancelImageLoads() {
-  imageLoadControllers.forEach((controller, img) => {
+  imageLoadControllers.forEach((controller, element) => {
     controller.abort();
-    img.src = ''; // Clear the src to stop loading
-    img.classList.add('loading'); // Reset to loading state
+    element.src = ''; // Clear the src to stop loading
+    if (element.tagName.toLowerCase() === 'video') {
+      element.load(); // Reset video element
+    }
+    element.classList.add('loading'); // Reset to loading state
   });
   imageLoadControllers.clear();
 }
 
-function generateBrowseUrl(path) {
-  // Construct proper URL
-  return path ? `${basePath}/${path}/` : basePath;
-}
-
 function handleDirectoryClick(event) {
-  // Ensure the click originated from a directory link
-  const target = event.target.closest('.file-item.directory a');
+  // Ensure the click originated from a directory item
+  const target = event.target.closest('.file-item.directory');
   if (!target) return;
 
   event.preventDefault();
-  const newPath = target.getAttribute('href');
-  if (!newPath) return;
-
+  const itemPath = target.dataset.path;
+  if (!itemPath) return;
+  
+  // Construct the new URL
+  const newPath = `${basePath}/${itemPath}`;
   // Clean the path before loading
-  const cleanPath = newPath.replace(new RegExp(`^${basePath}/?`), '');
-  loadDirectory(cleanPath, () => {
-    // Callback to scroll to top after directory is loaded
-    window.scrollTo(0, 0);
-  });
-  history.pushState({
-    path: cleanPath
-  }, '', newPath);
+  const cleanPath = itemPath.replace(new RegExp(`^${basePath}/?`), '');
+  
+  // Update state and load the directory
+  history.pushState({ path: cleanPath }, '', newPath);
+  loadDirectory(cleanPath);
+  // Scroll to top after state change
+  window.scrollTo(0, 0);
 }
+function getMediaUrl(item) {
+  return item.previewSrc || `/gdl/api/files/${item.encodedPath}`;
+}
+
+// Preload an image without displaying it
+function preloadMedia(item) {
+  if (!item || item.type === 'video') return; // Only preload images
+  const preloadImg = document.createElement('img');
+  preloadImg.src = getMediaUrl(item);
+}
+
 function showImagePopup(index) {
   if (index < 0 || index >= currentImageList.length) return;
   
@@ -339,27 +372,37 @@ function showImagePopup(index) {
   const prevButton = document.getElementById('prev-image');
   const nextButton = document.getElementById('next-image');
 
-  // Hide both video and image elements initially
+  // Hide both media elements initially
   popupImage.style.display = 'none';
   popupVideo.style.display = 'none';
-
+  // Load and show the appropriate media element
+  const url = getMediaUrl(item);
   if (item.type === 'video') {
-    popupVideo.src = item.url;
+    popupVideo.src = url;
     popupVideo.style.display = 'block';
   } else {
-    popupImage.src = item.url;
+    popupImage.src = url;
     popupImage.style.display = 'block';
   }
-  
+
   imageTitle.textContent = item.name;
   imageCounter.textContent = `${index + 1} / ${currentImageList.length}`;
-  
+
   // Update navigation buttons
   prevButton.disabled = index === 0;
   nextButton.disabled = index === currentImageList.length - 1;
   
+  // Show popup if not already visible
   popupViewer.style.display = 'flex';
   currentImageIndex = index;
+
+  // Preload adjacent images
+  if (index > 0) {
+    preloadMedia(currentImageList[index - 1]);
+  }
+  if (index < currentImageList.length - 1) {
+    preloadMedia(currentImageList[index + 1]);
+  }
 }
 
 function setupImagePopupEvents() {
@@ -370,6 +413,20 @@ function setupImagePopupEvents() {
   const nextButton = document.getElementById('next-image');
   const popupImage = document.getElementById('popup-image');
   const popupVideo = document.getElementById('popup-video');
+  let isZoomed = false;
+
+  function closePopup() {
+    if (!popupVideo.paused) {
+      popupVideo.pause();
+    }
+    // Reset zoom state before closing
+    if (isZoomed) {
+      handleZoom(0, 0);
+    }
+    popupImage.src = ''; // Reset image URL
+    popupVideo.src = ''; // Reset video URL
+    popupViewer.style.display = 'none';
+  }
 
   // Open image in new tab
   newTabButton.addEventListener('click', () => {
@@ -378,33 +435,32 @@ function setupImagePopupEvents() {
   });
 
   // Close popup
-  closeButton.addEventListener('click', () => {
-    if (!popupVideo.paused) {
-      popupVideo.pause();
-    }
-    popupImage.src = ''; // Reset image URL
-    popupVideo.src = ''; // Reset video URL
-    popupViewer.style.display = 'none';
-  });
+  closeButton.addEventListener('click', closePopup);
   
   // Close on background click
   popupViewer.addEventListener('click', (e) => {
     if (e.target === popupViewer) {
-      popupImage.src = ''; // Reset image URL
-      popupVideo.src = ''; // Reset video URL
-      popupViewer.style.display = 'none';
+      closePopup();
     }
   });
   
   // Navigation
   prevButton.addEventListener('click', () => {
     if (currentImageIndex > 0) {
+      // Reset zoom state before navigating
+      if (isZoomed) {
+        handleZoom(0, 0);
+      }
       showImagePopup(currentImageIndex - 1);
     }
   });
   
   nextButton.addEventListener('click', () => {
     if (currentImageIndex < currentImageList.length - 1) {
+      // Reset zoom state before navigating
+      if (isZoomed) {
+        handleZoom(0, 0);
+      }
       showImagePopup(currentImageIndex + 1);
     }
   });
@@ -412,60 +468,92 @@ function setupImagePopupEvents() {
   // Keyboard navigation
   document.addEventListener('keydown', (e) => {
     if (popupViewer.style.display === 'flex') {
-      const popupVideo = document.getElementById('popup-video');
       switch(e.key) {
         case 'Escape':
-          if (!popupVideo.paused) {
-            popupVideo.pause();
-          }
-          popupImage.src = ''; // Reset image URL
-          popupVideo.src = ''; // Reset video URL
-          popupViewer.style.display = 'none';
+          closePopup();
           break;
         case 'ArrowLeft':
           if (currentImageIndex > 0) {
+            // Reset zoom state before navigating
+            if (isZoomed) {
+              handleZoom(0, 0);
+            }
             showImagePopup(currentImageIndex - 1);
           }
           break;
         case 'ArrowRight':
           if (currentImageIndex < currentImageList.length - 1) {
+            // Reset zoom state before navigating
+            if (isZoomed) {
+              handleZoom(0, 0);
+            }
             showImagePopup(currentImageIndex + 1);
           }
           break;
       }
     }
   });
-
-  // Image zoom toggle
-  let isZoomed = false;
-  popupImage.addEventListener('click', (e) => {
+  
+  function handleZoom(x, y) {
     if (isZoomed) {
       popupImage.classList.remove('zoomed');
-      popupImage.style.transform = 'none'; // Reset zoom
+      popupImage.style.transform = 'none';
       popupImage.style.cursor = 'zoom-in';
+      popupImage.style.maxWidth = '';
+      popupImage.style.maxHeight = '';
+      popupImage.style.width = '';
+      popupImage.style.height = '';
+      popupImage.style.objectFit = '';
       isZoomed = false;
+      // Remove mousemove listener when unzoomed
+      popupImage.removeEventListener('mousemove', handleMouseMove);
     } else {
-      const rect = popupImage.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-      const zoomFactor = 2.5; // Adjust zoom factor as needed
+      // Set dimensions to fill viewport
+      popupImage.style.maxWidth = '95vw';
+      popupImage.style.maxHeight = '95vh';
+      popupImage.style.width = '95vw';
+      popupImage.style.height = '95vh';
+      popupImage.style.objectFit = 'contain';
       
+      // Get dimensions after setting max size
+      const rect = popupImage.getBoundingClientRect();
+      
+      // Calculate relative position of click within the viewport-sized image
+      const relativeX = (x - rect.left) / rect.width;
+      const relativeY = (y - rect.top) / rect.height;
+      
+      // Apply zoom centered on click position
       popupImage.classList.add('zoomed');
-      popupImage.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
-      popupImage.style.transform = `scale(${zoomFactor})`;
+      updateZoomPosition(relativeX, relativeY);
       popupImage.style.cursor = 'zoom-out';
       isZoomed = true;
+      
+      // Add mousemove listener when zoomed
+      popupImage.addEventListener('mousemove', handleMouseMove);
     }
-  });
+  }
 
-  popupImage.addEventListener('mousemove', (e) => {
-    if (isZoomed) {
-      const rect = popupImage.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
+  function handleMouseMove(e) {
+    if (!isZoomed) return;
+    
+    const rect = popupImage.getBoundingClientRect();
+    const relativeX = (e.clientX - rect.left) / rect.width;
+    const relativeY = (e.clientY - rect.top) / rect.height;
+    updateZoomPosition(relativeX, relativeY);
+  }
 
-      popupImage.style.transformOrigin = `${(offsetX / rect.width) * 100}% ${(offsetY / rect.height) * 100}%`;
-    }
+  function updateZoomPosition(relativeX, relativeY) {
+    // Ensure the relative positions are within bounds
+    const boundedX = Math.max(0, Math.min(1, relativeX));
+    const boundedY = Math.max(0, Math.min(1, relativeY));
+    
+    popupImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`;
+    popupImage.style.transform = 'scale(2)';
+  }
+
+  // Mouse events for zoom
+  popupImage.addEventListener('click', (e) => {
+    handleZoom(e.clientX, e.clientY);
   });
 }
 
@@ -507,37 +595,41 @@ function renderDirectory(contents, path) {
   // Render the file list
   let html = '';
   sortedContents.forEach(item => {
-    const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);
-    const itemPath = path ? `${path}/${item.name}` : item.name;
-    let previewUrl = item.type === 'file' ? `${item.url || `/gdl/api/files/${itemPath}`}` : null;
-    if (previewUrl && itemType === 'image' && !item.name.toLowerCase().endsWith('.gif')) {
-      previewUrl += '?x=50';
+    const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);    const itemPath = path ? `${path}/${item.name}` : item.name;
+    let previewUrl = null;
+    if (item.type === 'file') {
+      // Ensure proper URL encoding of the path
+      const encodedPath = itemPath.split('/').map(part => encodeURIComponent(part)).join('/');
+      previewUrl = item.url || `/gdl/api/files/${encodedPath}`;
+      if (itemType === 'image' && !item.name.toLowerCase().endsWith('.gif')) {
+        previewUrl += '?x=50';
+      }
     }
     
-    html += `
-      <div class="file-item ${item.type}" data-path="${itemPath}">
-        ${previewUrl ? `
-          ${itemType === 'video' ? `
-            <div class="video-preview-container">
-              <video 
-                class="file-preview video" 
-                src="${previewUrl}" 
-                preload="metadata"
-                onmouseover="this.play(); this.muted=false;" 
-                onmouseout="this.pause(); this.currentTime=0; this.muted=true;"
-                draggable="false"
-              ></video>
-            </div>
-          ` : itemType === 'image' ? `
-            <div class="preview-container">
-              <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
-            </div>
+    html += `      <div class="file-item ${item.type}" data-type="${itemType}" data-path="${itemPath}">        ${itemType === 'directory' ? `
+          <div class="file-icon ${itemType}">${icons[itemType]}</div>
+        ` : previewUrl ? `
+            ${itemType === 'video' ? `
+              <div class="video-preview-container">
+                <video 
+                  class="file-preview video loading" 
+                  data-src="${previewUrl}" 
+                  preload="none"
+                  onmouseover="if(this.src) { this.play(); this.muted=false; }" 
+                  onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
+                  draggable="false"
+                ></video>
+              </div>
+            ` : itemType === 'image' ? `
+              <div class="preview-container">
+                <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+              </div>
+            ` : `
+              <div class="file-icon ${itemType}">${icons[itemType]}</div>
+            `}
           ` : `
             <div class="file-icon ${itemType}">${icons[itemType]}</div>
           `}
-        ` : `
-          <div class="file-icon ${itemType}">${icons[itemType]}</div>
-        `}
         <div class="file-details">
           <div class="file-name">${item.name}</div>
           <div class="file-meta">

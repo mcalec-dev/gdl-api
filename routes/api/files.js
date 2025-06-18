@@ -115,7 +115,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
     if (!realPath.startsWith(normalizedGalleryDir)) {
       debug(`Access attempt outside of GALLERY_DL_DIR: ${realPath}`);
       return res.status(403).json({
-        error: 'Access denied - Path outside gallery'
+        message: 'Not Found',
+        status: 404
       });
     }
   } else {
@@ -125,17 +126,19 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
   // Security: Prevent directory traversal
   if (!pathUtils.isSubPath(realPath, normalizedGalleryDir)) {
     debug(`Directory traversal attempt: ${realPath}`);
-    return res.status(403).json({
-      error: 'Access denied - Path outside gallery'
-    });
+    return res.status(404).json({
+      message: 'Not Found',
+      status: 404
+  });
   }
 
   // Check if collection/path is excluded based on permissions
   const relativePath = path.relative(normalizedGalleryDir, realPath).replace(/\\/g, '/');
   if (await isExcluded(relativePath, permission)) {
     debug(`Access denied to: ${relativePath}`);
-    return res.status(403).json({
-      error: 'Access denied - Collection excluded'
+    return res.status(404).json({
+      message: 'Not Found',
+      status: 404
     });
   }
 
@@ -144,8 +147,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
   } catch (error) {
     debug(`Path not found: ${realPath}`, error);
     return res.status(404).json({
-      error: 'Path not found',
-      path: `/gdl/api/files/${relativePath}`
+      message: 'Not Found',
+      status: 404
     });
   }
 
@@ -209,8 +212,9 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       DISALLOWED_FILES.includes(path.basename(realPath)) ||
       isDisallowedExtension(path.basename(realPath))) {
       debug(`Access denied to file: ${realPath}`);
-      return res.status(403).json({
-        error: 'Access denied - File type not allowed'
+      return res.status(404).json({
+        message: 'Not Found',
+        status: 404
       });
     }
 

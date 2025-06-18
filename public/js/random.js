@@ -36,7 +36,7 @@ function showMedia(data) {
     mediaElement.autoplay = false;
   }
   imageInfo.innerHTML = `
-    <span id="image-author">${data.author}</span><span> on </span><span id="image-collection" style="text-transform:capitalize;">${data.collection}</span><br>
+    <span id="image-author">${data.author}</span><span> on </span><span id="image-collection">${data.collection}</span><br>
     <span id="image-size">${formatFileSize(data.size)}</span>
   `;
   function formatFileSize(bytes) {
@@ -72,15 +72,15 @@ async function loadRandomMedia() {
     const response = await fetch(API_URL);
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
     const data = await response.json();
-    if (historyIndex === -1 || !history[historyIndex] || history[historyIndex].url !== data.url) {
-      if (historyIndex < history.length - 1) {
-        history = history.slice(0, historyIndex + 1);
-      }
-      history.push(data);
-      if (history.length > HISTORY_LIMIT) history.shift();
-      historyIndex = history.length - 1;
-      saveHistory();
+    if (historyIndex < history.length - 1) {
+      history = history.slice(0, historyIndex + 1);
     }
+    history.push(data);
+    if (history.length > HISTORY_LIMIT) {
+      history.shift();
+    }
+    historyIndex = history.length - 1;
+    saveHistory();
     showMedia(data);
   } catch (error) {
     debug('Error loading random media:', error);

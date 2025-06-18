@@ -2,12 +2,7 @@ const dotenv = require('dotenv');
 const debug = require('debug')('gdl-api:config');
 dotenv.config();
 const parseJsonEnv = (envVar) => {
-  try {
-    return JSON.parse(envVar) || null;
-  } catch (error) {
-    debug(`Error parsing JSON from environment variable: ${error.message}`);
-    return null;
-  }
+  return JSON.parse(envVar) || null;
 };
 const NODE_ENV = process.env.NODE_ENV; 
 debug('Node environment:', NODE_ENV);
