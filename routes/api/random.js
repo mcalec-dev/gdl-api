@@ -21,15 +21,15 @@ const isDisallowedExtension = (filename) => {
 // Function to refresh the cache periodically
 async function refreshCache() {
   debug('Refreshing file list cache');
-  const permissions = []; // Add all possible permissions
+  const permissions = ['default', 'admin', 'all']; // Add all possible permissions
   for (const permission of permissions) {
     const cacheKey = `fileList_${permission}`;
     try {
-      const files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, permission);
+      const files = await getAllImagesInDirectory(GALLERY_DL_DIR, permission, 0);
       fileListCache.set(cacheKey, files);
-      debug(`Cache refreshed for ${cacheKey}`);
+      debug(`File list cache refreshed for ${cacheKey}`);
     } catch (error) {
-      debug(`Error refreshing cache for ${cacheKey}:`, error);
+      debug(`Error refreshing file list cache for ${cacheKey}:`, error);
     }
   }
 }
@@ -44,15 +44,9 @@ setInterval(refreshCache, 30 * 60 * 1000);
 async function getCachedFileList(permission) {
   const cacheKey = `fileList_${permission}`;
   let files = fileListCache.get(cacheKey);
+  // If cache is empty, do NOT scan the directory, just return empty (fast)
   if (files === undefined) {
-    try {
-      files = await getAllImagesInDirectory(GALLERY_DL_DIR, [], 0, permission);
-      fileListCache.set(cacheKey, files);
-      debug(`Cache created for ${cacheKey}`);
-    } catch (error) {
-      debug(`Error creating cache for ${cacheKey}:`, error);
-      files = [];
-    }
+    return [];
   }
   return files;
 }
@@ -67,18 +61,27 @@ async function getRandomImagePath(permission) {
 }
 
 router.get('/', async (req, res) => {
+  debug('Random image request received');
   try {
     const permission = await getUserPermission(req);
     const randomImage = await getRandomImagePath(permission);
-
-    // Get file stats only for the selected random image
-    const stats = await fs.stat(randomImage.path);
+    let stats = { size: randomImage.size };
+    // Only call fs.stat if size is missing
+    if (typeof randomImage.size !== 'number') {
+      try {
+        const statResult = await fs.stat(randomImage.path);
+        stats.size = statResult.size;
+      } catch {
+        stats.size = null;
+      }
+    }
 
     const relativePath = path.relative(GALLERY_DL_DIR, randomImage.path).replace(/\\/g, '/');
     const pathParts = relativePath.split('/');
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const collection = pathParts[0];
     const author = pathParts[1] || '';
+
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json({
       file: path.basename(randomImage.path),
@@ -88,7 +91,7 @@ router.get('/', async (req, res) => {
       size: stats.size,
       url: `${baseUrl}/gdl/api/files/${relativePath}`,
       timestamp: new Date().toISOString(),
-      type: path.extname(randomImage.path).slice(1).toLowerCase() || 'unknown'
+      type: randomImage.type || path.extname(randomImage.path).slice(1).toLowerCase() || 'unknown'
     });
     debug('Random image request completed');
   } catch (error) {
@@ -100,66 +103,53 @@ router.get('/', async (req, res) => {
   }
 });
 
-async function getAllImagesInDirectory(dir, results = [], depth = 0, permission = 'default') {
-  if (depth >= 10) return results; // Increase the depth limit to 10
+async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
+  if (depth >= 10) return [];
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
-    
-    const BATCH_SIZE = 10; // Adjust as needed
+    const BATCH_SIZE = 10;
+    let results = [];
     for (let i = 0; i < entries.length; i += BATCH_SIZE) {
       const batch = entries.slice(i, i + BATCH_SIZE);
-
-      // Use Promise.all to parallelize the processing of each entry in the batch
       const batchResults = await Promise.all(batch.map(async (entry) => {
         const fullPath = path.join(dir, entry.name);
         const relativePath = path.relative(GALLERY_DL_DIR, fullPath);
-
-        // Check if the entry should be excluded using the same logic as files.js
         if (await isExcluded(relativePath, permission) ||
             DISALLOWED_DIRS.includes(entry.name) ||
             (entry.isFile() && (DISALLOWED_FILES.includes(entry.name) || isDisallowedExtension(entry.name)))) {
-          debug(`Excluded entry: ${entry.name}`);
-          return null; // Skip excluded entries
+          return null;
         }
-
         if (entry.isDirectory()) {
-          // If it's a directory, recursively call this function
-          return getAllImagesInDirectory(fullPath, results, depth + 1, permission);
+          // Recursively get images from subdirectory
+          return await getAllImagesInDirectory(fullPath, permission, depth + 1);
         }
-
         if (entry.isFile() && hasAllowedExtension(fullPath, permission)) {
           try {
             const stats = await fs.stat(fullPath);
-            // If it's a file and has an allowed extension, return the file info
             return {
               path: fullPath,
               size: stats.size,
               type: path.extname(fullPath).slice(1).toLowerCase() || 'unknown'
             };
-          } catch (statError) {
-            debug(`Error getting stats for ${fullPath}:`, statError);
-            return null; // Skip if stat fails
+          } catch {
+            return null;
           }
         }
-        return null; // Skip if not a file or doesn't have allowed extension
+        return null;
       }));
-
-      // Process the results of the batch
-      batchResults.forEach(result => {
-        if (result && Array.isArray(result)) {
-          // If the result is an array (from a directory), concat the results
+      // Flatten and filter results
+      for (const result of batchResults) {
+        if (Array.isArray(result)) {
           results.push(...result);
         } else if (result) {
-          // If the result is a single file, push it to the results
           results.push(result);
         }
-      });
+      }
     }
-
     return results;
   } catch (error) {
     debug('Error scanning directory:', dir, error);
-    return results;
+    return [];
   }
 }
 

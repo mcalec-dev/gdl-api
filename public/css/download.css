@@ -1,0 +1,180 @@
+@import url('https://cdn.mcalec.dev/web/css/font/roboto.min.css');
+:root {
+  --primary-font: RobotoRegular, Arial, sans-serif;
+  --secondary-font: RobotoThin, Arial, sans-serif;
+  --bold-font: RobotoBold, Arial, sans-serif;
+  --primary-color: #121212;
+  --secondary-color: #1e1e1e;
+  --text-color: #ffffff;
+  --background-color: #121212;
+  --border-radius: 12px;
+  --container-gap: 20px;
+  --container-padding: 20px;
+}
+body {
+  font-family: var(--primary-font);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+.container {
+  max-width: 600px;
+  margin: 0 auto 18px auto;
+  padding: 20px 20px 20px 20px;
+  background: var(--secondary-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+h1 {
+  font-family: var(--secondary-font);
+  color: var(--text-color);
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin: 0 0 20px 0;
+  padding-top: 20px;
+}
+form#downloadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+label {
+  font-size: 1rem;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+#urlInput {
+  padding: 12px;
+  font-size: 16px;
+  border: 2px solid #333333;
+  border-radius: 4px;
+  outline: none;
+  background-color: #1e1e1e;
+  color: var(--text-color);
+}
+button[type="submit"] {
+  padding: 12px 24px;
+  font-size: 16px;
+  background-color: #0066cc;
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.25s;
+}
+button[type="submit"]:hover {
+  background-color: #0052a3;
+}
+.status-message {
+  margin-top: 10px;
+  color: #66b3ff;
+  font-size: 1rem;
+  min-height: 0;
+  text-align: center;
+  transition: margin 0.2s;
+}
+.status-message:empty {
+  margin-top: 0;
+  min-height: 0;
+  display: none;
+}
+#preview {
+  margin: 0 auto 0 auto;
+  position: relative;
+  background-color: #1e1e1e;
+  overflow: hidden;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 90vw;
+  max-height: calc(100vh - 175px - 20px);
+  transition: all 0.25s ease-in-out;
+  padding: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#preview.has-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+#preview .image-container {
+  margin: 0 auto;
+  position: relative;
+  background-color: #1e1e1e;
+  overflow: hidden;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 90vw;
+  max-height: calc(100vh - 180px - 20px);
+  transition: all 0.25s ease-in-out;
+}
+#preview .image-container.has-image {
+  cursor: pointer;
+}
+#preview img, #preview video {
+  max-width: 100%;
+  max-height: calc(70vh - 20px);
+  border-radius: 12px;
+  border: none;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  object-fit: contain;
+  background: #222;
+  transition: box-shadow 0.25s;
+}
+#preview .file-info {
+  color: #bbbbbb;
+  font-size: 0.95rem;
+  margin-top: 4px;
+  word-break: break-all;
+}
+#preview .error {
+  color: #ff6666;
+  font-weight: bold;
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  #preview {
+    max-width: 90vw;
+    max-height: calc(100vh - 120px);
+  }
+  #preview img, #preview video {
+    max-width: 100%;
+    max-height: calc(100vh - 120px);
+  }
+}
+#preview .file-info {
+  color: #bbbbbb;
+  font-size: 0.95rem;
+  margin-top: 4px;
+  word-break: break-all;
+}
+#preview .error {
+  color: #ff6666;
+  font-weight: bold;
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .container {
+    padding: 10px 2vw;
+  }
+  #preview img, #preview video {
+    max-height: 120px;
+  }
+}

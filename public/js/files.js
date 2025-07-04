@@ -1,7 +1,11 @@
+import { formatSize, formatDate, apiHost } from '../min/index.min.js';
+let frontendBasePath = '/gdl/files';
+let apiBasePath = '';
 const fileList = document.getElementById('fileList');
 const breadcrumb = document.getElementById('breadcrumb');
-const basePath = '/gdl/files';
-const apiBasePath = '/gdl/api/files';
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 const icons = {
   directory: '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
   image: '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-.55 0-1 .45-1 1v14c0 1.1.89 2 2 2h14c1.1 0-2-.9-2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
@@ -21,37 +25,11 @@ const SORT_STATES = {
   type: 'none',
   modified: 'none'
 };
-
 function getFileType(filename) {
   const ext = filename.split('.').pop().toLowerCase();
   if (['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'].includes(ext)) return 'image';
   if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
   return 'other';
-}
-
-function formatSize(bytes) {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  const finalFileSize = `${Math.round(size * 100 / 100)} ${units[unitIndex]}`;
-  return `${finalFileSize}`;
-}
-
-function formatDate(timestamp) {
-  const date = new Date(timestamp);
-  const options = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    timeZone: 'UTC'
-  };
-  return date.toLocaleString('en-US', options);
 }
 function getSortIcon(state) {
   switch (state) {
@@ -67,11 +45,11 @@ function updateBreadcrumb(path) {
   // Remove leading and trailing slashes and split
   const parts = path.split('/').filter(Boolean);
   let currentPath = '';
-  let breadcrumbHtml = `<a href="${basePath}/">Home</a>`;
+  let breadcrumbHtml = `<a href="${frontendBasePath}/">Home</a>`;
   parts.forEach((part, index) => {
     currentPath += `/${part}`;
     if (index < parts.length - 1) {
-      breadcrumbHtml += `<span>/</span><a href="${basePath}${currentPath}/">${part}</a>`;
+      breadcrumbHtml += `<span>/</span><a href="${frontendBasePath}${currentPath}/">${part}</a>`;
     } else {
       breadcrumbHtml += `<span>/</span><span>${part}</span><span>/</span>`;
     }
@@ -154,8 +132,9 @@ async function loadDirectory(path = '', callback) {
     // Clean and normalize path        
     path = path ? decodeURIComponent(path) : '';
     if (path) {
+      const frontendBasePathEscaped = escapeRegExp(frontendBasePath);
       path = path
-        .replace(new RegExp(`^${basePath}/?`), '')
+        .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
         .replace(/\/+/g, '/')
         .replace(/^\/|\/$/g, '');
     }
@@ -234,20 +213,22 @@ window.addEventListener('popstate', (event) => {
     currentSortDir = state.sortDir;
   }
   const location = window.location.pathname;
-  const currentPath = location === basePath || location === `${basePath}/` ?
+  const frontendBasePathEscaped = escapeRegExp(frontendBasePath);
+  const currentPath = location === frontendBasePath || location === `${frontendBasePath}/` ?
     '' :
     location
-      .replace(new RegExp(`^${basePath}/?`), '')
+      .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
       .replace(/\/+/g, '/')
       .replace(/^\/|\/$/g, '');
   loadDirectory(currentPath);
 });
 // Initial load
 const initialLocation = window.location.pathname;
-const currentPath = initialLocation === basePath || initialLocation === `${basePath}/` ?
+const frontendBasePathEscaped = escapeRegExp(frontendBasePath);
+const currentPath = initialLocation === frontendBasePath || initialLocation === `${frontendBasePath}/` ?
   '' :
   initialLocation
-    .replace(new RegExp(`^${basePath}/?`), '')
+    .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
     .replace(/\/+/g, '/')
     .replace(/^\/|\/$/g, '');
 loadDirectory(currentPath);
@@ -338,19 +319,23 @@ function handleDirectoryClick(event) {
   const itemPath = target.dataset.path;
   if (!itemPath) return;
   
-  // Construct the new URL
-  const newPath = `${basePath}/${itemPath}`;
+  // Construct the new URL (always with trailing slash)
+  let newPath = `${frontendBasePath}/${itemPath}`.replace(/\/+/g, '/');
+  if (!newPath.endsWith('/')) newPath += '/';
   // Clean the path before loading
-  const cleanPath = itemPath.replace(new RegExp(`^${basePath}/?`), '');
-  
+  const cleanPath = itemPath.replace(new RegExp(`^${frontendBasePath}/?`), '');
+
+  // Preserve current sort params
+  const url = new URL(window.location.href);
+  const params = url.search;
   // Update state and load the directory
-  history.pushState({ path: cleanPath }, '', newPath);
+  history.pushState({ path: cleanPath }, '', newPath + params);
   loadDirectory(cleanPath);
   // Scroll to top after state change
   window.scrollTo(0, 0);
 }
 function getMediaUrl(item) {
-  return item.previewSrc || `/gdl/api/files/${item.encodedPath}`;
+  return item.previewSrc || `${apiBasePath}/${item.encodedPath}`;
 }
 
 // Preload an image without displaying it
@@ -499,20 +484,20 @@ function setupImagePopupEvents() {
       popupImage.classList.remove('zoomed');
       popupImage.style.transform = 'none';
       popupImage.style.cursor = 'zoom-in';
-      popupImage.style.maxWidth = '';
       popupImage.style.maxHeight = '';
-      popupImage.style.width = '';
+      popupImage.style.maxWidth = '';
       popupImage.style.height = '';
+      popupImage.style.width = '';
       popupImage.style.objectFit = '';
       isZoomed = false;
       // Remove mousemove listener when unzoomed
       popupImage.removeEventListener('mousemove', handleMouseMove);
     } else {
       // Set dimensions to fill viewport
-      popupImage.style.maxWidth = '95vw';
       popupImage.style.maxHeight = '95vh';
-      popupImage.style.width = '95vw';
+      popupImage.style.maxWidth = '95vw';
       popupImage.style.height = '95vh';
+      popupImage.style.width = '95vw';
       popupImage.style.objectFit = 'contain';
       
       // Get dimensions after setting max size
@@ -576,6 +561,18 @@ function setupSortButtons() {
       currentSort = sortBy;
       currentSortDir = SORT_STATES[sortBy];
 
+      // Update URL query params
+      const url = new URL(window.location.href);
+      // Remove all sort params first
+      ['name','size','type','modified'].forEach(param => url.searchParams.delete(param));
+      if (SORT_STATES[sortBy] !== 'none') {
+        url.searchParams.set(sortBy, SORT_STATES[sortBy]);
+      }
+      // Always ensure trailing slash for directory URLs
+      let pathname = url.pathname;
+      if (!pathname.endsWith('/')) pathname += '/';
+      window.history.replaceState({}, '', pathname + url.search);
+
       // Re-render the directory with the new sort
       renderDirectory(currentDirectoryData.contents, currentDirectoryData.path);
     });
@@ -593,51 +590,56 @@ function renderDirectory(contents, path) {
   renderSortToolbar();
 
   // Render the file list
+
   let html = '';
   sortedContents.forEach(item => {
-    const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);    const itemPath = path ? `${path}/${item.name}` : item.name;
+    const itemType = item.type === 'directory' ? 'directory' : getFileType(item.name);
+    const itemPath = path ? `${path}/${item.name}` : item.name;
     let previewUrl = null;
     if (item.type === 'file') {
       // Ensure proper URL encoding of the path
       const encodedPath = itemPath.split('/').map(part => encodeURIComponent(part)).join('/');
-      previewUrl = item.url || `/gdl/api/files/${encodedPath}`;
+      previewUrl = item.url || `${apiBasePath}/${encodedPath}`;
+      // Only add ?x=50 for non-gif images
       if (itemType === 'image' && !item.name.toLowerCase().endsWith('.gif')) {
         previewUrl += '?x=50';
       }
+      // For gifs, leave previewUrl as is (no ?x=50) so they autoplay
     }
-    
-    html += `      <div class="file-item ${item.type}" data-type="${itemType}" data-path="${itemPath}">        ${itemType === 'directory' ? `
-          <div class="file-icon ${itemType}">${icons[itemType]}</div>
-        ` : previewUrl ? `
-            ${itemType === 'video' ? `
-              <div class="video-preview-container">
-                <video 
-                  class="file-preview video loading" 
-                  data-src="${previewUrl}" 
-                  preload="none"
-                  onmouseover="if(this.src) { this.play(); this.muted=false; }" 
-                  onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
-                  draggable="false"
-                ></video>
-              </div>
-            ` : itemType === 'image' ? `
-              <div class="preview-container">
-                <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
-              </div>
-            ` : `
-              <div class="file-icon ${itemType}">${icons[itemType]}</div>
-            `}
-          ` : `
-            <div class="file-icon ${itemType}">${icons[itemType]}</div>
-          `}
-        <div class="file-details">
-          <div class="file-name">${item.name}</div>
-          <div class="file-meta">
-            <span>${formatDate(item.modified)}</span><br>
-            <span>${item.type === 'file' ? formatSize(item.size) : 'Directory'}</span>
-          </div>
-        </div>
-      </div>`;
+
+    html += `<div class="file-item ${item.type}" data-type="${itemType}" data-path="${itemPath}">`;
+    if (itemType === 'directory') {
+      html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`;
+    } else if (previewUrl) {
+      if (itemType === 'video') {
+        html += `<div class="video-preview-container">
+          <video 
+            class="file-preview video loading" 
+            data-src="${previewUrl}"
+            preload="none"
+            onmouseover="if(this.src) { this.play(); this.muted=false; }" 
+            onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
+            draggable="false"
+          ></video>
+        </div>`;
+      } else if (itemType === 'image') {
+        html += `<div class="preview-container">
+          <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+        </div>`;
+      } else {
+        html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`;
+      }
+    } else {
+      html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`;
+    }
+    html += `<div class="file-details">
+      <div class="file-name">${item.name}</div>
+      <div class="file-meta">
+        <span>${formatDate(item.modified)}</span><br>
+        <span>${formatSize(item.size)}</span>
+      </div>
+    </div>
+    </div>`;
   });
   fileList.innerHTML = html;
 
@@ -653,7 +655,34 @@ function renderDirectory(contents, path) {
 }
 // Initialize popup events
 setupImagePopupEvents();
-// Initialize
-const initialPath = window.location.pathname.replace(basePath, '');
-loadDirectory(initialPath);
+// Only call loadDirectory once on initial load
+function getSortFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  let found = false;
+  ['name','size','type','modified'].forEach(param => {
+    const dir = params.get(param);
+    if (dir === 'asc' || dir === 'desc') {
+      currentSort = param;
+      currentSortDir = dir;
+      Object.keys(SORT_STATES).forEach(key => SORT_STATES[key] = 'none');
+      SORT_STATES[param] = dir;
+      found = true;
+    }
+  });
+  if (!found) {
+    currentSort = 'name';
+    currentSortDir = 'none';
+    Object.keys(SORT_STATES).forEach(key => SORT_STATES[key] = 'none');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const apiBase = await apiHost();
+  apiBasePath = `${apiBase}/files`;
+  getSortFromQuery();
+  // Use regex-safe frontendBasePath for replace
+  const frontendBasePathEscaped = escapeRegExp(frontendBasePath);
+  const initialPath = window.location.pathname.replace(new RegExp(`^${frontendBasePathEscaped}`), '');
+  loadDirectory(initialPath);
+});
 document.addEventListener('click', handleDirectoryClick);

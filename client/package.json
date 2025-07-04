@@ -1,0 +1,30 @@
+{
+  "name": "gdl-api-client",
+  "version": "1.0.0",
+  "description": "Gallery-DL API Client",
+  "author": "McAlec",
+  "license": "MIT",
+  "main": "electron.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --dir --config electron.json",
+    "build:win": "electron-builder --win --x64 --dir --config electron.json",
+    "build:linux": "electron-builder --linux --x64 --dir --config electron.json"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "electron-store": "^8.0.0",
+    "electron-updater": "^5.0.0",
+    "node-fetch": "^3.3.2",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "engines": {
+    "node": ">=23.0.0",
+    "npm": ">=6.0.0",
+    "pnpm": ">=6.0.0"
+  }
+}

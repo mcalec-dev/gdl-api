@@ -1,10 +1,11 @@
+import { formatSize, apiHost } from '../min/index.min.js';
+let API_URL = '';
 const loadImageBtn = document.getElementById('loadImageBtn');
 const backImageBtn = document.getElementById('backImageBtn');
 const forwardImageBtn = document.getElementById('forwardImageBtn');
 const imageContainer = document.getElementById('imageContainer');
 const loading = document.getElementById('loading');
 const imageInfo = document.getElementById('imageInfo');
-const API_URL = '/gdl/api/random';
 const HISTORY_KEY = 'randomMediaHistory';
 const HISTORY_LIMIT = 10;
 let history = [];
@@ -37,19 +38,8 @@ function showMedia(data) {
   }
   imageInfo.innerHTML = `
     <span id="image-author">${data.author}</span><span> on </span><span id="image-collection">${data.collection}</span><br>
-    <span id="image-size">${formatFileSize(data.size)}</span>
+    <span id="image-size">${formatSize(data.size)}</span>
   `;
-  function formatFileSize(bytes) {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-    const finalFileSize = `${Math.round(size * 100 / 100)} ${units[unitIndex]}`;
-    return `${finalFileSize}`;
-  }
   const loadHandler = () => {
     loading.style.display = 'none';
     mediaElement.style.display = 'block';
@@ -83,15 +73,15 @@ async function loadRandomMedia() {
     saveHistory();
     showMedia(data);
   } catch (error) {
-    debug('Error loading random media:', error);
-    handleMediaError();
+    handleMediaError(error);
   }
 }
-function handleMediaError() {
-  loading.textContent = 'Failed to load media. Try again.';
+function handleMediaError(error) {
+  loading.textContent = 'Failed to load media. Try again.', error;
   loading.classList.add('error');
   imageInfo.style.display = 'none';
   imageContainer.classList.remove('has-image');
+  console.error('Media load error:', error);
 }
 function showPreviousMedia() {
   if (historyIndex > 0) {
@@ -107,7 +97,13 @@ function showNextMedia() {
     showMedia(history[historyIndex], true);
   }
 }
-loadHistory();
-loadImageBtn.addEventListener('click', loadRandomMedia);
-backImageBtn.addEventListener('click', showPreviousMedia);
-forwardImageBtn.addEventListener('click', showNextMedia);
+
+// Initialize after resolving API host
+document.addEventListener('DOMContentLoaded', async () => {
+  const apiBase = await apiHost();
+  API_URL = `${apiBase}/random`;
+  loadHistory();
+  loadImageBtn.addEventListener('click', loadRandomMedia);
+  backImageBtn.addEventListener('click', showPreviousMedia);
+  forwardImageBtn.addEventListener('click', showNextMedia);
+});

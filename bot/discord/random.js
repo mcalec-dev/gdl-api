@@ -26,11 +26,20 @@ const commands = [
 ];
 
 // Use API configuration from main config
-const API_BASE_URL = `${HOST}${BASE_PATH}/api`;
-const ALT_API_BASE_URL = `${HOST}${BASE_PATH}/api`;
-
-// Command prefix
-const PREFIX = '!';
+function normalizeBaseUrl(host, basePath) {
+  let h = host || '';
+  let b = basePath || '';
+  // Ensure protocol is present
+  if (!/^https?:\/\//i.test(h)) {
+    h = 'https://' + h;
+  }
+  if (h.endsWith('/')) h = h.slice(0, -1);
+  if (b.endsWith('/')) b = b.slice(0, -1);
+  if (b && !b.startsWith('/')) b = '/' + b;
+  return `${h}${b}/api`;
+}
+const API_BASE_URL = normalizeBaseUrl(HOST, BASE_PATH);
+const ALT_API_BASE_URL = normalizeBaseUrl(HOST, BASE_PATH);
 
 // Add scale tracking to URL parameters
 let currentScale = 100; // Default scale
@@ -167,66 +176,6 @@ client.once(Events.ClientReady, () => {
   debug('Discord bot is ready!');
 });
 
-// Update the MessageCreate event handler
-client.on(Events.MessageCreate, async message => {
-    if (!message.content.startsWith(PREFIX) || message.author.bot) return;
-
-    const command = message.content.slice(PREFIX.length).toLowerCase();
-    
-    if (command === 'random') {
-        debug(`User ${message.author.tag} ran command: ${message.content}`);
-        
-        const loadingMessage = await message.reply('Loading...');
-        
-        try {
-            const imageData = await getRandomImage();
-            const imageUrl = new URL(imageData.url, 'https://api.mcalec.dev/').toString();
-            const isVideo = isVideoFile(imageData.file);
-            
-            const embed = new EmbedBuilder()
-                .setColor(0x0099FF)
-                .setTitle(imageData.file)
-                .setURL(imageUrl)
-                .addFields(
-                    { name: 'Author', value: imageData.author, inline: true },
-                    { name: 'Platform', value: imageData.collection, inline: true },
-                    { name: 'Size', value: `${Math.round(imageData.size / 1024)} KB`, inline: true },
-                    { name: 'Type', value: isVideo ? 'Video' : 'Image', inline: true },
-                    { name: 'Scale', value: '100%', inline: true }
-                )
-                .setTimestamp()
-                .setFooter({ text: `Gallery-DL Random Image | Requested by ${message.author.tag}` });
-
-            if (!isVideo) {
-                embed.setImage(imageUrl);
-            }
-
-            const actionRow = getActionRow();
-            
-            if (isVideo) {
-                // For videos, send a new message and delete the loading message
-                await message.channel.send({ 
-                    content: `Video: ${imageUrl}`,
-                    embeds: [embed], 
-                    components: [actionRow] 
-                });
-                await loadingMessage.delete();
-            } else {
-                // For images, edit the loading message with the embed
-                await loadingMessage.edit({ 
-                    content: null, // Remove the "Loading..." text
-                    embeds: [embed], 
-                    components: [actionRow] 
-                });
-            }
-        } catch (error) {
-            debug('Error handling random command:', error.message);
-            debug('Full error:', error);
-            await loadingMessage.edit(`Error fetching random image: ${error.message}`);
-        }
-    }
-});
-
 // Handle button interactions
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton() && !interaction.isChatInputCommand()) return;
@@ -302,7 +251,12 @@ client.on(Events.InteractionCreate, async interaction => {
         }
 
         if (interaction.isChatInputCommand() && interaction.commandName === 'random') {
-            await interaction.deferReply();
+            try {
+                await interaction.deferReply();
+            } catch {
+                debug('Failed to defer reply - interaction may have expired');
+                return;
+            }
             const imageData = await getRandomImage();
             await sendImageEmbed(interaction, imageData);
         }

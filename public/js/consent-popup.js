@@ -9,21 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setTheme();
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
   function createAndShowPopup() {
+    // Remove any existing overlay first
+    const existing = document.querySelector('.consent-overlay');
+    if (existing) existing.remove();
     const overlay = document.createElement('div');
     overlay.className = 'consent-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(5px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999999;
-    `;
     const popup = document.createElement('div');
     popup.className = 'consent-popup';
     popup.innerHTML = `
@@ -44,6 +34,27 @@ document.addEventListener('DOMContentLoaded', () => {
       overlay.remove();
       document.body.style.overflow = 'auto';
     };
+    // Close popup when clicking outside the popup
+    overlay.addEventListener('mousedown', function(e) {
+      if (e.target === overlay) {
+        overlay.remove();
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+
+  function createInfoButton() {
+    // Remove any existing info button first
+    const existingBtn = document.getElementById('consent-info-btn');
+    if (existingBtn) existingBtn.remove();
+    const btn = document.createElement('button');
+    btn.id = 'consent-info-btn';
+    btn.setAttribute('aria-label', 'Show content warning');
+    btn.innerHTML = '<span class="consent-info-icon">&#9432;</span>';
+    btn.onclick = () => {
+      createAndShowPopup();
+    };
+    document.body.appendChild(btn);
   }
   function setCookie(name, value, days) {
     const date = new Date();
@@ -57,4 +68,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!getCookie('content-warning-accepted')) { 
     createAndShowPopup();
   }
+  createInfoButton();
 });

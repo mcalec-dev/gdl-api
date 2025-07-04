@@ -1,19 +1,20 @@
 *.log
+*.bak
+*.tmp
+*.backup
+*.env
 
-.env
-.env.bak
-.DS_Store
 ecosystem.config.js
-ecosystem.config.js.bak
-package-lock.json
+.DS_Store
 run.bat
 favicon.png
 favicon.svg
 Thumbs.db
 
-/.vscode/
-/node_modules/
-/logs/
-/dist/
-/db/
+dist/
+node_modules/
 min/
+
+/.vscode/
+/logs/
+/db/

@@ -1,7 +1,7 @@
 @import url('https://cdn.mcalec.dev/web/css/font/roboto.min.css');
 :root {
-  --primary-font: RobotoThin, Arial, sans-serif;
-  --secondary-font: RobotoRegular, Arial, sans-serif;
+  --primary-font: RobotoRegular, Arial, sans-serif;
+  --secondary-font: RobotoThin, Arial, sans-serif;
 
   --bold-font: RobotoBold, Arial, sans-serif;
   --itlalic-font: RobotoRegularItalic, Arial, sans-serif;
@@ -23,7 +23,7 @@
 
 /* General Styles */
 body {
-  font-family: 'Roboto', Arial, sans-serif;
+  font-family: var(--primary-font), Arial, sans-serif;
   margin: 0;
   padding: 20px;
   background-color: var(--background-color);
@@ -44,7 +44,6 @@ body {
   background: var(--secondary-color);
   padding: 12px 16px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .breadcrumb a {
   color: #66b3ff;
@@ -66,7 +65,6 @@ body {
   gap: 7px;
   background: var(--secondary-color);
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
@@ -85,7 +83,6 @@ body {
   box-sizing: border-box;
   align-items: center;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .sort-button {
   display: flex;
@@ -106,7 +103,6 @@ body {
 .sort-button[data-active="true"] {
   background: #505050;
   border-color: #666666;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 .sort-button .sort-icon {
   margin-left: 8px;
@@ -140,10 +136,8 @@ body {
   box-sizing: border-box;
   max-width: 100%;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 .file-item:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   transform: scale(1.015);
 }
 .file-item .file-details.directory {
@@ -196,10 +190,8 @@ body {
   position: relative;
   overflow: hidden;
   background: #2d2d2d;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 .grid-view .file-item:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   transform: scale(1.05);
 }
 .grid-view .preview-container {
@@ -236,14 +228,12 @@ body {
 }
 .grid-view .file-name {
   font-size: 12px;
-  overflow-wrap: break-word;
-  word-break: break-all;
-  white-space: normal;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  overflow: hidden;
   color: var(--text-color);
   margin-bottom: 2px;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .grid-view .file-meta {
   font-size: 11px;
@@ -344,6 +334,7 @@ body {
   max-height: 95vh;
   width: auto;
   height: auto;
+  cursor: zoom-in;
   border: none;
   display: block;
   margin: 0 auto;
@@ -352,14 +343,12 @@ body {
   cursor: default;
   object-fit: contain;
 }
-.popup-image {
-  cursor: zoom-in;
-  transition: width 0.3s, height 0.3s;
-}
 .popup-image.zoomed {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  touch-action: none; /* Prevent browser touch actions when zoomed */
-  will-change: transform; /* Optimize performance */
+  touch-action: none;
+  will-change: transform;
 }
 .popup-viewer span {
   width: 30px;
@@ -403,16 +392,15 @@ body {
   position: absolute;
   top: 50%;
   right: 50%;
+  width: 50px;
+  height: 50px;
   padding: 0;
   margin: 0;
   transform: translateY(-50%);
-  width: 50px;
-  height: 50px;
   background: rgba(45, 45, 45, 0.9);
   border: 1px solid #404040;
   border-radius: 50%;
   color: var(--text-color);
-  font-size: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -455,33 +443,32 @@ body {
 
 /* Misc Styles */
 .loading, .error, .empty-message {
-  position: fixed;
+  position: absolute;
   left: 50%;
   top: 50%;
-  text-align: center;
-  background: #000000;
-  padding: 50%;
+  min-width: 180px;
+  max-width: 320px;
+  padding: 18px 28px;
+  background: #232323;
   color: #bbbbbb;
+  border: 1px solid #404040;
+  text-align: center;
   transform: translate(-50%, -50%);
   z-index: 1000;
-  pointer-events: none;
+  cursor: not-allowed;
 }
-.error {
-  color: #ff6666;
-}
+.loading { color: #666666; }
+.error { color: #ff6666; }
 
 /* Responsive Styles */
+@media (max-width: 1200px) {
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
 @media (max-width: 768px) {
   .file-list.grid-view {
     grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
-  }
-  .sort-toolbar {
-    left: 50%;
-    top: 50%;
-    display: flex;
-    place-items: center;
-    justify-content: center;
-    align-items: center;
   }
   .image-info {
     bottom: 15px;
@@ -491,12 +478,23 @@ body {
     max-width: 250px;
   }
 }
-
+@media (max-width: 540px) {
+  .file-list.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+    .sort-button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+}
 @media (max-width: 480px) {
   .file-list.grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
   .sort-button {
-    gap: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
   }
 }

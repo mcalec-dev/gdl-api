@@ -27,6 +27,8 @@ app.use(session({
     httpOnly: true
   }
 }));
+app.use(morgan('dev'));
+/*
 morgan.token('full-url', (req) => `${req.protocol}://${req.get('host')}${req.originalUrl}`);
 morgan.token('client-ip', (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress);
 morgan.token('user-agent', (req) => req.get('user-agent'))
@@ -39,6 +41,7 @@ app.use(morgan((tokens, req, res) => {
     debug(chalk.gray(`User-Agent: ${tokens['user-agent'](req, res)}`))
   ]
 }));
+*/
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=180'); next(); });
 app.use(BASE_PATH, express.static(path.join(__dirname, 'public'), {
@@ -47,9 +50,6 @@ app.use(BASE_PATH, express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
 }));
 app.use(`${BASE_PATH}/api`, async (req, res, next) => {
-  if ((req.headers['user-agent']).toLowerCase().includes('discordbot')) { 
-    return next();
-  }
   if (req.path.startsWith('/auth/')) { 
     return next();
   }
@@ -65,8 +65,10 @@ app.use(`${BASE_PATH}/api`, async (req, res, next) => {
     return;
   }
 });
-app.get(`/favicon.ico`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'favicon.ico')); res.setHeader('Content-Type', 'image/x-icon'); });
 app.get('/', (req, res) => { res.redirect(`${BASE_PATH}/`); });
+app.get(/^\/(?!gdl\/).*/, (req, res) => { res.redirect(`${BASE_PATH}${req.path}`); });
+app.get('/robots.txt', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'robots.txt')); res.setHeader('Content-Type', 'text/plain'); });
+app.get(`/favicon.ico`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'favicon.ico')); res.setHeader('Content-Type', 'image/x-icon'); });
 app.get(`${BASE_PATH}/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 app.get(`${BASE_PATH}/random/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'random.html')); });
 app.get(`${BASE_PATH}/stats/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'stats.html')); });
@@ -74,6 +76,7 @@ app.get(`${BASE_PATH}/search/`, (req, res) => { res.sendFile(path.join(__dirname
 app.get(`${BASE_PATH}/files/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'files.html')); });
 app.get(`${BASE_PATH}/files/*`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'files.html')); });
 app.get(`${BASE_PATH}/login/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'login.html')); });
+app.get(`${BASE_PATH}/download/`, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'download.html')); });
 app.use(BASE_PATH, require('./routes'));
 app.use((req, res, next) => { 
   next();

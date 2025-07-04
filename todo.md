@@ -19,3 +19,5 @@
 - `files.js` doesnt append the metadata even if it doesnt have an upscaler uri tag
 - use the frontend js files as modules so they can be used globally
 - fix relavancy in `search.js` to find more relavant directories (score them and show in json)
+- add testing modules (`*.test.js`) that only check for errors so its easier to just run the server
+- add virtual scrolling to the file browser so its efficient on resources

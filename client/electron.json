@@ -1,0 +1,32 @@
+{
+  "appId": "com.gdl.electronapp",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "electron.js"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "windows_x64",
+    "icon": "public/favicon.ico"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "linux_x64",
+    "icon": "public/favicon.ico"
+  },
+  "extraMetadata": {
+    "main": "electron.js"
+  }
+}

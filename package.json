@@ -1,7 +1,10 @@
 {
   "name": "gdl-api",
-  "version": "v0.2.3",
+  "version": "v0.2.5",
   "description": "Gallery-DL API",
+  "author": "McAlec",
+  "license": "MIT",
+  "main": "server.js",
   "scripts": {
     "start": "set DEBUG=gdl-api:* && node server.js",
     "server": "set DEBUG=gdl-api:* && node server.js",
@@ -11,15 +14,6 @@
     "minify": "set DEBUG=gdl-api:* && node minify.js",
     "telegram": "set DEBUG=gdl-api:* && node bot/telegram/index.js"
   },
-  "keywords": [
-    "gdl",
-    "api",
-    "gallery-dl",
-    "discord",
-    "bot"
-  ],
-  "author": "McAlec",
-  "license": "MIT",
   "dependencies": {
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
@@ -52,6 +46,8 @@
     "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=23.0.0"
+    "node": ">=23.0.0",
+    "npm": ">=6.0.0",
+    "pnpm": ">=6.0.0"
   }
 }

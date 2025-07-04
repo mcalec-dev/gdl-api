@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /gdl/api/*
+Disallow: /gdl/files/*

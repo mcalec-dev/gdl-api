@@ -9,29 +9,47 @@ const { normalizeUrl } = require('../../utils/urlUtils');
 const pathUtils = require('../../utils/pathUtils');
 const { getUserPermission } = require('../../utils/authUtils');
 const { resizeImage } = require('../../utils/imageUtils');
-
-// Helper function to check if file is an image
 const isImageFile = (filename) => {
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'];
-  return imageExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+  const n = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
+  return n.some(ext => filename.toLowerCase().endsWith(ext));
 };
-
-// DO NOT DELETE THIS CONSTANT
-//  will be used to check if a file is video or not
-/*const isVideoFile = (filename) => {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-    return true;
-};*/
-
-// Helper function to check if a file is disallowed based on its extension
+// DO NOT DELETE THIS
+// will replace existing video function in imageUtils.js/fileUtils.js
+/*
+const isVideoFile = (filename) => {
+  const n = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+  return n.some(ext => filename.toLowerCase().endsWith(ext));
+};
+*/
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase();
   return DISALLOWED_EXTENSIONS.some(disallowedExt =>
     ext === disallowedExt.toLowerCase() || ext === `.${disallowedExt.toLowerCase()}`
   );
 };
-
-// Collection/file route handler
+async function getDirectorySize(dirPath) {
+  let total = 0;
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        total += await getDirectorySize(entryPath);
+      } else if (entry.isFile()) {
+        try {
+          const stats = await fs.stat(entryPath);
+          total += stats.size;
+        } catch (error) {
+          debug('Error getting file stats:', error);
+        }
+      }
+    }
+  } catch (error) {
+    debug('Error reading directory:', dirPath, error);
+    return 0;
+  }
+  return total;
+}
 router.get(['/', ''], async (req, res) => {
   const permission = await getUserPermission(req);
   try {
@@ -40,7 +58,6 @@ router.get(['/', ''], async (req, res) => {
       debug('GALLERY_DL_DIR is not a directory');
       throw new Error('GALLERY_DL_DIR is not a directory');
     }
-
     let entries = [];
     try {
       entries = await fs.readdir(GALLERY_DL_DIR, {
@@ -53,8 +70,6 @@ router.get(['/', ''], async (req, res) => {
         error: 'Failed to read directory'
       });
     }
-
-    // Filter entries based on permission and exclusion logic
     const results = await Promise.all(entries.map(async entry => {
       if (await isExcluded(entry.name, permission) ||
         DISALLOWED_DIRS.includes(entry.name) ||
@@ -67,15 +82,17 @@ router.get(['/', ''], async (req, res) => {
       let mtime = new Date();
       try {
         const stats = await fs.stat(entryPath);
-        size = stats.size;
+        if (entry.isDirectory()) {
+          size = await getDirectorySize(entryPath);
+        } else {
+          size = stats.size;
+        }
         mtime = stats.mtime;
       } catch {
         return null;
       }
       const relativePath = path.relative(GALLERY_DL_DIR, entryPath).replace(/\\/g, '/');
-      const {
-        url
-      } = normalizeUrl(req, relativePath, entry.isDirectory());
+      const { url } = normalizeUrl(req, relativePath, entry.isDirectory());
       return {
         name: entry.name,
         type: entry.isDirectory() ? 'directory' : 'file',
@@ -85,7 +102,6 @@ router.get(['/', ''], async (req, res) => {
         url
       };
     }));
-
     res.json({
       path: '/',
       contents: results.filter(Boolean)
@@ -97,21 +113,14 @@ router.get(['/', ''], async (req, res) => {
     });
   }
 });
-
-// Collection endpoint
 router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res) => {
   const permission = await getUserPermission(req);
   const collection = req.params.collection;
   const subPath = req.params[0] || '';
-
   const normalizedGalleryDir = path.normalize(GALLERY_DL_DIR);
-
-  // Construct the real path carefully
   let realPath;
   if (path.isAbsolute(collection)) {
-    // If collection is an absolute path, use it directly
     realPath = path.join(collection, subPath);
-    // Ensure the path is within the GALLERY_DL_DIR
     if (!realPath.startsWith(normalizedGalleryDir)) {
       debug(`Access attempt outside of GALLERY_DL_DIR: ${realPath}`);
       return res.status(403).json({
@@ -122,8 +131,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
   } else {
     realPath = path.join(normalizedGalleryDir, collection, subPath);
   }
-
-  // Security: Prevent directory traversal
   if (!pathUtils.isSubPath(realPath, normalizedGalleryDir)) {
     debug(`Directory traversal attempt: ${realPath}`);
     return res.status(404).json({
@@ -131,8 +138,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       status: 404
   });
   }
-
-  // Check if collection/path is excluded based on permissions
   const relativePath = path.relative(normalizedGalleryDir, realPath).replace(/\\/g, '/');
   if (await isExcluded(relativePath, permission)) {
     debug(`Access denied to: ${relativePath}`);
@@ -141,7 +146,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       status: 404
     });
   }
-
   try {
     await fs.access(realPath);
   } catch (error) {
@@ -151,7 +155,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       status: 404
     });
   }
-
   const stats = await fs.stat(realPath);
   if (stats.isDirectory()) {
     let entries = [];
@@ -166,8 +169,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
         error: 'Failed to read directory'
       });
     }
-
-    // Filter entries based on permission and exclusion logic
     const formattedContents = await Promise.all(entries.map(async entry => {
       const entryRelativePath = path.join(collection, subPath, entry.name);
       if (await isExcluded(entryRelativePath, permission) ||
@@ -179,20 +180,20 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       const entryPath = path.join(realPath, entry.name);
       const relativePath = path.relative(normalizedGalleryDir, entryPath).replace(/\\/g, '/');
       const isDir = entry.isDirectory();
-
       let size = 0;
       let mtime = new Date();
       try {
         const stats = await fs.stat(entryPath);
-        size = stats.size;
+        if (isDir) {
+          size = await getDirectorySize(entryPath);
+        } else {
+          size = stats.size;
+        }
         mtime = stats.mtime;
       } catch {
         return null;
       }
-
-      const {
-        url
-      } = normalizeUrl(req, relativePath, isDir);
+      const { url } = normalizeUrl(req, relativePath, isDir);
       return {
         name: entry.name,
         type: isDir ? 'directory' : 'file',
@@ -207,7 +208,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       contents: formattedContents.filter(Boolean)
     });
   } else {
-    // File access check based on permissions
     if (!hasAllowedExtension(realPath, permission) ||
       DISALLOWED_FILES.includes(path.basename(realPath)) ||
       isDisallowedExtension(path.basename(realPath))) {
@@ -217,30 +217,36 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
         status: 404
       });
     }
-
-    // Check for image scaling parameter
     const scaleMatch = req.url.match(/\?x=(\d+)/);
-    if (scaleMatch && isImageFile(realPath)) {
-      const scale = parseInt(scaleMatch[1]);
-      if (!isNaN(scale) && scale > 0) {
-        try {
-          const transformer = await resizeImage(realPath, {
-            scale
-          });
-          res.type(path.extname(realPath));
-          res.set('Cache-Control', 'public, max-age=180'); // Cache for 1 hour
+    if (isImageFile(realPath)) {
+      let scale = null;
+      if (scaleMatch) {
+        scale = parseInt(scaleMatch[1]);
+      }
+      try {
+        const transformer = await resizeImage(realPath, (!scaleMatch || isNaN(scale) || scale <= 0 || scale === 100) ? {} : { scale });
+        if (transformer) {
+          res.type(path.extname(realPath).slice(1));
           transformer.pipe(res);
           return;
-        } catch (error) {
-          debug('Error processing image:', error);
-          return res.status(500).json({
-            error: 'Failed to process image'
+        }
+      } catch (error) {
+        debug('Error resizing image:', error);
+        return res.status(500).json({
+          error: 'Error processing image'
+        });
+      }
+    }
+    res.download(realPath, (error) => {
+      if (error) {
+        debug('Error in file download:', error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'Error in file download'
           });
         }
       }
-    }
-    res.sendFile(realPath);
+    });
   }
 });
-
 module.exports = router;
