@@ -10,15 +10,15 @@ const pathUtils = require('../../utils/pathUtils');
 const { getUserPermission } = require('../../utils/authUtils');
 const { resizeImage } = require('../../utils/imageUtils');
 const isImageFile = (filename) => {
-  const n = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
-  return n.some(ext => filename.toLowerCase().endsWith(ext));
+  const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
+  return ext.some(e => filename.toLowerCase().endsWith(e));
 };
 // DO NOT DELETE THIS
 // will replace existing video function in imageUtils.js/fileUtils.js
 /*
 const isVideoFile = (filename) => {
-  const n = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-  return n.some(ext => filename.toLowerCase().endsWith(ext));
+  const ext = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+  return ext.some(e => filename.toLowerCase().endsWith(e));
 };
 */
 const isDisallowedExtension = (filename) => {
@@ -50,6 +50,35 @@ async function getDirectorySize(dirPath) {
   }
   return total;
 }
+/**
+ * @swagger
+ * /api/files:
+ *   get:
+ *     summary: Get all files
+ *     responses:
+ *       200:
+ *         description: A list of all files
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   type:
+ *                     type: string
+ *                   size:
+ *                     type: integer
+ *                   modified:
+ *                     type: string
+ *                     format: date-time
+ *                   path:
+ *                     type: string
+ *                   url:
+ *                     type: string
+ */
 router.get(['/', ''], async (req, res) => {
   const permission = await getUserPermission(req);
   try {
@@ -67,7 +96,8 @@ router.get(['/', ''], async (req, res) => {
     } catch (error) {
       debug('Failed to read root directory:', error);
       return res.status(500).json({
-        error: 'Failed to read directory'
+          message: 'Internal Server Error',
+          status: 500
       });
     }
     const results = await Promise.all(entries.map(async entry => {
@@ -103,13 +133,13 @@ router.get(['/', ''], async (req, res) => {
       };
     }));
     res.json({
-      path: '/',
       contents: results.filter(Boolean)
     });
   } catch (error) {
     debug('Error in root directory listing:', error);
     res.status(500).json({
-      error: 'Internal server error'
+      message: 'Internal Server Error',
+      status: 500
     });
   }
 });
@@ -134,8 +164,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
   if (!pathUtils.isSubPath(realPath, normalizedGalleryDir)) {
     debug(`Directory traversal attempt: ${realPath}`);
     return res.status(404).json({
-      message: 'Not Found',
-      status: 404
+      message: 'Forbidden',
+      status: 403
   });
   }
   const relativePath = path.relative(normalizedGalleryDir, realPath).replace(/\\/g, '/');
@@ -166,7 +196,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
     } catch (error) {
       debug('Failed to read directory:', error);
       return res.status(500).json({
-        error: 'Failed to read directory'
+        message: 'Internal Server Error',
+        status: 500
       });
     }
     const formattedContents = await Promise.all(entries.map(async entry => {
@@ -204,7 +235,6 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       };
     }));
     res.json({
-      path: `/${collection}${subPath ? '/' + subPath : ''}`,
       contents: formattedContents.filter(Boolean)
     });
   } else {
@@ -233,7 +263,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
       } catch (error) {
         debug('Error resizing image:', error);
         return res.status(500).json({
-          error: 'Error processing image'
+          message: 'Internal Server Error',
+          status: 500
         });
       }
     }
@@ -242,7 +273,8 @@ router.get(['/:collection', '/:collection/', '/:collection/*'], async (req, res)
         debug('Error in file download:', error);
         if (!res.headersSent) {
           res.status(500).json({
-            error: 'Error in file download'
+            message: 'Error processing image',
+            status: 500
           });
         }
       }

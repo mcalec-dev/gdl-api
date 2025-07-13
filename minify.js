@@ -17,9 +17,9 @@ const minifyJS = async (filePath) => {
     const outputPath = path.join(outputDir, fileName);
     await fs.mkdir(outputDir, { recursive: true });
     await fs.writeFile(outputPath, minified.code);
-    debug(`Minified JS: ${outputPath}`);
+    debug('Minified JS:', outputPath);
   } catch (error) {
-    debug(`Error minifying JS: ${filePath}`, error);
+    debug('Error minifying JS:', filePath, error);
   }
 };
 const minifyCSS = async (filePath) => {
@@ -34,9 +34,9 @@ const minifyCSS = async (filePath) => {
     const outputPath = path.join(outputDir, fileName);
     await fs.mkdir(outputDir, { recursive: true });
     await fs.writeFile(outputPath, minified.styles);
-    debug(`Minified CSS: ${outputPath}`);
+    debug('Minified CSS:', outputPath);
   } catch (error) {
-    debug(`Error minifying CSS: ${filePath}`, error);
+    debug('Error minifying CSS:', filePath, error);
   }
 };
 async function processFiles() {
@@ -55,7 +55,7 @@ async function processFiles() {
     }
     debug('File processing completed');
   } catch (error) {
-    debug('Error in processFiles:', error);
+    debug('Error in file processing:', error);
   }
 }
 

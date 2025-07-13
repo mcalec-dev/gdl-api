@@ -25,21 +25,7 @@ const commands = [
         .toJSON()
 ];
 
-// Use API configuration from main config
-function normalizeBaseUrl(host, basePath) {
-  let h = host || '';
-  let b = basePath || '';
-  // Ensure protocol is present
-  if (!/^https?:\/\//i.test(h)) {
-    h = 'https://' + h;
-  }
-  if (h.endsWith('/')) h = h.slice(0, -1);
-  if (b.endsWith('/')) b = b.slice(0, -1);
-  if (b && !b.startsWith('/')) b = '/' + b;
-  return `${h}${b}/api`;
-}
-const API_BASE_URL = normalizeBaseUrl(HOST, BASE_PATH);
-const ALT_API_BASE_URL = normalizeBaseUrl(HOST, BASE_PATH);
+const API_BASE_URL = `https://${HOST}${BASE_PATH}/api`;
 
 // Add scale tracking to URL parameters
 let currentScale = 100; // Default scale
@@ -76,7 +62,7 @@ function buildImageUrl(baseUrl, scale) {
 
 // Function to fetch random image
 async function getRandomImage() {
-    const urls = [API_BASE_URL, ALT_API_BASE_URL];
+    const urls = [API_BASE_URL];
     let lastError = null;
 
     for (const baseUrl of urls) {

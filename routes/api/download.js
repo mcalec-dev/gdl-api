@@ -1,16 +1,18 @@
 const express = require('express');
-const debug = require('debug')('gdl-api:api:download');
 const router = express.Router();
-const { HOST, ALT_HOST } = require('../../config');
+const debug = require('debug')('gdl-api:api:download');
+const { HOST } = require('../../config');
 async function handleDownload(req, res) {
   let q = req.query.q || req.body?.q;
   if (!q) {
-    return res.status(400).json({ error: 'Missing ?q= parameter' });
+    return res.status(400).json({ 
+      error: 'Missing ?q= parameter' 
+    });
   }
   q = q.trim();
   let allowedHosts = [];
-  if (HOST) allowedHosts.push(HOST.replace(/^https?:\/\//, '').replace(/\/$/, ''));
-  if (ALT_HOST) allowedHosts.push(ALT_HOST.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+  const outHost = await HOST;
+  allowedHosts.push(outHost.replace(/^https?:\/\//, '').replace(/\/$/, ''));
   let parsedUrl;
   try {
     parsedUrl = new URL(q);
@@ -19,9 +21,14 @@ async function handleDownload(req, res) {
     return res.status(400).json({ error: 'Malformed URL' });
   }
   const urlHostParam = parsedUrl.hostname.toLowerCase();
-  if (!allowedHosts.some(h => urlHostParam === h.replace(/:.*/, '') || urlHostParam === ('www.' + h.replace(/:.*/, '')))) {
-    return res.status(403).json({ error: 'URL host not allowed' });
-  }
+  const notAllowedHosts = !allowedHosts.some(h => urlHostParam === h.replace(/:.*/, '') || urlHostParam === ('www.' + h.replace(/:.*/, '')));
+  if (notAllowedHosts) {
+    debug('Host not allowed:', notAllowedHosts)
+    return res.status(403).json({ 
+      message: 'URL host not allowed',
+      status: 403
+    });
+  } 
   const https = require('https');
   const http = require('http');
   const protocol = parsedUrl.protocol === 'https:' ? https : http;

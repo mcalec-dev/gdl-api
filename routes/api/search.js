@@ -9,6 +9,46 @@ const { normalizePath } = require('../../utils/pathUtils');
 
 const MAX_SEARCH_RESULTS = 1000;
 
+/**
+ * @swagger
+ * /api/search:
+ *   get:
+ *     summary: Search for files
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 query:
+ *                   type: string
+ *                 count:
+ *                   type: integer
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       collection:
+ *                         type: string
+ *                       path:
+ *                         type: string
+ *                       url:
+ *                         type: string
+ */
 router.get('/', async (req, res) => {
   const {
     q
@@ -17,7 +57,8 @@ router.get('/', async (req, res) => {
 
   if (!q || q.length === 0) {
     return res.status(400).json({
-      error: 'Invalid search query'
+      message: 'Bad Request',
+      status: 400
     });
   }
 
@@ -59,7 +100,8 @@ router.get('/', async (req, res) => {
   } catch (error) {
     debug('Search error:', error.stack);
     res.status(500).json({
-      error: `Search failed: ${error.message}`
+      message: 'Internal Server Error',
+      status: 500
     });
   }
 });

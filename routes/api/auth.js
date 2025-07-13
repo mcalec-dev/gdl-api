@@ -39,6 +39,25 @@ router.get('/check', (req, res) => {
     username: username,
   });
 });
+/* @swagger
+ * /api/auth:
+ *   get:
+ *     summary: Get authentication routes information
+ *     responses:
+ *       200:
+ *         description: Authentication routes information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 login_url:
+ *                   type: string
+ *                 logout_url:
+ *                   type: string
+ *                 check_url:
+ *                   type: string
+ */
 router.get('/', (req, res) => {
   const baseURL = getAPIUrl(req) + `/auth`;
   debug(`Auth routes info requested`);

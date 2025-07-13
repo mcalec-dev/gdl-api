@@ -1,4 +1,5 @@
 const sharp = require('sharp');
+const debug = require('debug')('gdl-api:utils:image');
 sharp.cache(true);
 sharp.simd(true);
 sharp.concurrency(5);
@@ -13,10 +14,10 @@ async function resizeImage(imagePath, { width, height, scale }) {
       }
     ).metadata();
     if (!metadata || typeof metadata.width !== 'number' || typeof metadata.height !== 'number') {
-      throw new Error('Invalid or missing image metadata');
+      debug('Invalid or missing image metadata');
     }
   } catch (error) {
-    throw new Error(`Failed to read image metadata: ${error.message}`);
+    debug('Failed to read image metadata:', error);
   }
   if (scale) {
     width = Math.round(metadata.width * (scale / 100));

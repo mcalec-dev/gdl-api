@@ -11,8 +11,24 @@ const chalk = require('chalk');
 const figlet = require('figlet');
 const { NODE_ENV, PORT, HOST, BASE_PATH, GALLERY_DL_DIR, SESSION_SECRET } = require('./config');
 const { getUserPermission } = require('./utils/authUtils');
-//const { processFiles } = require('./minify');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 const SESSION_MAX_AGE = 30 * 60 * 1000;
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'gdl-api',
+      version: process.env.npm_package_version
+    },
+    servers: [
+      { url: `https://alt-api.mcalec.dev` }
+    ]
+  },
+  apis: ['./routes/**/*.js', './utils/*.js'],
+}
+const swaggerSpec = swaggerJsdoc(swaggerOptions)
+app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(cors());
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 app.use(session({
@@ -108,13 +124,13 @@ async function verifyConfiguration() {
     process.exit(1);
   }
 }
-const displayBanner = () => {
+const displayBanner = async () => {
   const banner = figlet.textSync('GDL-API', { font: 'Standard', horizontalLayout: 'full', verticalLayout: 'default' });
   console.log(chalk.cyan(banner));
   console.log(chalk.dim('━'.repeat(60)));
   console.log(`${chalk.gray('⚡ ')} ${chalk.white('Status:')}  ${chalk.green('Online')}`);
   console.log(`${chalk.gray('✨ ')} ${chalk.white('Mode:')}  ${chalk.green(NODE_ENV)}`);
-  console.log(`${chalk.gray('🔗 ')} ${chalk.white('URL:')}  ${chalk.green(`https://${HOST}${BASE_PATH}/`)}`);
+  console.log(`${chalk.gray('🔗 ')} ${chalk.white('URL:')}  ${chalk.green(`${await HOST}${BASE_PATH}/`)}`);
   console.log(`${chalk.gray('⚙️ ')} ${chalk.white('Port:')}  ${chalk.green(PORT)}`);
   console.log(`${chalk.gray('📂 ')} ${chalk.white('Directory:')}  ${chalk.green(`${GALLERY_DL_DIR}/`)}`);
   console.log(chalk.dim('━'.repeat(60)));
@@ -122,11 +138,10 @@ const displayBanner = () => {
 async function initializeServer() {
   await verifyConfiguration();
   app.listen(PORT, () => {
-    displayBanner();
     debug(`Server is listening on port ${PORT}`);
     debug(`Server is running in ${NODE_ENV} mode`);
-    //processFiles();
   });
+  displayBanner();
 }
 initializeServer().catch(error => {
   debug('Failed to start server:', error);

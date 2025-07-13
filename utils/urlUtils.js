@@ -1,7 +1,6 @@
 const path = require('path');
 const { BASE_PATH } = require('../config');
-const debug = require('debug')('gdl-api:urlUtils');
-
+const debug = require('debug')('gdl-api:utils:url');
 function normalizeUrl(req, relativePath) {
   const protocol = req.protocol;
   const host = req.get('host');

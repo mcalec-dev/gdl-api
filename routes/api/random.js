@@ -7,10 +7,7 @@ const { GALLERY_DL_DIR, DISALLOWED_DIRS, DISALLOWED_FILES, DISALLOWED_EXTENSIONS
 const { hasAllowedExtension, isExcluded } = require('../../utils/fileUtils');
 const { getUserPermission } = require('../../utils/authUtils');
 const NodeCache = require('node-cache');
-
 const fileListCache = new NodeCache({ stdTTL: 3600 * 24, checkperiod: 3600 }); // 24 hours TTL, check every hour
-
-// Helper function to check if a file is disallowed based on its extension
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase();
   return DISALLOWED_EXTENSIONS.some(disallowedExt =>
@@ -33,24 +30,20 @@ async function refreshCache() {
     }
   }
 }
-
 refreshCache().then(() => {
   debug('Initial cache population completed');
 }).catch(error => {
   debug('Error during initial cache population:', error);
 });
 setInterval(refreshCache, 30 * 60 * 1000);
-
 async function getCachedFileList(permission) {
   const cacheKey = `fileList_${permission}`;
   let files = fileListCache.get(cacheKey);
-  // If cache is empty, do NOT scan the directory, just return empty (fast)
   if (files === undefined) {
     return [];
   }
   return files;
 }
-
 async function getRandomImagePath(permission) {
   const files = await getCachedFileList(permission);
   if (files.length === 0) {
@@ -59,7 +52,37 @@ async function getRandomImagePath(permission) {
   const randomIndex = Math.floor(Math.random() * files.length);
   return files[randomIndex];
 }
-
+/**
+ * @swagger
+ * /api/random:
+ *   get:
+ *     summary: Get a random file
+ *     responses:
+ *       200:
+ *         description: Show a random file
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 file:
+ *                   type: string
+ *                 path:
+ *                   type: string
+ *                 collection:
+ *                   type: string
+ *                 author:
+ *                   type: string
+ *                 size:
+ *                   type: integer
+ *                 url:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 type:
+ *                   type: string
+ */
 router.get('/', async (req, res) => {
   debug('Random image request received');
   try {
@@ -81,7 +104,6 @@ router.get('/', async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const collection = pathParts[0];
     const author = pathParts[1] || '';
-
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json({
       file: path.basename(randomImage.path),
@@ -97,12 +119,11 @@ router.get('/', async (req, res) => {
   } catch (error) {
     debug('Error getting random image:', error);
     res.status(500).json({
-      error: 'Failed to get random image',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Internal Server Error',
+      status: 500
     });
   }
 });
-
 async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
   if (depth >= 10) return [];
   try {
@@ -120,7 +141,6 @@ async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
           return null;
         }
         if (entry.isDirectory()) {
-          // Recursively get images from subdirectory
           return await getAllImagesInDirectory(fullPath, permission, depth + 1);
         }
         if (entry.isFile() && hasAllowedExtension(fullPath, permission)) {
@@ -137,7 +157,6 @@ async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
         }
         return null;
       }));
-      // Flatten and filter results
       for (const result of batchResults) {
         if (Array.isArray(result)) {
           results.push(...result);

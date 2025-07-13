@@ -37,6 +37,29 @@ router.use('/search', searchRouter);
 debug('Mounting stats routes');
 router.use('/stats', statsRouter);
 
+/* * @swagger
+ * /api:
+ *   get:
+ *     summary: Get API root information
+ *     responses:
+ *       200:
+ *         description: API root information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 auth_url:
+ *                   type: string
+ *                 files_url:
+ *                   type: string
+ *                 random_url:
+ *                   type: string
+ *                 search_url:
+ *                   type: string
+ *                 stats_url:
+ *                   type: string
+ */
 router.get('/', (req, res) => {
   debug('Handling request for API root');
   const baseURL = getAPIUrl(req);
