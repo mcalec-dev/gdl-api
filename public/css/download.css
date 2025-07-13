@@ -25,7 +25,7 @@ body {
   padding: 20px 20px 20px 20px;
   background: var(--secondary-color);
   border-radius: var(--border-radius);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 h1 {
   font-family: var(--secondary-font);
@@ -55,7 +55,7 @@ label {
   background-color: #1e1e1e;
   color: var(--text-color);
 }
-button[type="submit"] {
+button[type='submit'] {
   padding: 12px 24px;
   font-size: 16px;
   background-color: #0066cc;
@@ -66,7 +66,7 @@ button[type="submit"] {
   margin-top: 8px;
   transition: background-color 0.25s;
 }
-button[type="submit"]:hover {
+button[type='submit']:hover {
   background-color: #0052a3;
 }
 .status-message {
@@ -126,7 +126,8 @@ button[type="submit"]:hover {
 #preview .image-container.has-image {
   cursor: pointer;
 }
-#preview img, #preview video {
+#preview img,
+#preview video {
   max-width: 100%;
   max-height: calc(70vh - 20px);
   border-radius: 12px;
@@ -154,7 +155,8 @@ button[type="submit"]:hover {
     max-width: 90vw;
     max-height: calc(100vh - 120px);
   }
-  #preview img, #preview video {
+  #preview img,
+  #preview video {
     max-width: 100%;
     max-height: calc(100vh - 120px);
   }
@@ -174,7 +176,8 @@ button[type="submit"]:hover {
   .container {
     padding: 10px 2vw;
   }
-  #preview img, #preview video {
+  #preview img,
+  #preview video {
     max-height: 120px;
   }
 }

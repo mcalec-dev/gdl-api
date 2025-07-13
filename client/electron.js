@@ -1,41 +1,43 @@
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
-const https = require('https');
-const http = require('http');
-const SITES = [
-  'https://alt-api.mcalec.dev/gdl/',
-  'https://api.mcalec.dev/gdl/'
-];
+const { app, BrowserWindow } = require('electron')
+const path = require('path')
+const https = require('https')
+const http = require('http')
+const SITES = ['https://alt-api.mcalec.dev/gdl/', 'https://api.mcalec.dev/gdl/']
 function checkSite(url) {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const req = mod.request(url, {
-      method: 'GET', timeout: 4000
-    }, res => {
-      if (res.statusCode >= 200 && res.statusCode < 400) {
-        resolve(url);
-      } else {
-        reject(new Error('Bad status: ' + res.statusCode));
+    const mod = url.startsWith('https') ? https : http
+    const req = mod.request(
+      url,
+      {
+        method: 'GET',
+        timeout: 4000,
+      },
+      (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          resolve(url)
+        } else {
+          reject(new Error('Bad status: ' + res.statusCode))
+        }
       }
-    });
-    req.on('error', reject);
+    )
+    req.on('error', reject)
     req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Timeout'));
-    });
-    req.end();
-  });
+      req.destroy()
+      reject(new Error('Timeout'))
+    })
+    req.end()
+  })
 }
 async function findWorkingSite() {
   for (const site of SITES) {
     try {
-      await checkSite(site);
-      return site;
+      await checkSite(site)
+      return site
     } catch (error) {
-      console.error('Site check failed:', error);
+      console.error('Site check failed:', error)
     }
   }
-  return null;
+  return null
 }
 async function createWindow() {
   const win = new BrowserWindow({
@@ -43,7 +45,7 @@ async function createWindow() {
     height: 900,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: false
+      contextIsolation: false,
     },
     icon: path.join(__dirname, 'public', 'favicon.svg'),
     title: 'Gallery-DL API Client',
@@ -55,12 +57,12 @@ async function createWindow() {
     },
     autoHideMenuBar: false,
     backgroundColor: '#ecf0f1',
-  });
-  const site = await findWorkingSite();
+  })
+  const site = await findWorkingSite()
   if (site) {
-    win.loadURL(site);
+    win.loadURL(site)
     win.webContents.on('did-finish-load', () => {
-      win.webContents.setZoomFactor(0.95);
+      win.webContents.setZoomFactor(0.95)
       /**
       * Uncomment to customize title bar
       win.webContents.insertCSS(`
@@ -74,7 +76,7 @@ async function createWindow() {
         }
       `);
       */
-    });
+    })
     // Enable default context menu
     win.webContents.on('context-menu', (params) => {
       win.webContents.executeJavaScript(`
@@ -83,18 +85,18 @@ async function createWindow() {
             bubbles:true, clientX:${params.x}, clientY:${params.y}
           })
         );
-      `);
-    });
+      `)
+    })
   } else {
-    win.loadURL('data:text/plain,No sites are available.');
+    win.loadURL('data:text/plain,No sites are available.')
   }
 }
 app.whenReady().then(() => {
-  createWindow();
+  createWindow()
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  if (process.platform !== 'darwin') app.quit()
+})

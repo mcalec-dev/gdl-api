@@ -36,7 +36,9 @@ pre code {
   padding: 0;
   font-family: 'Consolas', 'Monaco', 'Roboto Mono', monospace;
 }
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   color: #ffffff;
 }
 p {
@@ -48,7 +50,8 @@ table {
   width: 100%;
   margin-bottom: 20px;
 }
-th, td {
+th,
+td {
   border: 1px solid #404040;
   padding: 8px;
   text-align: left;

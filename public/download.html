@@ -1,24 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/css/min/download.min.css">
-  <link rel="stylesheet" href="/css/min/consent-popup.min.css">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <title>Downloader</title>
-</head>
-<body>
-  <script src="/js/min/consent-popup.min.js"></script>
-  <h1>File Downloader</h1>
-  <div class="container">
-    <form id="downloadForm">
-      <label for="urlInput">Enter URL to download:</label>
-      <input type="text" id="urlInput" name="url" placeholder="https://example.com/file.jpg" required>
-      <button type="submit">Download</button>
-    </form>
-    <div id="statusMessage" class="status-message"></div>
-  </div>
-  <script defer src="/js/min/download.min.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/min/download.min.css" />
+    <link rel="stylesheet" href="/css/min/consent-popup.min.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>Downloader</title>
+  </head>
+  <body>
+    <script src="/js/min/consent-popup.min.js"></script>
+    <h1>File Downloader</h1>
+    <div class="container">
+      <form id="downloadForm">
+        <label for="urlInput">Enter URL to download:</label>
+        <input
+          type="text"
+          id="urlInput"
+          name="url"
+          placeholder="https://example.com/file.jpg"
+          required
+        />
+        <button type="submit">Download</button>
+      </form>
+      <div id="statusMessage" class="status-message"></div>
+    </div>
+    <script defer src="/js/min/download.min.js"></script>
+  </body>
 </html>

@@ -9,7 +9,7 @@
   --accept-btn-bg: #28a745;
   --btn-text: #ffffff;
 }
-[data-theme="dark"] {
+[data-theme='dark'] {
   --popup-bg: #1e1e1e;
   --popup-text: #e0e0e0;
   --popup-title: #ffffff;
@@ -75,7 +75,8 @@
   gap: 1rem;
   justify-content: flex-end;
 }
-#leaveButton, #acceptButton {
+#leaveButton,
+#acceptButton {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;
@@ -83,8 +84,12 @@
   font-weight: bold;
   color: var(--btn-text);
 }
-#leaveButton { background: var(--leave-btn-bg); }
-#acceptButton { background: var(--accept-btn-bg); }
+#leaveButton {
+  background: var(--leave-btn-bg);
+}
+#acceptButton {
+  background: var(--accept-btn-bg);
+}
 
 @media (max-width: 480px) {
   .consent-popup {
@@ -94,7 +99,8 @@
   .consent-buttons {
     flex-direction: column;
   }
-  #leaveButton, #acceptButton {
+  #leaveButton,
+  #acceptButton {
     width: 100%;
   }
 }

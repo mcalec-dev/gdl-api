@@ -1,31 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/css/min/login.min.css">
-  <link rel="stylesheet" href="/css/min/consent-popup.min.css">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <title>Login - Gallery-DL API</title>
-</head>
-<body>
-  <script src="/js/min/consent-popup.min.js"></script>
-  <div class="login-container">
-    <h1>Login</h1>
-    <div id="error" class="error-message"></div>
-    <div id="loading" class="loading" style="display: none;">Logging in...</div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" required autocomplete="username">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/min/login.min.css" />
+    <link rel="stylesheet" href="/css/min/consent-popup.min.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>Login - Gallery-DL API</title>
+  </head>
+  <body>
+    <script src="/js/min/consent-popup.min.js"></script>
+    <div class="login-container">
+      <h1>Login</h1>
+      <div id="error" class="error-message"></div>
+      <div id="loading" class="loading" style="display: none">
+        Logging in...
       </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="login-button">Login</button>
-    </form>
-  </div>
-  <script defer src="/js/min/login.min.js"></script>
-</body>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            autocomplete="username"
+          />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <button type="submit" class="login-button">Login</button>
+      </form>
+    </div>
+    <script defer src="/js/min/login.min.js"></script>
+  </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "v0.2.6",
+  "version": "v0.2.7",
   "description": "Gallery-DL API",
   "author": "McAlec",
   "license": "MIT",
@@ -8,7 +8,9 @@
   "scripts": {
     "start": "set DEBUG=gdl-api:* && node server.js",
     "server": "set DEBUG=gdl-api:* && node server.js",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "prettier": "prettier . --check",
+    "prettier:fix": "prettier . --write",
     "discord": "set DEBUG=gdl-api:* && node bot/discord/index.js",
     "invite": "set DEBUG=gdl-api:* && node bot/discord/invite.js",
     "minify": "set DEBUG=gdl-api:* && node minify.js",
@@ -43,7 +45,8 @@
     "@types/figlet": "^1.7.0",
     "eslint": "^9.28.0",
     "eslint-plugin-json": "^4.0.1",
-    "globals": "^16.2.0"
+    "globals": "^16.2.0",
+    "prettier": "3.6.2"
   },
   "engines": {
     "node": ">=24.0.0",

@@ -39,39 +39,41 @@ body {
 
 /* Main Stats Grid - 3x2 layout */
 .main-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 25px;
-    margin-bottom: 25px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+  margin-bottom: 25px;
 }
 
 /* Secondary Stats Grid - 2x2 layout */
 .secondary-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(calc(50% - 12.5px), 1fr));
-    gap: 25px;
-    margin-top: 25px;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: visible;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(50% - 12.5px), 1fr));
+  gap: 25px;
+  margin-top: 25px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .stat-card {
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    width: 100%;
-    box-sizing: border-box;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    height: fit-content; /* Adjust height based on content */
+  background-color: var(--secondary-color);
+  border-radius: var(--border-radius);
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  box-sizing: border-box;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  height: fit-content; /* Adjust height based on content */
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
 }
 
 /* System Stats Card - Full width */
@@ -118,54 +120,54 @@ body {
 .collection-grid,
 .memory-grid,
 .cache-grid {
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 15px;
 }
 
 /* For larger screens - grid layout */
 @media (min-width: 1201px) {
-    .file-types-grid,
-    .collection-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 12px;
-        max-height: none;
-        overflow: visible;
-    }
+  .file-types-grid,
+  .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    max-height: none;
+    overflow: visible;
+  }
 
-    /* Ensure grid items fill their space */
-    .file-type,
-    .collection-item {
-        width: 100%;
-        box-sizing: border-box;
-        height: fit-content;
-    }
+  /* Ensure grid items fill their space */
+  .file-type,
+  .collection-item {
+    width: 100%;
+    box-sizing: border-box;
+    height: fit-content;
+  }
 }
 
 /* For smaller screens - maintain scrollable list */
 @media (max-width: 1200px) {
-    .file-types-grid,
-    .collection-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        max-height: 300px;
-        overflow-y: auto;
-        padding-right: 8px;
-    }
+  .file-types-grid,
+  .collection-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
 }
 
 .file-type,
 .collection-item {
-    background-color: #2d2d2d;
-    padding: 12px 15px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    box-sizing: border-box;
+  background-color: #2d2d2d;
+  padding: 12px 15px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .loading {
@@ -201,7 +203,8 @@ h1 {
   padding-bottom: 25px;
 }
 
-h2, h3 {
+h2,
+h3 {
   font-family: var(--primary-font);
   color: var(--text-color);
   font-size: 1.25rem;
@@ -231,19 +234,19 @@ h2, h3 {
   }
 }
 @media (min-width: 1200px) {
-    .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-    .main-stats-grid,
-    .secondary-stats-grid {
-      grid-template-columns: 1fr;
-    }
+  .main-stats-grid,
+  .secondary-stats-grid {
+    grid-template-columns: 1fr;
   }
+}
 @media (min-width: 768px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

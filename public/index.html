@@ -1,93 +1,116 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/css/min/index.min.css">
-  <link rel="stylesheet" href="/css/min/footer.min.css">
-  <link rel="stylesheet" href="/css/min/consent-popup.min.css">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <title>Gallery-DL API</title>
-</head>
-<body>
-  <script src="/js/min/consent-popup.min.js"></script>
-  <div class="content">
-    <h1>Gallery-DL API</h1>
-    <p>I suggest you to check my main site, <a href="//mcalec.dev/" rel="noopener" target="_blank">mcalec.dev</a><br>
-    Contact me at: hello[at]mcalec[dot]dev</p>
-    <table>
-      <tr>
-        <th>Endpoint/Page</th>
-        <th>Description</th>
-        <th>Link</th>
-      </tr>
-      <tr>
-        <td><code>/gdl/login/</code></td>
-        <td>Sign in for full access</td>
-        <td><a href="/login/">link</a></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/search/</code></td>
-        <td>Search interface for collections</td>
-        <td><a href="/search/">link</a></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/stats/</code></td>
-        <td>View detailed statistics dashboard</td>
-        <td><a href="/stats/">link</a></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/random/</code></td>
-        <td>View random images interface</td>
-        <td><a href="/random/">link</a></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/files/</code></td>
-        <td>Browse all collections and files</td>
-        <td><a href="/files/">link</a></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/api/random</code></td>
-        <td>Get random image</td>
-        <td><em>endpoint</em></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/api/stats</code></td>
-        <td>Get collection statistics</td>
-        <td><em>endpoint</em></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/api/files/*</code></td>
-        <td>Access individual files</td>
-        <td><em>endpoint</em></td>
-      </tr>
-      <tr>
-        <td><code>/gdl/api/search?q=term</code></td>
-        <td>Search API endpoint</td>
-        <td><em>endpoint</em></td>
-      </tr>
-    </table>
-    <h2>API Usage</h2>
-    <p>The API supports both JSON responses and direct file access. All endpoints return proper CORS headers and support rate limiting.</p>
-    <h2>Rate Limits</h2>
-    <p>API requests are limited based on server configuration. Current limits:</p>
-    <ul>
-      <li>Time Window: <code id="rateLimitWindow">15</code> minutes</li>
-      <li>Max Requests: <code id="rateLimitMax">100</code> requests per window</li>
-    </ul>
-  </div>
-  <footer>
-    <div class="footer-content">
-      <div class="footer-copyright">
-        McAlec Development © 2025
-      </div>
-      <div class="footer-links">
-        <a href="//old.mcalec.dev/legal/license/" rel="noopener" target="_blank">License</a>
-        <a href="//old.mcalec.dev/legal/credits/" rel="noopener" target="_blank">Credits</a>
-        <a href="//mcalec.dev/legal/terms/" rel="noopener" target="_blank">Terms</a>
-        <a href="//mcalec.dev/legal/privacy/" rel="noopener" target="_blank">Privacy</a>
-      </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/min/index.min.css" />
+    <link rel="stylesheet" href="/css/min/footer.min.css" />
+    <link rel="stylesheet" href="/css/min/consent-popup.min.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>Gallery-DL API</title>
+  </head>
+  <body>
+    <script src="/js/min/consent-popup.min.js"></script>
+    <div class="content">
+      <h1>Gallery-DL API</h1>
+      <p>
+        I suggest you to check my main site,
+        <a href="//mcalec.dev/" rel="noopener" target="_blank">mcalec.dev</a
+        ><br />
+        Contact me at: hello[at]mcalec[dot]dev
+      </p>
+      <table>
+        <tr>
+          <th>Endpoint/Page</th>
+          <th>Description</th>
+          <th>Link</th>
+        </tr>
+        <tr>
+          <td><code>/gdl/login/</code></td>
+          <td>Sign in for full access</td>
+          <td><a href="/login/">link</a></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/search/</code></td>
+          <td>Search interface for collections</td>
+          <td><a href="/search/">link</a></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/stats/</code></td>
+          <td>View detailed statistics dashboard</td>
+          <td><a href="/stats/">link</a></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/random/</code></td>
+          <td>View random images interface</td>
+          <td><a href="/random/">link</a></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/files/</code></td>
+          <td>Browse all collections and files</td>
+          <td><a href="/files/">link</a></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/api/random</code></td>
+          <td>Get random image</td>
+          <td><em>endpoint</em></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/api/stats</code></td>
+          <td>Get collection statistics</td>
+          <td><em>endpoint</em></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/api/files/*</code></td>
+          <td>Access individual files</td>
+          <td><em>endpoint</em></td>
+        </tr>
+        <tr>
+          <td><code>/gdl/api/search?q=term</code></td>
+          <td>Search API endpoint</td>
+          <td><em>endpoint</em></td>
+        </tr>
+      </table>
+      <h2>API Usage</h2>
+      <p>
+        The API supports both JSON responses and direct file access. All
+        endpoints return proper CORS headers and support rate limiting.
+      </p>
+      <h2>Rate Limits</h2>
+      <p>
+        API requests are limited based on server configuration. Current limits:
+      </p>
+      <ul>
+        <li>Time Window: <code id="rateLimitWindow">15</code> minutes</li>
+        <li>
+          Max Requests: <code id="rateLimitMax">100</code> requests per window
+        </li>
+      </ul>
     </div>
-  </footer>
-</body>
+    <footer>
+      <div class="footer-content">
+        <div class="footer-copyright">McAlec Development © 2025</div>
+        <div class="footer-links">
+          <a
+            href="//old.mcalec.dev/legal/license/"
+            rel="noopener"
+            target="_blank"
+            >License</a
+          >
+          <a
+            href="//old.mcalec.dev/legal/credits/"
+            rel="noopener"
+            target="_blank"
+            >Credits</a
+          >
+          <a href="//mcalec.dev/legal/terms/" rel="noopener" target="_blank"
+            >Terms</a
+          >
+          <a href="//mcalec.dev/legal/privacy/" rel="noopener" target="_blank"
+            >Privacy</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
 </html>

@@ -42,7 +42,8 @@ h1 {
   padding-bottom: 25px;
 }
 
-h2, h3 {
+h2,
+h3 {
   font-family: var(--primary-font);
   color: var(--text-color);
   font-size: 1.25rem;
@@ -128,7 +129,7 @@ h2, h3 {
 
 .thumbnail-container {
   width: 100%;
-  height: auto; 
+  height: auto;
   overflow: hidden;
   display: flex;
   justify-content: center;
@@ -141,7 +142,7 @@ h2, h3 {
   max-height: calc(10vh * 2.5);
   object-fit: contain;
   background: transparent;
-  display: block; 
+  display: block;
 }
 
 .info-container {
@@ -192,7 +193,7 @@ h2, h3 {
   .search-container {
     flex-direction: column;
   }
-  
+
   #searchButton {
     width: 100%;
   }
