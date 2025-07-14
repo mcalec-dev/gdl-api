@@ -81,6 +81,9 @@ async function getDirectorySize(dirPath) {
  *                   modified:
  *                     type: string
  *                     format: date-time
+ *                   created:
+ *                     type: string
+ *                     format: date-time
  *                   path:
  *                     type: string
  *                   url:
@@ -122,6 +125,7 @@ router.get(['/', ''], async (req, res) => {
         const entryPath = path.join(GALLERY_DL_DIR, entry.name)
         let size = 0
         let mtime = new Date()
+        let ctime = new Date()
         try {
           const stats = await fs.stat(entryPath)
           if (entry.isDirectory()) {
@@ -130,6 +134,7 @@ router.get(['/', ''], async (req, res) => {
             size = stats.size
           }
           mtime = stats.mtime
+          ctime = stats.birthtime
         } catch {
           return null
         }
@@ -142,6 +147,7 @@ router.get(['/', ''], async (req, res) => {
           type: entry.isDirectory() ? 'directory' : 'file',
           size: size,
           modified: mtime,
+          created: ctime,
           path: normalizeUrl(req, relativePath, entry.isDirectory()).path,
           url,
         }
@@ -239,6 +245,7 @@ router.get(
           const isDir = entry.isDirectory()
           let size = 0
           let mtime = new Date()
+          let ctime = new Date()
           try {
             const stats = await fs.stat(entryPath)
             if (isDir) {
@@ -247,6 +254,7 @@ router.get(
               size = stats.size
             }
             mtime = stats.mtime
+            ctime = stats.birthtime
           } catch {
             return null
           }
@@ -256,6 +264,7 @@ router.get(
             type: isDir ? 'directory' : 'file',
             size: size,
             modified: mtime,
+            created: ctime,
             path: normalizeUrl(req, relativePath, isDir).path,
             url,
           }

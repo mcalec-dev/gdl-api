@@ -5,7 +5,9 @@ import {
   getFileType,
 } from '../min/index.min.js'
 let frontendBasePath = '/gdl/files'
-let apiBasePath = ''
+let apiBasePath = '/gdl/api/files'
+const previewSize = '?x=50'
+const zoomedSize = '?x=400'
 const fileList = document.getElementById('fileList')
 const breadcrumb = document.getElementById('breadcrumb')
 function escapeRegExp(string) {
@@ -13,13 +15,9 @@ function escapeRegExp(string) {
 }
 const icons = {
   directory:
-    '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
-  image:
-    '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-.55 0-1 .45-1 1v14c0 1.1.89 2 2 2h14c1.1 0-2-.9-2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
-  video:
-    '<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 1.1.89 2 2 2H18c1.1 0-2-.9-2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>',
+    '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8z"/></svg>',
   other:
-    '<svg viewBox="0 0 24 24"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>',
+    '<svg viewBox="0 0 24 24"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm7 7V3.5L18.5 9z"/></svg>',
 }
 let currentDirectoryData = null
 let currentImageIndex = 0
@@ -33,6 +31,7 @@ const SORT_STATES = {
   size: 'none',
   type: 'none',
   modified: 'none',
+  created: 'none',
 }
 function getSortIcon(state) {
   switch (state) {
@@ -76,6 +75,10 @@ function renderSortToolbar() {
       <span>Modified</span>
       <span class="sort-icon">${getSortIcon(SORT_STATES.modified)}</span>
     </button>
+    <button class="sort-button" data-sort="created">
+      <span>Created</span>
+      <span class="sort-icon">${getSortIcon(SORT_STATES.created)}</span>
+    </button>
   `
   document.querySelector('.sort-toolbar').innerHTML = sortToolbarHtml
 }
@@ -112,6 +115,9 @@ function sortContents(contents, sortBy, direction) {
       }
       case 'modified':
         comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
+        break
+      case 'created':
+        comparison = new Date(a.created || 0) - new Date(b.created || 0)
         break
     }
     return direction === 'asc' ? comparison : -comparison
@@ -344,6 +350,7 @@ function showImagePopup(index) {
   } else {
     popupImage.src = url
     popupImage.style.display = 'block'
+    popupImage.style.cursor = 'zoom-in'
   }
   imageTitle.textContent = item.name
   imageCounter.textContent = `${index + 1} / ${currentImageList.length}`
@@ -380,7 +387,8 @@ function setupImagePopupEvents() {
   }
   newTabButton.addEventListener('click', () => {
     const item = currentImageList[currentImageIndex]
-    window.open(item.url, '_blank')
+    const fullUrl = getMediaUrl(item)
+    window.open(fullUrl, '_blank')
   })
   closeButton.addEventListener('click', closePopup)
   popupViewer.addEventListener('click', (e) => {
@@ -431,6 +439,9 @@ function setupImagePopupEvents() {
   })
   function handleZoom(x, y) {
     if (isZoomed) {
+      const item = currentImageList[currentImageIndex]
+      const originalUrl = getMediaUrl(item)
+      popupImage.src = originalUrl
       popupImage.classList.remove('zoomed')
       popupImage.style.transform = 'none'
       popupImage.style.cursor = 'zoom-in'
@@ -442,6 +453,9 @@ function setupImagePopupEvents() {
       isZoomed = false
       popupImage.removeEventListener('mousemove', handleMouseMove)
     } else {
+      const item = currentImageList[currentImageIndex]
+      const highResUrl = getMediaUrl(item) + zoomedSize
+      popupImage.src = highResUrl
       popupImage.style.maxHeight = '95vh'
       popupImage.style.maxWidth = '95vw'
       popupImage.style.height = '95vh'
@@ -491,7 +505,7 @@ function setupSortButtons() {
       currentSort = sortBy
       currentSortDir = SORT_STATES[sortBy]
       const url = new URL(window.location.href)
-      ;['name', 'size', 'type', 'modified'].forEach((param) =>
+      ;['name', 'size', 'type', 'modified', 'created'].forEach((param) =>
         url.searchParams.delete(param)
       )
       if (SORT_STATES[sortBy] !== 'none') {
@@ -511,7 +525,6 @@ async function renderDirectory(contents, path) {
   fileList.classList.toggle('grid-view', shouldUseGridView)
   const sortedContents = sortContents(contents, currentSort, currentSortDir)
   renderSortToolbar()
-
   let html = ''
   for (const item of sortedContents) {
     const itemPath = path ? `${path}/${item.name}` : item.name
@@ -532,7 +545,7 @@ async function renderDirectory(contents, path) {
         .join('/')
       previewUrl = item.url || `${apiBasePath}/${encodedPath}`
       if (itemType === 'image' && !item.name.toLowerCase().endsWith('.gif')) {
-        previewUrl += '?x=50'
+        previewUrl += previewSize
       }
     }
     html += `<div class="file-item ${item.type}" data-type="${itemType}" data-path="${itemPath}">`
@@ -580,7 +593,7 @@ setupImagePopupEvents()
 function getSortFromQuery() {
   const params = new URLSearchParams(window.location.search)
   let found = false
-  ;['name', 'size', 'type', 'modified'].forEach((param) => {
+  ;['name', 'size', 'type', 'modified', 'created'].forEach((param) => {
     const dir = params.get(param)
     if (dir === 'asc' || dir === 'desc') {
       currentSort = param

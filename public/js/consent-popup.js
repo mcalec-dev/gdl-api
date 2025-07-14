@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     popup.className = 'consent-popup'
     popup.innerHTML = `
       <h2>Content Warning</h2>
-      <p>This site may contain suggestive content and media that some users may find uncomfortable.</p>
+      <p>This site may contain suggestive themes, content, or media that some users may find uncomfortable.</p>
       <div class="consent-buttons">
         <button id="leaveButton">Leave Site</button>
         <button id="acceptButton">Okay</button>

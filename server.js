@@ -23,7 +23,7 @@ const swaggerUi = require('swagger-ui-express')
 const SESSION_MAX_AGE = 30 * 60 * 1000
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    openapi: '3.0.3',
     info: {
       title: 'gdl-api',
       version: process.env.npm_package_version,
@@ -131,6 +131,9 @@ app.get(`${BASE_PATH}/login/`, (req, res) => {
 })
 app.get(`${BASE_PATH}/download/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'download.html'))
+})
+app.get(`${BASE_PATH}/navbar/`, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'navbar.html'))
 })
 app.use(BASE_PATH, require('./routes'))
 app.use((req, res, next) => {

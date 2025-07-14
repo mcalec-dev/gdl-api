@@ -4,7 +4,7 @@ const https = require('https')
 const http = require('http')
 dotenv.config()
 const parseJsonEnv = (envVar) => {
-  return JSON.parse(envVar) || null
+  return JSON.parse(envVar)
 }
 const checkHostOnline = async (host) => {
   return new Promise((resolve) => {
@@ -55,11 +55,6 @@ const DB_DIR = process.env.DB_DIR
 debug('Database directory:', DB_DIR)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
-const RATE_LIMIT = {
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES) * 60 * 1000,
-  maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS),
-}
-debug('Rate limit:', RATE_LIMIT)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -70,6 +65,5 @@ module.exports = {
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
   SESSION_SECRET,
-  RATE_LIMIT,
   debug,
 }

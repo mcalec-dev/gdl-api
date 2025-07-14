@@ -20,3 +20,4 @@
 - fix relavancy in `search.js` to find more relavant directories (score them and show in response)
 - add testing modules (`*.test.js`) that only check for errors
 - add wiki to reflect swagger docs
+- proper MIME setter in `files.js` (for each file)

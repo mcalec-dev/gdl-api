@@ -45,11 +45,16 @@ export async function apiHost() {
   }
   debug('No API endpoints are available')
 }
+let cachedMimeDB = null
 export async function getFileType(file) {
-  let cachedMimeDB = null
   if (!cachedMimeDB) {
-    const res = await fetch('https://cdn.jsdelivr.net/npm/mime-db/db.json')
-    cachedMimeDB = await res.json
+    try {
+      const res = await fetch('https://cdn.jsdelivr.net/npm/mime-db/db.json')
+      cachedMimeDB = await res.json()
+    } catch (error) {
+      console.error('Failed to fetch MIME database...', error)
+      cachedMimeDB = {}
+    }
   }
   const ext = file.split('.').pop().toLowerCase()
   function getMimeType() {
@@ -69,7 +74,7 @@ export async function getFileType(file) {
     if (videoFallbacks.includes(ext)) return 'video'
     return 'other'
   }
-  console.log(`File ${file} → MIME: ${mimeType}`)
+  console.log(`${file} = ${mimeType}`)
   if (mimeType.startsWith('image/')) return 'image'
   if (mimeType.startsWith('video/')) return 'video'
   if (imageFallbacks.includes(ext)) return 'image'
