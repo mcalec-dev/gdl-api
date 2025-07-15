@@ -4,7 +4,7 @@ const path = require('path')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
 const {
-  GALLERY_DL_DIR,
+  BASE_DIR,
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
@@ -92,14 +92,13 @@ async function getDirectorySize(dirPath) {
 router.get(['/', ''], async (req, res) => {
   const permission = await getUserPermission(req)
   try {
-    const stats = await fs.stat(GALLERY_DL_DIR)
+    const stats = await fs.stat(BASE_DIR)
     if (!stats.isDirectory()) {
-      debug('GALLERY_DL_DIR is not a directory')
-      throw new Error('GALLERY_DL_DIR is not a directory')
+      debug(BASE_DIR, 'is not a directory')
     }
     let entries = []
     try {
-      entries = await fs.readdir(GALLERY_DL_DIR, {
+      entries = await fs.readdir(BASE_DIR, {
         withFileTypes: true,
       })
       debug(`Found ${entries.length} entries in root directory`)
@@ -122,7 +121,7 @@ router.get(['/', ''], async (req, res) => {
           debug(`Excluded entry: ${entry.name}`)
           return null
         }
-        const entryPath = path.join(GALLERY_DL_DIR, entry.name)
+        const entryPath = path.join(BASE_DIR, entry.name)
         let size = 0
         let mtime = new Date()
         let ctime = new Date()
@@ -139,7 +138,7 @@ router.get(['/', ''], async (req, res) => {
           return null
         }
         const relativePath = path
-          .relative(GALLERY_DL_DIR, entryPath)
+          .relative(BASE_DIR, entryPath)
           .replace(/\\/g, '/')
         const { url } = normalizeUrl(req, relativePath, entry.isDirectory())
         return {
@@ -170,29 +169,29 @@ router.get(
     const permission = await getUserPermission(req)
     const collection = req.params.collection
     const subPath = req.params[0] || ''
-    const normalizedGalleryDir = path.normalize(GALLERY_DL_DIR)
+    const normalizedDir = path.normalize(BASE_DIR)
     let realPath
     if (path.isAbsolute(collection)) {
       realPath = path.join(collection, subPath)
-      if (!realPath.startsWith(normalizedGalleryDir)) {
-        debug(`Access attempt outside of GALLERY_DL_DIR: ${realPath}`)
+      if (!realPath.startsWith(normalizedDir)) {
+        debug('Access attempt outside of BASE_DIR:', realPath)
         return res.status(403).json({
-          message: 'Not Found',
-          status: 404,
+          message: 'Forbidden',
+          status: 403,
         })
       }
     } else {
-      realPath = path.join(normalizedGalleryDir, collection, subPath)
+      realPath = path.join(normalizedDir, collection, subPath)
     }
-    if (!pathUtils.isSubPath(realPath, normalizedGalleryDir)) {
+    if (!pathUtils.isSubPath(realPath, normalizedDir)) {
       debug(`Directory traversal attempt: ${realPath}`)
-      return res.status(404).json({
+      return res.status(403).json({
         message: 'Forbidden',
         status: 403,
       })
     }
     const relativePath = path
-      .relative(normalizedGalleryDir, realPath)
+      .relative(normalizedDir, realPath)
       .replace(/\\/g, '/')
     if (await isExcluded(relativePath, permission)) {
       debug(`Access denied to: ${relativePath}`)
@@ -240,7 +239,7 @@ router.get(
           }
           const entryPath = path.join(realPath, entry.name)
           const relativePath = path
-            .relative(normalizedGalleryDir, entryPath)
+            .relative(normalizedDir, entryPath)
             .replace(/\\/g, '/')
           const isDir = entry.isDirectory()
           let size = 0
@@ -316,7 +315,7 @@ router.get(
           debug('Error in file download:', error)
           if (!res.headersSent) {
             res.status(500).json({
-              message: 'Error processing image',
+              message: 'Internal Server Error',
               status: 500,
             })
           }

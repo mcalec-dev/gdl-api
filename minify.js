@@ -62,6 +62,5 @@ async function processFiles() {
     debug('Error in file processing:', error)
   }
 }
-
 processFiles()
-module.exports = { processFiles }
+module.exports = processFiles

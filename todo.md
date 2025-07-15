@@ -21,3 +21,6 @@
 - add testing modules (`*.test.js`) that only check for errors
 - add wiki to reflect swagger docs
 - proper MIME setter in `files.js` (for each file)
+- npm packages to utilize; moment, pm2, async, graphql, passport.js
+- look into using tailwindcss for the frontend
+- reformat frontend with react?

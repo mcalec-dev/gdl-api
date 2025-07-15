@@ -39,7 +39,8 @@ router.get('/check', (req, res) => {
     username: username,
   })
 })
-/* @swagger
+/**
+ * @swagger
  * /api/auth:
  *   get:
  *     summary: Get authentication routes information

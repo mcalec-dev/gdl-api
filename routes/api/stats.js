@@ -4,7 +4,7 @@ const fs = require('fs').promises
 const path = require('path')
 const debug = require('debug')('gdl-api:api:stats')
 const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
-const { GALLERY_DL_DIR } = require('../../config')
+const { BASE_DIR } = require('../../config')
 async function aggregateStats(dirPath, stats = null) {
   if (!stats) {
     stats = {
@@ -22,7 +22,7 @@ async function aggregateStats(dirPath, stats = null) {
     })
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name)
-      const entryRelativePath = path.relative(GALLERY_DL_DIR, fullPath)
+      const entryRelativePath = path.relative(BASE_DIR, fullPath)
       if (entry.isDirectory()) {
         if (!(await isExcluded(entryRelativePath))) {
           const subStats = await aggregateStats(fullPath)
@@ -99,7 +99,7 @@ async function getApiStats() {
     node: process.version,
   }
 }
-/*
+/**
  * @swagger
  * /api/stats:
  *   get:
@@ -126,10 +126,10 @@ router.get('/', async (req, res) => {
         details: {},
       },
     }
-    const collections = await fs.readdir(GALLERY_DL_DIR)
+    const collections = await fs.readdir(BASE_DIR)
     await Promise.all(
       collections.map(async (collection) => {
-        const collectionPath = path.join(GALLERY_DL_DIR, collection)
+        const collectionPath = path.join(BASE_DIR, collection)
         const dirStats = await fs.stat(collectionPath)
         if (dirStats.isDirectory() && !(await isExcluded(collection))) {
           stats.collections.totalDirectories++

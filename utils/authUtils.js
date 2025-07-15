@@ -29,7 +29,10 @@ function isAuthenticated(req, res, next) {
   if (req.session && req.session.authenticated) {
     return next()
   }
-  res.status(401).json({ error: 'Not authenticated' })
+  res.status(401).json({
+    message: 'Not authenticated',
+    status: 401,
+  })
 }
 async function getUserPermission(req) {
   if (req.session && req.session.authenticated && req.session.username) {

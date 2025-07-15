@@ -1,7 +1,7 @@
 const fs = require('fs').promises
 const path = require('path')
 const debug = require('debug')('gdl-api:utils:search')
-const { MAX_DEPTH, GALLERY_DL_DIR } = require('../config')
+const { MAX_DEPTH, BASE_DIR } = require('../config')
 const { isExcluded } = require('./fileUtils')
 async function* walkAndSearchFiles(
   dir,
@@ -19,7 +19,7 @@ async function* walkAndSearchFiles(
     for (const entry of entries) {
       if (count >= limit) return
       const fullPath = path.join(dir, entry.name)
-      const relativePath = path.relative(GALLERY_DL_DIR, fullPath)
+      const relativePath = path.relative(BASE_DIR, fullPath)
       if (await isExcluded(relativePath, permission)) continue
       const lowerCaseQuery = query.toLowerCase()
       const lowerCaseName = entry.name.toLowerCase()

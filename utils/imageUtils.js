@@ -1,5 +1,6 @@
 const sharp = require('sharp')
 const debug = require('debug')('gdl-api:utils:image')
+const { HOST, NAME } = require('../config')
 sharp.cache(true)
 sharp.simd(true)
 sharp.concurrency(5)
@@ -60,44 +61,32 @@ async function resizeImage(imagePath, { width, height, scale }) {
     const seconds = String(d.getSeconds()).padStart(2, '0')
     return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`
   }
-
-  // Add common metadata and image processing tags
   const metaIFD0 = {
-    // Basic file info
     Software: 'Gallery-DL API',
     ProcessingSoftware: 'Sharp',
-    Description: 'Downloaded from api.mcalec.dev',
-    ImageDescription: 'Downloaded from api.mcalec.dev',
+    Description: `Downloaded from ${HOST}`,
+    ImageDescription: `Downloaded from ${HOST}`,
     Copyright: 'All Rights Reserved',
-
-    // Date and time
     DateTime: formatExifDateTime(mtime),
     DateTimeOriginal: formatExifDateTime(mtime),
     DateTimeDigitized: formatExifDateTime(mtime),
     ModifyDate: formatExifDateTime(new Date()),
-
-    // Other fields
-    Artist: 'Gallery-DL API',
-    XPComment: 'Processed by Gallery-DL API',
+    Artist: NAME,
+    XPComment: `Processed by ${NAME}`,
     UserComment: `Processed on ${new Date().toISOString()}`,
     ColorSpace: 'sRGB',
     YCbCrPositioning: 'centered',
   }
   const metaExifIFD = {
-    // Basic file info
-    Software: 'Gallery-DL API',
+    Software: NAME,
     ProcessingSoftware: 'Sharp',
-    Description: 'Downloaded from api.mcalec.dev',
-    ImageDescription: 'Downloaded from api.mcalec.dev',
+    Description: `Downloaded from ${HOST}`,
+    ImageDescription: `Downloaded from ${HOST}`,
     Copyright: 'All Rights Reserved',
-
-    // Date and time
     DateTimeOriginal: formatExifDateTime(mtime),
     DateTimeDigitized: formatExifDateTime(mtime),
-
-    // Other fields
-    Artist: 'Gallery-DL API',
-    XPComment: 'Processed by Gallery-DL API',
+    Artist: NAME,
+    XPComment: `Processed by ${NAME}`,
     UserComment: `Processed on ${new Date().toISOString()}`,
     ColorSpace: 'sRGB',
     YCbCrPositioning: 'centered',

@@ -21,6 +21,10 @@ NODE_ENV=production
 # ie. localhost:3030 or 127.0.0.1:3030
 PORT=
 
+# name of your site
+# ex. mcalec-api
+NAME=
+
 # will check if either host is online and use it
 HOST=
 ALT_HOST=
@@ -28,8 +32,8 @@ ALT_HOST=
 # the base path that comes after the host (ex. example.com/gdl)
 BASE_PATH=
 
-# the path where your gdl downloads are
-GALLERY_DL_DIR=
+# the path where your files are
+BASE_DIR=
 
 # never show these dirs
 DISALLOWED_DIRS=[]

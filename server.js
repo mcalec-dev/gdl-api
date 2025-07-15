@@ -12,9 +12,10 @@ const figlet = require('figlet')
 const {
   NODE_ENV,
   PORT,
+  NAME,
   HOST,
   BASE_PATH,
-  GALLERY_DL_DIR,
+  BASE_DIR,
   SESSION_SECRET,
 } = require('./config')
 const { getUserPermission } = require('./utils/authUtils')
@@ -25,7 +26,7 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.3',
     info: {
-      title: 'gdl-api',
+      title: NAME,
       version: process.env.npm_package_version,
     },
     servers: [{ url: `https://alt-api.mcalec.dev` }],
@@ -150,9 +151,9 @@ app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err)
   }
-  res.status(err.status || 500).json({
+  res.status(500).json({
     message: 'Internal Server Error',
-    status: err.status || 500,
+    status: 500,
   })
 })
 process.on('uncaughtException', (error) => {
@@ -170,14 +171,14 @@ process.on('SIGTERM', () => {
 })
 async function verifyConfiguration() {
   try {
-    await fs.access(GALLERY_DL_DIR)
+    await fs.access(BASE_DIR)
   } catch {
-    debug(`ERROR: Gallery-DL directory not accessible: ${GALLERY_DL_DIR}`)
+    debug('Directory inaccessible:', BASE_DIR)
     process.exit(1)
   }
 }
 const displayBanner = async () => {
-  const banner = figlet.textSync('GDL-API', {
+  const banner = figlet.textSync(process.env.NAME, {
     font: 'Standard',
     horizontalLayout: 'full',
     verticalLayout: 'default',
@@ -197,7 +198,7 @@ const displayBanner = async () => {
     `${chalk.gray('⚙️ ')} ${chalk.white('Port:')}  ${chalk.green(PORT)}`
   )
   console.log(
-    `${chalk.gray('📂 ')} ${chalk.white('Directory:')}  ${chalk.green(`${GALLERY_DL_DIR}/`)}`
+    `${chalk.gray('📂 ')} ${chalk.white('Directory:')}  ${chalk.green(`${BASE_DIR}/`)}`
   )
   console.log(chalk.dim('━'.repeat(60)))
 }

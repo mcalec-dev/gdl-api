@@ -5,8 +5,10 @@ const { HOST } = require('../../config')
 async function handleDownload(req, res) {
   let q = req.query.q || req.body?.q
   if (!q) {
+    debug('Missing ?q parameter')
     return res.status(400).json({
-      error: 'Missing ?q= parameter',
+      message: 'Bad Request',
+      status: 400,
     })
   }
   q = q.trim()
@@ -18,7 +20,10 @@ async function handleDownload(req, res) {
     parsedUrl = new URL(q)
   } catch (error) {
     debug('Malformed URL:', error.message)
-    return res.status(400).json({ error: 'Malformed URL' })
+    return res.status(400).json({
+      message: 'Bad Request',
+      status: 400,
+    })
   }
   const urlHostParam = parsedUrl.hostname.toLowerCase()
   const notAllowedHosts = !allowedHosts.some(
@@ -29,7 +34,7 @@ async function handleDownload(req, res) {
   if (notAllowedHosts) {
     debug('Host not allowed:', notAllowedHosts)
     return res.status(403).json({
-      message: 'URL host not allowed',
+      message: 'Forbidden',
       status: 403,
     })
   }
@@ -39,7 +44,10 @@ async function handleDownload(req, res) {
   protocol
     .get(q, (fileRes) => {
       if (fileRes.statusCode !== 200) {
-        return res.status(404).json({ error: 'File not found on remote host' })
+        return res.status(404).json({
+          message: 'Not Found',
+          status: 404,
+        })
       }
       const filename = decodeURIComponent(
         (parsedUrl.pathname || '').split('/').pop() || 'download'
@@ -53,7 +61,10 @@ async function handleDownload(req, res) {
     })
     .on('error', (err) => {
       debug('Download error:', err)
-      return res.status(404).json({ error: 'File not found' })
+      return res.status(404).json({
+        message: 'Not Found',
+        status: 404,
+      })
     })
 }
 router.get('/', handleDownload)

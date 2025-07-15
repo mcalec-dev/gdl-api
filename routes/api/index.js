@@ -10,7 +10,6 @@ const randomRouter = require('./random')
 const searchRouter = require('./search')
 const statsRouter = require('./stats')
 debug('Initializing API routes')
-
 router.use((req, res, next) => {
   req.utils = {
     ...req.utils,
@@ -18,26 +17,20 @@ router.use((req, res, next) => {
   }
   next()
 })
-
 debug('Mounting auth routes')
 router.use('/auth', authRouter)
-
 debug('Mounting files routes')
 router.use('/files', filesRouter)
-
 debug('Mounting download routes')
 router.use('/download', downloadRouter)
-
 debug('Mounting random routes')
 router.use('/random', randomRouter)
-
 debug('Mounting search routes')
 router.use('/search', searchRouter)
-
 debug('Mounting stats routes')
 router.use('/stats', statsRouter)
-
-/* * @swagger
+/** 
+ * @swagger
  * /api:
  *   get:
  *     summary: Get API root information
@@ -72,7 +65,5 @@ router.get('/', (req, res) => {
     stats_url: baseURL + '/stats',
   })
 })
-
 debug('All routes mounted successfully')
-
 module.exports = router

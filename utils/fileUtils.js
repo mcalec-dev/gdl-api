@@ -282,7 +282,6 @@ function isPathExcluded(pathStr) {
   }
   return false
 }
-
 module.exports = {
   safeReadJson,
   isExcluded,

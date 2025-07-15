@@ -39,12 +39,14 @@ const NODE_ENV = process.env.NODE_ENV
 debug('Node environment:', NODE_ENV)
 const PORT = process.env.PORT
 debug('Port:', PORT)
+const NAME = process.env.NAME
+debug('Name:', NAME)
 const HOST = getHost()
 debug('Host:', HOST)
 const BASE_PATH = process.env.BASE_PATH
 debug('Base path:', BASE_PATH)
-const GALLERY_DL_DIR = process.env.GALLERY_DL_DIR
-debug('Gallery-dl directory:', GALLERY_DL_DIR)
+const BASE_DIR = process.env.BASE_DIR
+debug('Base directory:', BASE_DIR)
 const DISALLOWED_DIRS = parseJsonEnv(process.env.DISALLOWED_DIRS)
 debug('Disallowed directories:', DISALLOWED_DIRS)
 const DISALLOWED_FILES = parseJsonEnv(process.env.DISALLOWED_FILES)
@@ -58,9 +60,10 @@ debug('Session secret:', SESSION_SECRET)
 module.exports = {
   NODE_ENV,
   PORT,
-  BASE_PATH,
+  NAME,
   HOST,
-  GALLERY_DL_DIR,
+  BASE_PATH,
+  BASE_DIR,
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,

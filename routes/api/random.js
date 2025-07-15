@@ -4,7 +4,7 @@ const path = require('path')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:random')
 const {
-  GALLERY_DL_DIR,
+  BASE_DIR,
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
@@ -12,7 +12,7 @@ const {
 const { hasAllowedExtension, isExcluded } = require('../../utils/fileUtils')
 const { getUserPermission } = require('../../utils/authUtils')
 const NodeCache = require('node-cache')
-const fileListCache = new NodeCache({ stdTTL: 3600 * 24, checkperiod: 3600 }) // 24 hours TTL, check every hour
+const fileListCache = new NodeCache({ stdTTL: 3600 * 24, checkperiod: 3600 })
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase()
   return DISALLOWED_EXTENSIONS.some(
@@ -21,15 +21,13 @@ const isDisallowedExtension = (filename) => {
       ext === `.${disallowedExt.toLowerCase()}`
   )
 }
-
-// Function to refresh the cache periodically
 async function refreshCache() {
   debug('Refreshing file list cache')
-  const permissions = ['default', 'admin', 'all'] // Add all possible permissions
+  const permissions = ['default', 'admin', 'all']
   for (const permission of permissions) {
     const cacheKey = `fileList_${permission}`
     try {
-      const files = await getAllImagesInDirectory(GALLERY_DL_DIR, permission, 0)
+      const files = await getAllImagesInDirectory(BASE_DIR, permission, 0)
       fileListCache.set(cacheKey, files)
       debug(`File list cache refreshed for ${cacheKey}`)
     } catch (error) {
@@ -107,9 +105,8 @@ router.get('/', async (req, res) => {
         stats.size = null
       }
     }
-
     const relativePath = path
-      .relative(GALLERY_DL_DIR, randomImage.path)
+      .relative(BASE_DIR, randomImage.path)
       .replace(/\\/g, '/')
     const pathParts = relativePath.split('/')
     const baseUrl = `${req.protocol}://${req.get('host')}`
@@ -149,7 +146,7 @@ async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
       const batchResults = await Promise.all(
         batch.map(async (entry) => {
           const fullPath = path.join(dir, entry.name)
-          const relativePath = path.relative(GALLERY_DL_DIR, fullPath)
+          const relativePath = path.relative(BASE_DIR, fullPath)
           if (
             (await isExcluded(relativePath, permission)) ||
             DISALLOWED_DIRS.includes(entry.name) ||
@@ -196,5 +193,4 @@ async function getAllImagesInDirectory(dir, permission = 'default', depth = 0) {
     return []
   }
 }
-
 module.exports = router
