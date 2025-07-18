@@ -1,20 +1,16 @@
 *.log
 *.bak
 *.tmp
-*.backup
 *.env
 
 ecosystem.config.js
 .DS_Store
-run.bat
-favicon.png
-favicon.svg
 Thumbs.db
 
 dist/
 node_modules/
 min/
+logs/
 
 /.vscode/
-/logs/
 /db/

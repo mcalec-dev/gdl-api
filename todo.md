@@ -1,7 +1,6 @@
 # todo
 
 - add file checkers in `fileUtil.js` (ex. duplicate files, no extensions, etc.)
-- fix auth system and use a token system
 - integration with gallery-dl (powershell script or exe)
 - pagination for better optimization of large lists
 - add filters to `files` and `search` endpoints and frontend
@@ -9,18 +8,18 @@
 - add github actions (ci pipeline) for auditing dependencies, and linting
 - implement logging for the entire project (via debugs with log files and live ones)
 - add error handler as a util (middleware)
-- implement prettier
-- validater for json api data
+- validator for json api data
 - complete the `README.md` file
 - add testing applications (like insomnia or postman)
 - `config.json` for frontend variables (refer to my personal website)
-- i18n translations for the frontend (refer to discord bots)
-- `files.js` doesnt append the metadata even if it doesnt have an url param
-- use the frontend js files as modules so they can be used globally
-- fix relavancy in `search.js` to find more relavant directories (score them and show in response)
+- translations for the frontend (refer to discord bots)
+- `files.js` doesn't append the metadata even if it doesn't have an url param
+- fix relevancy in `search.js` to find more relevant directories (score them and show in response)
 - add testing modules (`*.test.js`) that only check for errors
-- add wiki to reflect swagger docs
+- create a wiki to reflect the swagger docs
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, graphql, passport.js
-- look into using tailwindcss for the frontend
-- reformat frontend with react?
+- npm packages to utilize; moment, pm2, async
+- alternate frontend with react?
+- finish revamping frontend with tailwind.css (and look into native tailwind)
+- fix normalizers in `fileUtils.js`, `pathUtils.js`, and `urlUtils.js`
+- fix issue of trying to logout and login not working

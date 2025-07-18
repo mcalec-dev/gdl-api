@@ -3,110 +3,179 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/css/min/index.min.css" />
-    <link rel="stylesheet" href="/css/min/footer.min.css" />
     <link rel="stylesheet" href="/css/min/consent-popup.min.css" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <title>Gallery-DL API</title>
+    <title>title</title>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body>
+  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
     <script src="/js/min/consent-popup.min.js"></script>
-    <div class="content">
-      <h1>Gallery-DL API</h1>
-      <p>
-        I suggest you to check my main site,
-        <a href="//mcalec.dev/" rel="noopener" target="_blank">
-          mcalec.dev
+    <nav class="bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border-b border-l border-r border-white/20 fixed z-20 top-0 left-1/2 -translate-x-1/2 w-full md:w-[65%] rounded-b-xl shadow-lg">
+      <div class="flex flex-wrap items-center justify-between p-4">
+        <a href="/" class="flex items-center">
+          <span id="navbar-title" class="self-center text-2xl font-semibold whitespace-nowrap text-white hover:text-blue-400 transition-colors duration-300">title</span>
         </a>
-        <br />
-        Contact me at: hello[at]mcalec[dot]dev
-      </p>
-      <table>
-        <tr>
-          <th>Endpoint/Page</th>
-          <th>Description</th>
-          <th>Link</th>
-        </tr>
-        <tr>
-          <td><code>/gdl/login/</code></td>
-          <td>Sign in for full access</td>
-          <td><a href="/login/">link</a></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/search/</code></td>
-          <td>Search interface for collections</td>
-          <td><a href="/search/">link</a></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/stats/</code></td>
-          <td>View detailed statistics dashboard</td>
-          <td><a href="/stats/">link</a></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/random/</code></td>
-          <td>View random images interface</td>
-          <td><a href="/random/">link</a></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/files/</code></td>
-          <td>Browse all collections and files</td>
-          <td><a href="/files/">link</a></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/api/random</code></td>
-          <td>Get random image</td>
-          <td><em>endpoint</em></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/api/stats</code></td>
-          <td>Get collection statistics</td>
-          <td><em>endpoint</em></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/api/files/*</code></td>
-          <td>Access individual files</td>
-          <td><em>endpoint</em></td>
-        </tr>
-        <tr>
-          <td><code>/gdl/api/search?q=term</code></td>
-          <td>Search API endpoint</td>
-          <td><em>endpoint</em></td>
-        </tr>
-      </table>
-      <h2>API Usage</h2>
-      <p>
-        The API supports both JSON responses and direct file access. All
-        endpoints return proper CORS headers and support rate limiting.
-      </p>
-      <h2>Rate Limits</h2>
-      <p>
-        API requests are limited based on server configuration. Current limits:
-      </p>
-      <ul>
-        <li>Time Window: <code id="rateLimitWindow">15</code> minutes</li>
-        <li>
-          Max Requests: <code id="rateLimitMax">100</code> requests per window
-        </li>
-      </ul>
-    </div>
-    <footer>
-      <div class="footer-content">
-        <div class="footer-copyright">McAlec Development © 2025</div>
-        <div class="footer-links">
-          <a href="//old.mcalec.dev/legal/license/" rel="noopener" target="_blank">
-            License
-          </a>
-          <a href="//old.mcalec.dev/legal/credits/" rel="noopener" target="_blank">
-            Credits
-          </a>
-          <a href="//mcalec.dev/legal/terms/" rel="noopener" target="_blank">
-            Terms
-          </a>
-          <a href="//mcalec.dev/legal/privacy/" rel="noopener" target="_blank">
-            Privacy
-          </a>
+        <div class="flex md:order-2">
+          <button id="mobile-menu-button" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" aria-controls="navbar-sticky" aria-expanded="false">
+            <span class="sr-only">Open main menu</span>
+            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15" /></svg>
+          </button>
+        </div>
+        <div id="mobile-navbar-menu" class="absolute right-0 top-[100%] w-56 bg-[#232329]/90 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 z-30 hidden md:hidden">
+          <ul class="flex flex-col space-y-2 p-4">
+            <li>
+              <a href="/" class="block py-2 pl-3 pr-4 text-white bg-blue-700 rounded hover:underline" aria-current="page">
+                Home
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/files" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline dark:text-white">
+                Files
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/random" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline dark:text-white">
+                Random
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/login" id="login-register" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline dark:text-white">
+                Login / Register
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div id="navbar-sticky" class="hidden md:flex items-center ml-auto">
+          <ul class="flex flex-row space-x-8 font-medium">
+            <li>
+              <a href="/" class="block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500 hover:underline" aria-current="page">
+                Home
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/files" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline md:p-0 md:dark:hover:text-blue-500 dark:text-white" >
+                Files
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/random" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline md:p-0 md:dark:hover:text-blue-500 dark:text-white" >
+                Random
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+            <li>
+              <a href="/login" id="login-register" class="block py-2 pl-3 pr-4 text-gray-900 rounded hover:underline md:p-0 md:dark:hover:text-blue-500 dark:text-white" >
+                Login / Register
+                <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
-    </footer>
+    </nav>
+    <script type="module" defer src="/js/min/navbar.min.js"></script>
+    <div class="w-full max-w-3xl rounded-2xl shadow-2xl p-4 sm:p-8 md:p-8 mx-1 sm:mx-0 z-10 bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border border-white/20 mt-24 mb-8 sm:mb-12 md:mb-16">
+      <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8">Home</h1>
+      <p class="text-base text-gray-300 text-center mb-6 sm:mb-8">
+        I suggest you to check the documentation of this API, which is available at
+        <a href="/gdl/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">/gdl/docs/</a>
+        <br />
+        You can also visit my main site at
+        <a href="//mcalec.dev/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">mcalec.dev</a>
+        <br />
+        Contact me at: <span class="text-gray-400">hello[at]mcalec[dot]dev</span>
+      </p>
+      <div class="overflow-x-auto -mx-2 sm:mx-0">
+        <table class="w-full text-sm text-left text-gray-400 border border-white/10 rounded-xl overflow-hidden bg-[#171717]/90 shadow-lg">
+          <thead class="bg-[#131316] text-gray-300 border-white/10">
+            <tr>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">Endpoint/Page</th>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">Description</th>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Landing page</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/gdl/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/docs/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Swagger API Documentation</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/gdl/docs/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/login/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Log into your account</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/login/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/register/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Register a new account</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/register/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/dashboard/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">View your account dashboard</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/dashboard/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/search/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Search interface</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/search/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/stats/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Detailed statistics dashboard</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/stats/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/random/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Random images interface</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/random/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/files/</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Browse all files</td>
+              <td class="px-2 py-2 border border-[#404040]"><a href="/files/" class="text-blue-500 hover:underline">link</a></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/random</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Get a random image</td>
+              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/stats</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Get collection statistics</td>
+              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/files</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Access individual files</td>
+              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/search?q=term</code></td>
+              <td class="px-2 py-2 border border-[#404040]">Search API endpoint</td>
+              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h2 class="text-xl sm:text-2xl text-white font-semibold mt-8 sm:mt-12 mb-3 sm:mb-4">API Usage</h2>
+      <p class="text-gray-300 mb-6 sm:mb-8">
+        The API supports both JSON responses and direct file access. All endpoints should return the proper CORS headers.
+      </p>
+    </div>
+    <div aria-hidden="true" class="pointer-events-none select-none absolute inset-0 w-full h-full z-0">
+      <img type="image/svg+xml" src="/img/bg.svg" class="w-full h-full">
+    </div>
   </body>
 </html>

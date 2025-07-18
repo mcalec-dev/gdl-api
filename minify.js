@@ -3,10 +3,12 @@ const path = require('path')
 const { minify } = require('terser')
 const CleanCSS = require('clean-css')
 const glob = require('glob')
+const chalk = require('chalk')
 const debug = require('debug')('gdl-api:minify')
 const publicDir = path.join(__dirname, 'public')
 const minifyJS = async (filePath) => {
   try {
+    debug(chalk.blue('Minifying JS:', filePath))
     const code = await fs.readFile(filePath, 'utf8')
     const minified = await minify(code)
     const jsDir = path.join(publicDir, 'js')
@@ -17,13 +19,14 @@ const minifyJS = async (filePath) => {
     const outputPath = path.join(outputDir, fileName)
     await fs.mkdir(outputDir, { recursive: true })
     await fs.writeFile(outputPath, minified.code)
-    debug('Minified JS:', outputPath)
+    debug(chalk.greenBright('Minified JS:', outputPath))
   } catch (error) {
-    debug('Error minifying JS:', filePath, error)
+    debug(chalk.redBright('Error minifying JS:', filePath, error))
   }
 }
 const minifyCSS = async (filePath) => {
   try {
+    debug(chalk.blue('Minifying CSS:', filePath))
     const code = await fs.readFile(filePath, 'utf8')
     const minified = new CleanCSS().minify(code)
     const cssDir = path.join(publicDir, 'css')
@@ -34,32 +37,33 @@ const minifyCSS = async (filePath) => {
     const outputPath = path.join(outputDir, fileName)
     await fs.mkdir(outputDir, { recursive: true })
     await fs.writeFile(outputPath, minified.styles)
-    debug('Minified CSS:', outputPath)
+    debug(chalk.greenBright('Minified CSS:', outputPath))
   } catch (error) {
-    debug('Error minifying CSS:', filePath, error)
+    debug(chalk.redBright('Error minifying CSS:', filePath, error))
   }
 }
 async function processFiles() {
   try {
+    debug(chalk.cyan('File processing started...'))
     const jsPattern = path
       .join(publicDir, 'js', '**', '*.js')
       .replace(/\\/g, '/')
     const jsFiles = glob.sync(jsPattern, { ignore: [`**/*.min.js`] })
-    debug(`Found ${jsFiles.length} js files`)
+    debug(chalk.cyan(`Found ${jsFiles.length} js files`))
     const cssPattern = path
       .join(publicDir, 'css', '**', '*.css')
       .replace(/\\/g, '/')
     const cssFiles = glob.sync(cssPattern, { ignore: [`**/*.min.css`] })
-    debug(`Found ${cssFiles.length} css files`)
+    debug(chalk.cyan(`Found ${cssFiles.length} css files`))
     for (const file of jsFiles) {
       await minifyJS(file)
     }
     for (const file of cssFiles) {
       await minifyCSS(file)
     }
-    debug('File processing completed')
+    debug(chalk.cyanBright('File processing completed!'))
   } catch (error) {
-    debug('Error in file processing:', error)
+    debug(chalk.redBright('Error in file processing:', error))
   }
 }
 processFiles()

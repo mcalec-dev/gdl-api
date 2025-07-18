@@ -12,7 +12,6 @@ const {
 const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
 const { normalizeUrl } = require('../../utils/urlUtils')
 const pathUtils = require('../../utils/pathUtils')
-const { getUserPermission } = require('../../utils/authUtils')
 const { resizeImage } = require('../../utils/imageUtils')
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
@@ -90,7 +89,6 @@ async function getDirectorySize(dirPath) {
  *                     type: string
  */
 router.get(['/', ''], async (req, res) => {
-  const permission = await getUserPermission(req)
   try {
     const stats = await fs.stat(BASE_DIR)
     if (!stats.isDirectory()) {
@@ -112,7 +110,7 @@ router.get(['/', ''], async (req, res) => {
     const results = await Promise.all(
       entries.map(async (entry) => {
         if (
-          (await isExcluded(entry.name, permission)) ||
+          (await isExcluded(entry.name)) ||
           DISALLOWED_DIRS.includes(entry.name) ||
           (entry.isFile() &&
             (DISALLOWED_FILES.includes(entry.name) ||
@@ -166,7 +164,6 @@ router.get(['/', ''], async (req, res) => {
 router.get(
   ['/:collection', '/:collection/', '/:collection/*'],
   async (req, res) => {
-    const permission = await getUserPermission(req)
     const collection = req.params.collection
     const subPath = req.params[0] || ''
     const normalizedDir = path.normalize(BASE_DIR)
@@ -193,7 +190,7 @@ router.get(
     const relativePath = path
       .relative(normalizedDir, realPath)
       .replace(/\\/g, '/')
-    if (await isExcluded(relativePath, permission)) {
+    if (await isExcluded(relativePath)) {
       debug(`Access denied to: ${relativePath}`)
       return res.status(404).json({
         message: 'Not Found',
@@ -228,7 +225,7 @@ router.get(
         entries.map(async (entry) => {
           const entryRelativePath = path.join(collection, subPath, entry.name)
           if (
-            (await isExcluded(entryRelativePath, permission)) ||
+            (await isExcluded(entryRelativePath)) ||
             DISALLOWED_DIRS.includes(entry.name) ||
             (entry.isFile() &&
               (DISALLOWED_FILES.includes(entry.name) ||
@@ -274,7 +271,7 @@ router.get(
       })
     } else {
       if (
-        !hasAllowedExtension(realPath, permission) ||
+        !hasAllowedExtension(realPath) ||
         DISALLOWED_FILES.includes(path.basename(realPath)) ||
         isDisallowedExtension(path.basename(realPath))
       ) {

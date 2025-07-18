@@ -31,7 +31,9 @@ function showMedia(data) {
   const mediaElement = isVideo
     ? document.createElement('video')
     : document.createElement('img')
-  mediaElement.className = 'media-element'
+  mediaElement.classList =
+    'object-contain w-full h-full overflow-hidden border-none rounded-xl'
+  mediaElement.style.display = 'none'
   if (isVideo) {
     mediaElement.controls = true
     mediaElement.muted = false
@@ -39,9 +41,19 @@ function showMedia(data) {
     mediaElement.autoplay = false
   }
   imageInfo.innerHTML = `
-    <span id="image-author">${data.author}</span><span> on </span><span id="image-collection">${data.collection}</span><br>
-    <span id="image-size">${formatSize(data.size)}</span>
+    <span id="image-author" class="font-semibold text-gray-300">${escapeHTML(data.author)}</span>
+    <span class="text-gray-400"> on </span>
+    <span id="image-collection" class="font-semibold text-gray-300">${escapeHTML(data.collection)}</span><br>
+    <span id="image-size" class="text-gray-400">${formatSize(data.size)}</span>
   `
+  function escapeHTML(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
   const loadHandler = () => {
     loading.style.display = 'none'
     mediaElement.style.display = 'block'
@@ -51,13 +63,13 @@ function showMedia(data) {
   mediaElement.addEventListener(isVideo ? 'loadeddata' : 'load', loadHandler)
   mediaElement.addEventListener('error', handleMediaError)
   mediaElement.src = mediaUrl + ''
+  mediaElement.onclick = () => window.open(mediaUrl, '_blank')
   imageContainer.appendChild(mediaElement)
-  imageContainer.onclick = () => window.open(mediaUrl, '_blank')
 }
 async function loadRandomMedia() {
   try {
     imageContainer.classList.remove('has-image')
-    loading.textContent = '<span>loading...</span>'
+    loading.textContent = 'Loading...'
     loading.style.display = 'block'
     loading.classList.remove('error')
     imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())

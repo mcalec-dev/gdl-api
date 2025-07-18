@@ -10,7 +10,6 @@ const {
   DISALLOWED_EXTENSIONS,
 } = require('../../config')
 const { hasAllowedExtension, isExcluded } = require('../../utils/fileUtils')
-const { getUserPermission } = require('../../utils/authUtils')
 const NodeCache = require('node-cache')
 const fileListCache = new NodeCache({ stdTTL: 3600 * 24, checkperiod: 3600 })
 const isDisallowedExtension = (filename) => {
@@ -23,16 +22,17 @@ const isDisallowedExtension = (filename) => {
 }
 async function refreshCache() {
   debug('Refreshing file list cache')
-  const permissions = ['default', 'admin', 'all']
-  for (const permission of permissions) {
-    const cacheKey = `fileList_${permission}`
+  try {
+    const cacheKey = 'randomFileListCache'
     try {
-      const files = await getAllImagesInDirectory(BASE_DIR, permission, 0)
+      const files = await getAllImagesInDirectory(BASE_DIR, 0)
       fileListCache.set(cacheKey, files)
-      debug(`File list cache refreshed for ${cacheKey}`)
+      debug('File list cache refreshed for:', cacheKey)
     } catch (error) {
-      debug(`Error refreshing file list cache for ${cacheKey}:`, error)
+      debug('Error refreshing file list cache for:', cacheKey, error)
     }
+  } catch (error) {
+    debug('Error refreshing cache:', error)
   }
 }
 refreshCache()
@@ -43,16 +43,16 @@ refreshCache()
     debug('Error during initial cache population:', error)
   })
 setInterval(refreshCache, 30 * 60 * 1000)
-async function getCachedFileList(permission) {
-  const cacheKey = `fileList_${permission}`
+async function getCachedFileList() {
+  const cacheKey = 'randomFileListCache'
   let files = fileListCache.get(cacheKey)
   if (files === undefined) {
     return []
   }
   return files
 }
-async function getRandomImagePath(permission) {
-  const files = await getCachedFileList(permission)
+async function getRandomImagePath() {
+  const files = await getCachedFileList()
   if (files.length === 0) {
     throw new Error('No files available')
   }
@@ -93,8 +93,7 @@ async function getRandomImagePath(permission) {
 router.get('/', async (req, res) => {
   debug('Random image request received')
   try {
-    const permission = await getUserPermission(req)
-    const randomImage = await getRandomImagePath(permission)
+    const randomImage = await getRandomImagePath()
     let stats = { size: randomImage.size }
     // Only call fs.stat if size is missing
     if (typeof randomImage.size !== 'number') {

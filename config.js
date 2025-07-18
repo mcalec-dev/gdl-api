@@ -53,8 +53,8 @@ const DISALLOWED_FILES = parseJsonEnv(process.env.DISALLOWED_FILES)
 debug('Disallowed files:', DISALLOWED_FILES)
 const DISALLOWED_EXTENSIONS = parseJsonEnv(process.env.DISALLOWED_EXTENSIONS)
 debug('Disallowed extensions:', DISALLOWED_EXTENSIONS)
-const DB_DIR = process.env.DB_DIR
-debug('Database directory:', DB_DIR)
+const MONGODB_URL = process.env.MONGODB_URL
+debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
 module.exports = {
@@ -67,6 +67,7 @@ module.exports = {
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
+  MONGODB_URL,
   SESSION_SECRET,
   debug,
 }

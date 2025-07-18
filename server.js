@@ -1,3 +1,6 @@
+const mongoose = require('mongoose')
+const passport = require('./utils/passport')
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors')
@@ -9,6 +12,8 @@ const session = require('express-session')
 const debug = require('debug')('gdl-api:server')
 const chalk = require('chalk')
 const figlet = require('figlet')
+const swaggerJsdoc = require('swagger-jsdoc')
+const swaggerUi = require('swagger-ui-express')
 const {
   NODE_ENV,
   PORT,
@@ -17,10 +22,8 @@ const {
   BASE_PATH,
   BASE_DIR,
   SESSION_SECRET,
+  MONGODB_URL,
 } = require('./config')
-const { getUserPermission } = require('./utils/authUtils')
-const swaggerJsdoc = require('swagger-jsdoc')
-const swaggerUi = require('swagger-ui-express')
 const SESSION_MAX_AGE = 30 * 60 * 1000
 const swaggerOptions = {
   definition: {
@@ -51,6 +54,8 @@ app.use(
     },
   })
 )
+app.use(passport.initialize())
+app.use(passport.session())
 app.use(morgan('dev'))
 /*
 morgan.token('full-url', (req) => `${req.protocol}://${req.get('host')}${req.originalUrl}`);
@@ -79,27 +84,22 @@ app.use(
     maxAge: '1h',
   })
 )
-app.use(`${BASE_PATH}/api`, async (req, res, next) => {
-  if (req.path.startsWith('/auth/')) {
-    return next()
-  }
-  const permission = await getUserPermission(req)
-  if (permission && permission !== 'visitor') {
-    return next()
-  }
-  res.setHeader('Cache-Control', 'no-cache, no-store')
-  res.setHeader('Content-Type', 'application/json')
-  try {
-    await require('./utils/authUtils').isAuthenticated(req, res, next)
-  } catch {
-    return
-  }
-})
+mongoose
+  .connect(MONGODB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => debug('MongoDB connected'))
+  .catch((err) => debug('MongoDB connection error:', err))
 app.get('/', (req, res) => {
   res.redirect(`${BASE_PATH}/`)
 })
 app.get(/^\/(?!gdl\/).*/, (req, res) => {
   res.redirect(`${BASE_PATH}${req.path}`)
+})
+app.get('/robots.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
+  res.setHeader('Content-Type', 'text/plain')
 })
 app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
@@ -130,11 +130,17 @@ app.get(`${BASE_PATH}/files/*`, (req, res) => {
 app.get(`${BASE_PATH}/login/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'))
 })
+app.get(`${BASE_PATH}/register/`, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'register.html'))
+})
 app.get(`${BASE_PATH}/download/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'download.html'))
 })
 app.get(`${BASE_PATH}/navbar/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'navbar.html'))
+})
+app.get(`${BASE_PATH}/dashboard/`, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))
 })
 app.use(BASE_PATH, require('./routes'))
 app.use((req, res, next) => {

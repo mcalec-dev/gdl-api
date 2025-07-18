@@ -1,6 +1,8 @@
 const express = require('express')
 const router = express.Router()
 const { getAPIUrl } = require('../../utils/urlUtils')
+const { NAME, BASE_PATH } = require('../../config')
+require('dotenv').config()
 const debug = require('debug')('gdl-api:api:routes')
 const pathUtils = require('../../utils/pathUtils')
 const authRouter = require('./auth')
@@ -29,7 +31,7 @@ debug('Mounting search routes')
 router.use('/search', searchRouter)
 debug('Mounting stats routes')
 router.use('/stats', statsRouter)
-/** 
+/**
  * @swagger
  * /api:
  *   get:
@@ -58,11 +60,18 @@ router.get('/', (req, res) => {
   const baseURL = getAPIUrl(req)
   debug(`Base URL for API: ${baseURL}`)
   res.json({
-    auth_url: baseURL + '/auth',
-    files_url: baseURL + '/files',
-    random_url: baseURL + '/random',
-    search_url: baseURL + '/search',
-    stats_url: baseURL + '/stats',
+    api: 'v2',
+    name: NAME,
+    version: process.env.npm_package_version,
+    description: process.env.npm_package_description,
+    basePath: BASE_PATH,
+    urls: {
+      auth: baseURL + '/auth',
+      files: baseURL + '/files',
+      random: baseURL + '/random',
+      search: baseURL + '/search',
+      stats: baseURL + '/stats',
+    },
   })
 })
 debug('All routes mounted successfully')

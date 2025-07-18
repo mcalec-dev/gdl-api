@@ -23,6 +23,7 @@ module.exports = defineConfig([
         global: 'readonly',
         console: 'readonly',
         URL: 'readonly',
+        startTimeout: 'readonly',
       }
     }
   },

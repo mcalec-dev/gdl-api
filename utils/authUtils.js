@@ -1,50 +1,38 @@
-const fs = require('fs').promises
-const path = require('path')
-const DATABASE = path.join(__dirname, '../db')
-const DEFAULT = 'default'
-async function getUserConfig(username) {
-  let user = username || DEFAULT
-  const configPath = path.join(DATABASE, user, 'config.json')
-  try {
-    const data = await fs.readFile(configPath, 'utf8')
-    return JSON.parse(data)
-  } catch {
-    if (user !== DEFAULT) {
-      const defPath = path.join(DATABASE, DEFAULT, 'config.json')
-      const data = await fs.readFile(defPath, 'utf8')
-      return JSON.parse(data)
+const debug = require('debug')('gdl:utils:auth')
+function requireRole(role) {
+  return (req, res, next) => {
+    if (
+      req.isAuthenticated() &&
+      req.user &&
+      req.user.roles &&
+      req.user.roles.includes(role)
+    ) {
+      debug('User:', req.user.username, 'has role:', role)
+      return next()
     }
-    return { username: '', password: '', permission: 'visitor' }
+    debug('User:', req.user ? req.user.username : 'unknown', 'does not have role:', role)
+    return res.status(403).json({
+      message: 'Forbidden',
+      status: 403,
+    })
   }
 }
-async function validateUser(username, password) {
-  const config = await getUserConfig(username)
-  if (!config || !config.password) return false
-  if (!config.password && !password) return true
-  // Unsafe, but works for now
-  // Otherwise, compare plaintext
-  return config.password === password
-}
-function isAuthenticated(req, res, next) {
-  if (req.session && req.session.authenticated) {
-    return next()
+function requireAnyRole(roles) {
+  return (req, res, next) => {
+    if (
+      req.isAuthenticated() &&
+      req.user &&
+      req.user.roles &&
+      roles.some((r) => req.user.roles.includes(r))
+    ) {
+      debug('User:', req.user.username, 'has one of the roles:', roles)
+      return next()
+    }
+    debug('User:', req.user ? req.user.username : 'unknown', 'does not have any of the roles:', roles)
+    return res.status(403).json({
+      message: 'Forbidden',
+      status: 403,
+    })
   }
-  res.status(401).json({
-    message: 'Not authenticated',
-    status: 401,
-  })
 }
-async function getUserPermission(req) {
-  if (req.session && req.session.authenticated && req.session.username) {
-    const config = await getUserConfig(req.session.username)
-    return config.permission || DEFAULT
-  }
-  const config = await getUserConfig(DEFAULT)
-  return config.permission || DEFAULT
-}
-module.exports = {
-  isAuthenticated,
-  validateUser,
-  getUserConfig,
-  getUserPermission,
-}
+module.exports = { requireRole, requireAnyRole }
