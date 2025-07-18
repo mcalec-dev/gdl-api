@@ -1,5 +1,6 @@
 {
-  "appId": "com.gdl.electronapp",
+  "productName": "gdl-api-client",
+  "appId": "dev.mcalec.gdl-api-client",
   "directories": {
     "output": "dist"
   },
@@ -8,23 +9,24 @@
   ],
   "win": {
     "target": [
-      {
-        "target": "nsis",
-        "arch": ["x64"]
-      }
+      { "target": "msi", "arch": ["x64"] },
+      { "target": "nsis", "arch": ["x64"] },
+      { "target": "portable", "arch": ["x64"] },
+      { "target": "zip", "arch": ["x64"] },
+      { "target": "7z", "arch": ["x64"] }
     ],
-    "artifactName": "windows_x64",
-    "icon": "public/favicon.ico"
+    "artifactName": "${productName}_${os}-${arch}_${version}.${ext}",
+    "icon": "icon.ico"
   },
   "linux": {
     "target": [
-      {
-        "target": "AppImage",
-        "arch": ["x64"]
-      }
+      { "target": "deb", "arch": ["x64"] },
+      { "target": "tar.gz", "arch": ["x64"] },
+      { "target": "zip", "arch": ["x64"] },
+      { "target": "7z", "arch": ["x64"] }
     ],
-    "artifactName": "linux_x64",
-    "icon": "public/favicon.ico"
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "icon": "icon.png"
   },
   "extraMetadata": {
     "main": "electron.js"
