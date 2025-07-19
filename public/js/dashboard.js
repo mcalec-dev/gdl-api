@@ -25,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="mt-6">
           <div class="flex flex-col sm:flex-row gap-3 mt-4">
-            <button id="link-github" class="px-4 py-3 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2 hover:bg-[#1b1f23]">
+            <button id="link-github" class="px-4 py-3 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2">
               <img src="/img/github.svg" alt="GitHub" class="h-5 w-5">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
             </button>
-            <button id="link-discord" class="px-4 py-3 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2 hover:bg-[#4752c4]">
+            <button id="link-discord" class="px-4 py-3 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2">
               <img src="/img/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
           </div>

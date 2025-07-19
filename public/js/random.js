@@ -111,8 +111,6 @@ function showNextMedia() {
     showMedia(history[historyIndex], true)
   }
 }
-
-// Initialize after resolving API host
 document.addEventListener('DOMContentLoaded', async () => {
   const apiBase = await apiHost()
   API_URL = `${apiBase}/random`

@@ -8,11 +8,9 @@ const {
   ButtonStyle,
   SlashCommandBuilder,
 } = require('discord.js')
-const axios = require('axios')
 const debug = require('debug')('gdl-api:bot:discord')
-const { HOST, BASE_PATH } = require('../../config')
-
-// Update client configuration
+const { HOST, BASE_PATH, NAME } = require('../../config')
+const axios = require('axios')
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -21,25 +19,16 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
   ],
   allowedMentions: { parse: ['users'] },
-  partials: ['CHANNEL'], // Required for DM support
+  partials: ['CHANNEL'],
 })
-
-// Update command configuration
 const commands = [
   new SlashCommandBuilder()
     .setName('random')
     .setDescription('Get a random image from the gallery')
-    .setDMPermission(true) // Enable DMs
-    .setDefaultMemberPermissions(null) // Available to everyone
+    .setDMPermission(true)
+    .setDefaultMemberPermissions(null)
     .toJSON(),
 ]
-
-const API_BASE_URL = `https://${HOST}${BASE_PATH}/api`
-
-// Add scale tracking to URL parameters
-let currentScale = 100 // Default scale
-
-// Update the getActionRow function to include all buttons
 const getActionRow = () => {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -56,79 +45,54 @@ const getActionRow = () => {
       .setStyle(ButtonStyle.Secondary)
   )
 }
-
-// Add helper function to build URL with scale
 function buildImageUrl(baseUrl, scale) {
-  // If it's a full URL, use it directly
+  const apiBase = `${HOST}${BASE_PATH}/api/`
   const url = baseUrl.startsWith('http')
     ? new URL(baseUrl)
-    : new URL(baseUrl, API_BASE_URL) // Fallback to primary URL
-
+    : new URL(baseUrl, apiBase)
   url.searchParams.set('x', scale)
   return url.toString()
 }
-
-// Function to fetch random image
 async function getRandomImage() {
-  const urls = [API_BASE_URL]
-  let lastError = null
-
-  for (const baseUrl of urls) {
-    try {
-      debug(`Attempting to fetch from ${baseUrl}/random`)
-      const response = await axios.get(`${baseUrl}/random`, {
-        timeout: 60 * 1000, // 60 seconds timeout
-      })
-
-      debug(`Successfully fetched from ${baseUrl}`)
-      const imageData = response.data
-
-      // If the URL is relative, make it absolute
-      if (imageData.url && !imageData.url.startsWith('http')) {
-        const apiDomain = new URL(baseUrl).origin
-        imageData.url = `${apiDomain}${imageData.url}`
-        debug(`Converted relative URL to absolute: ${imageData.url}`)
-      }
-
-      return imageData
-    } catch (error) {
-      debug(`Failed to fetch from ${baseUrl}:`, error.message)
-      debug(`Response status:`, error.response?.status)
-      debug(`Response data:`, error.response?.data)
-      lastError = error
-    }
+  const baseUrl = `${await HOST}${BASE_PATH}/api/random`
+  try {
+    debug('Attempting to fetch from:', baseUrl)
+    const response = await axios.get(baseUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 60 * 1000,
+    })
+    debug('Successfully fetched from:', baseUrl)
+    return response.data
+  } catch (error) {
+    debug('Failed to fetch from:', baseUrl, error.message)
+    throw new Error(error)
   }
-
-  debug('All API endpoints failed')
-  throw new Error(
-    `Failed to fetch image from all endpoints: ${lastError?.message}`
-  )
 }
-
-// Add helper function to check if file is video
 function isVideoFile(filename) {
   const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv']
   return videoExtensions.some((ext) => filename.toLowerCase().endsWith(ext))
 }
-
-// Update the sendImageEmbed function
+let currentScale = 100
 async function sendImageEmbed(interaction, imageData) {
-  // Validate interaction is still valid
   if (!interaction.webhook) {
     debug('Interaction is no longer valid')
     return
   }
-
-  const imageUrl = new URL(imageData.url, 'https://api.mcalec.dev/').toString()
+  let imageUrl = imageData.url
   const isVideo = isVideoFile(imageData.file)
-
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)
     .setTitle(imageData.file)
     .setURL(imageUrl)
     .addFields(
       { name: 'Author', value: imageData.author, inline: true },
-      { name: 'Platform', value: imageData.collection, inline: true },
+      {
+        name: 'Platform',
+        value: imageData.collection,
+        inline: true,
+      },
       {
         name: 'Size',
         value: `${Math.round(imageData.size / 1024)} KB`,
@@ -139,34 +103,20 @@ async function sendImageEmbed(interaction, imageData) {
     )
     .setTimestamp()
     .setFooter({
-      text: `Gallery-DL Random Image | Requested by ${interaction.user.tag}`,
+      text: `${NAME} | Requested by ${interaction.user?.tag}`,
     })
-
-  if (!isVideo) {
+  if (!isVideo && imageUrl) {
     embed.setImage(imageUrl)
   }
-
   const actionRow = getActionRow()
-
   try {
-    if (isVideo) {
-      await interaction
-        .editReply({ content: `Video: ${imageUrl}` })
-        .catch(() => debug('Failed to edit reply with video'))
-
-      if (interaction.webhook) {
-        await interaction
-          .followUp({ embeds: [embed], components: [actionRow] })
-          .catch(() => debug('Failed to send follow-up embed'))
-      }
-    } else {
-      await interaction
-        .editReply({ embeds: [embed], components: [actionRow] })
-        .catch(() => debug('Failed to edit reply with embed'))
-    }
+    await interaction.editReply({
+      content: isVideo ? `Video: ${imageUrl}` : undefined,
+      embeds: [embed],
+      components: [actionRow],
+    })
   } catch (error) {
     debug('Error sending embed:', error)
-
     if (interaction.webhook) {
       await interaction
         .editReply({
@@ -177,23 +127,15 @@ async function sendImageEmbed(interaction, imageData) {
     }
   }
 }
-
-// Event handlers
 client.once(Events.ClientReady, () => {
   debug('Discord bot is ready!')
 })
-
-// Handle button interactions
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton() && !interaction.isChatInputCommand()) return
-
   try {
     if (interaction.isButton()) {
-      // Get the original user from the footer text
       const footer = interaction.message.embeds[0].footer.text
       const originalUser = footer.split('Requested by ')[1]
-
-      // Check if the interaction user is the original user
       if (interaction.user.tag !== originalUser) {
         await interaction.reply({
           content: 'This is not your message to interact with!',
@@ -201,12 +143,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         })
         return
       }
-
       await interaction.deferUpdate()
-
       let imageData
       let newScale = currentScale
-
       switch (interaction.customId) {
         case 'scaleUp':
           newScale = Math.min(500, currentScale + 50)
@@ -221,17 +160,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
           imageData = await getRandomImage()
           break
       }
-
       currentScale = newScale
       const imageUrl = buildImageUrl(
         interaction.customId === 'regenerate' ? imageData.url : imageData.url,
         currentScale
       )
-
       const isVideo = isVideoFile(
         interaction.customId === 'regenerate' ? imageData.file : imageData.title
       )
-
       const embed = new EmbedBuilder()
         .setColor(0x0099ff)
         .setTitle(
@@ -270,20 +206,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
         )
         .setTimestamp()
         .setFooter({
-          text: `Gallery-DL Random Image | Requested by ${originalUser}`,
+          text: `${NAME} | Requested by ${originalUser}`,
         })
-
       if (!isVideo) {
         embed.setImage(imageUrl)
       }
-
       await interaction.editReply({
         content: isVideo ? `Video: ${imageUrl}` : null,
         embeds: [embed],
         components: [getActionRow()],
       })
     }
-
     if (
       interaction.isChatInputCommand() &&
       interaction.commandName === 'random'
@@ -299,21 +232,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   } catch (error) {
     debug('Error handling interaction:', error)
-
-    // Only try to respond if the interaction hasn't been responded to
     if (!interaction.replied && !interaction.deferred) {
       try {
         await interaction.reply({
           content: 'Error fetching random image. Please try again later.',
-          flags: [1 << 6], // Using flags instead of ephemeral
+          flags: [1 << 6],
         })
       } catch (innerError) {
         debug('Error sending error response:', innerError)
       }
       return
     }
-
-    // If the interaction was deferred, try to edit the reply
     if (interaction.deferred) {
       try {
         const actionRow = getActionRow()
@@ -327,8 +256,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 })
-
-// Export the client and required functions
 module.exports = {
   client,
   commands,

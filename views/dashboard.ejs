@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <%- include('partials/head') %>
+  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+    <%- include('partials/navbar') %>
+    <div id="container" class="w-full max-w-3xl rounded-2xl shadow-2xl p-4 sm:p-8 md:p-8 mx-1 sm:mx-0 z-10 bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border border-white/20 mt-24 mb-8 sm:mb-12 md:mb-16">
+      <h1 class="text-3xl font-light text-center text-white mb-6 sm:mb-8">Dashboard</h1>
+      <div id="loading" class="text-center text-gray-300">Loading...</div>
+      <div id="error" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
+      <div id="dashboard-content" class="text-white space-y-4"></div>
+    </div>
+    <script type="module" defer src="/js/min/dashboard.min.js"></script>
+    <%- include('partials/bg') %>
+  </body>
+</html>

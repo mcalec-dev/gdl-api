@@ -187,7 +187,6 @@ router.get(
     res.redirect('/')
   }
 )
-// tba admin dashboard
 router.get('/admin', requireRole('admin'), (req, res, next) => {
   next()
 })

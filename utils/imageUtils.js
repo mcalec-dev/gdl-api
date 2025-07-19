@@ -64,8 +64,8 @@ async function resizeImage(imagePath, { width, height, scale }) {
   const metaIFD0 = {
     Software: 'Gallery-DL API',
     ProcessingSoftware: 'Sharp',
-    Description: `Downloaded from ${HOST}`,
-    ImageDescription: `Downloaded from ${HOST}`,
+    Description: `Downloaded from ${await HOST}`,
+    ImageDescription: `Downloaded from ${await HOST}`,
     Copyright: 'All Rights Reserved',
     DateTime: formatExifDateTime(mtime),
     DateTimeOriginal: formatExifDateTime(mtime),
@@ -80,8 +80,8 @@ async function resizeImage(imagePath, { width, height, scale }) {
   const metaExifIFD = {
     Software: NAME,
     ProcessingSoftware: 'Sharp',
-    Description: `Downloaded from ${HOST}`,
-    ImageDescription: `Downloaded from ${HOST}`,
+    Description: `Downloaded from ${await HOST}`,
+    ImageDescription: `Downloaded from ${await HOST}`,
     Copyright: 'All Rights Reserved',
     DateTimeOriginal: formatExifDateTime(mtime),
     DateTimeDigitized: formatExifDateTime(mtime),

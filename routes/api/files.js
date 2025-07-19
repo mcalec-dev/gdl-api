@@ -1,6 +1,9 @@
 const express = require('express')
 const router = express.Router()
 const path = require('path')
+const Directory = require('../../models/Directory')
+const Image = require('../../models/Image')
+const Video = require('../../models/Video')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
 const {
@@ -8,23 +11,15 @@ const {
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
+  BASE_PATH,
 } = require('../../config')
 const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
-const { normalizeUrl } = require('../../utils/urlUtils')
 const pathUtils = require('../../utils/pathUtils')
 const { resizeImage } = require('../../utils/imageUtils')
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
 }
-// DO NOT DELETE THIS
-// will replace existing video function in imageUtils.js/fileUtils.js
-/*
-const isVideoFile = (filename) => {
-  const ext = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-  return ext.some(e => filename.toLowerCase().endsWith(e));
-};
-*/
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase()
   return DISALLOWED_EXTENSIONS.some(
@@ -32,6 +27,81 @@ const isDisallowedExtension = (filename) => {
       ext === disallowedExt.toLowerCase() ||
       ext === `.${disallowedExt.toLowerCase()}`
   )
+}
+async function upsertDirectoryEntry(dirObj) {
+  await Directory.findOneAndUpdate(
+    { path: dirObj.path },
+    { $set: dirObj },
+    { upsert: true, new: true }
+  )
+}
+async function upsertImageEntry(imgObj) {
+  await Image.findOneAndUpdate(
+    { path: imgObj.path },
+    { $set: imgObj },
+    { upsert: true, new: true }
+  )
+}
+async function upsertVideoEntry(vidObj) {
+  await Video.findOneAndUpdate(
+    { path: vidObj.path },
+    { $set: vidObj },
+    { upsert: true, new: true }
+  )
+}
+async function createDbEntriesForContents(contents, parentPath = '') {
+  const apiPrefix = `${BASE_PATH}/api/files`
+  for (const item of contents) {
+    const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
+    const dbPath = `${apiPrefix}/${relPath}`.replace(/\/+/g, '/')
+    if (item.type === 'directory') {
+      await upsertDirectoryEntry({
+        name: item.name,
+        path: dbPath,
+        size: item.size || 0,
+        created: item.created || new Date(),
+        modified: item.modified || new Date(),
+        files: item.files || [],
+      })
+      if (item.contents) {
+        await createDbEntriesForContents(item.contents, relPath)
+      }
+    } else if (item.type === 'file') {
+      const ext = path.extname(item.name).toLowerCase()
+      const isImage = [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.webp',
+        '.bmp',
+        '.gif',
+        '.tiff',
+        '.svg',
+        '.avif',
+      ].includes(ext)
+      const isVideo = ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
+      if (isImage) {
+        await upsertImageEntry({
+          name: item.name,
+          path: dbPath,
+          size: item.size || 0,
+          mimetype: item.mimetype || '',
+          created: item.created || new Date(),
+          modified: item.modified || new Date(),
+          exif: item.exif || {},
+        })
+      } else if (isVideo) {
+        await upsertVideoEntry({
+          name: item.name,
+          path: dbPath,
+          size: item.size || 0,
+          mimetype: item.mimetype || '',
+          created: item.created || new Date(),
+          modified: item.modified || new Date(),
+        })
+      }
+    }
+  }
 }
 async function getDirectorySize(dirPath) {
   let total = 0
@@ -138,21 +208,25 @@ router.get(['/', ''], async (req, res) => {
         const relativePath = path
           .relative(BASE_DIR, entryPath)
           .replace(/\\/g, '/')
-        const { url } = normalizeUrl(req, relativePath, entry.isDirectory())
+        const apiPrefix = `${BASE_PATH}/api/files`
+        const fullPath = `${apiPrefix}/${relativePath}`.replace(/\/+/g, '/')
         return {
           name: entry.name,
           type: entry.isDirectory() ? 'directory' : 'file',
           size: size,
           modified: mtime,
           created: ctime,
-          path: normalizeUrl(req, relativePath, entry.isDirectory()).path,
-          url,
+          path: fullPath,
+          url: fullPath,
         }
       })
     )
     res.json({
       contents: results.filter(Boolean),
     })
+    if (results && results.length) {
+      await createDbEntriesForContents(results.filter(Boolean), '')
+    }
   } catch (error) {
     debug('Error in root directory listing:', error)
     res.status(500).json({
@@ -254,21 +328,28 @@ router.get(
           } catch {
             return null
           }
-          const { url } = normalizeUrl(req, relativePath, isDir)
+          const apiPrefix = `${BASE_PATH}/api/files`
+          const fullPath = `${apiPrefix}/${relativePath}`.replace(/\/+/g, '/')
           return {
             name: entry.name,
             type: isDir ? 'directory' : 'file',
             size: size,
             modified: mtime,
             created: ctime,
-            path: normalizeUrl(req, relativePath, isDir).path,
-            url,
+            path: fullPath,
+            url: fullPath,
           }
         })
       )
       res.json({
         contents: formattedContents.filter(Boolean),
       })
+      if (formattedContents && formattedContents.length) {
+        await createDbEntriesForContents(
+          formattedContents.filter(Boolean),
+          relativePath
+        )
+      }
     } else {
       if (
         !hasAllowedExtension(realPath) ||

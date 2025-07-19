@@ -12,6 +12,12 @@ async function handleDownload(req, res) {
     })
   }
   q = q.trim()
+  if (
+    (q.startsWith('"') && q.endsWith('"')) ||
+    (q.startsWith("'") && q.endsWith("'"))
+  ) {
+    q = q.slice(1, -1)
+  }
   let allowedHosts = []
   const outHost = await HOST
   allowedHosts.push(outHost.replace(/^https?:\/\//, '').replace(/\/$/, ''))

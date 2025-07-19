@@ -71,14 +71,72 @@ app.use(morgan((tokens, req, res) => {
   ]
 }));
 */
+app.set('view engine', 'ejs')
+app.set('views', path.join(__dirname, 'views'))
 app.use(express.json({ limit: '1mb' }))
 app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'public, max-age=180')
+  res.setHeader('Cache-Control', 'public, max-age=0')
   next()
 })
 app.use(
-  BASE_PATH,
-  express.static(path.join(__dirname, 'public'), {
+  `${BASE_PATH}/css`,
+  express.static(path.join(__dirname, 'public', 'css'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/css/min`,
+  express.static(path.join(__dirname, 'public', 'css', 'min'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/js`,
+  express.static(path.join(__dirname, 'public', 'js'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/js/min`,
+  express.static(path.join(__dirname, 'public', 'js', 'min'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/img`,
+  express.static(path.join(__dirname, 'public', 'img'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/favicon.ico`,
+  express.static(path.join(__dirname, 'public', 'favicon.ico'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/robots.txt`,
+  express.static(path.join(__dirname, 'public', 'robots.txt'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1h',
+  })
+)
+app.use(
+  `${BASE_PATH}/sitemap.xml`,
+  express.static(path.join(__dirname, 'public', 'sitemap.xml'), {
     etag: true,
     lastModified: true,
     maxAge: '1h',
@@ -101,46 +159,87 @@ app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
   res.setHeader('Content-Type', 'text/plain')
 })
-app.get('/robots.txt', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
-  res.setHeader('Content-Type', 'text/plain')
-})
 app.get(`/favicon.ico`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'))
   res.setHeader('Content-Type', 'image/x-icon')
 })
+app.get(`/sitemap.xml`, (req, res) => {
+  const sitemap = require('./utils/sitemap')
+  res.setHeader('Content-Type', 'application/xml')
+  res.send(sitemap.defaultSitemap.toXML())
+})
 app.get(`${BASE_PATH}/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+  res.render('index', {
+    title: 'Home',
+    currentPage: 'home',
+  })
 })
 app.get(`${BASE_PATH}/random/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'random.html'))
+  res.render('random', {
+    title: 'Random',
+    currentPage: 'random',
+  })
 })
 app.get(`${BASE_PATH}/stats/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'stats.html'))
+  res.render('stats', {
+    title: 'Stats',
+    currentPage: 'stats',
+  })
 })
 app.get(`${BASE_PATH}/search/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'search.html'))
+  res.render('search', {
+    title: 'Search',
+    currentPage: 'search',
+  })
 })
+/*
+app.get(`${BASE_PATH}/files/`, (req, res) => {
+  res.render('files', {
+    title: 'Files',
+    currentPage: 'files',
+  })
+})
+app.get(`${BASE_PATH}/files/*`, (req, res) => {
+  res.render('files', {
+    title: 'Files',
+    currentPage: 'files',
+  })
+})
+*/
 app.get(`${BASE_PATH}/files/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'files.html'))
+  res.setHeader('Content-Type', 'text/html')
 })
 app.get(`${BASE_PATH}/files/*`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'files.html'))
+  res.setHeader('Content-Type', 'text/html')
 })
 app.get(`${BASE_PATH}/login/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'))
+  res.render('login', {
+    title: 'Login',
+    currentPage: 'login',
+  })
 })
 app.get(`${BASE_PATH}/register/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'register.html'))
+  res.render('register', {
+    title: 'Register',
+    currentPage: 'register',
+  })
 })
 app.get(`${BASE_PATH}/download/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'download.html'))
+  res.render('download', {
+    title: 'Download',
+    currentPage: 'download',
+  })
 })
 app.get(`${BASE_PATH}/navbar/`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'navbar.html'))
 })
 app.get(`${BASE_PATH}/dashboard/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))
+  res.render('dashboard', {
+    title: 'Dashboard',
+    currentPage: 'dashboard',
+  })
 })
 app.use(BASE_PATH, require('./routes'))
 app.use((req, res, next) => {

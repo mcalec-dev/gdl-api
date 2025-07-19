@@ -42,13 +42,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     checkAuthStatus = null
   }
   const isLoggedIn = checkAuthStatus && checkAuthStatus.authenticated === true
-  loginRegisterButtons.forEach((btn) => {
-    if (isLoggedIn) {
-      btn.textContent = 'Dashboard'
-      btn.href = '/dashboard'
-    } else {
-      btn.textContent = 'Login / Register'
-      btn.href = '/login'
-    }
-  })
+  if (loginRegisterButtons && loginRegisterButtons.length > 0) {
+    loginRegisterButtons.forEach((btn) => {
+      if (btn) {
+        if (isLoggedIn) {
+          btn.textContent = 'Dashboard'
+          btn.href = '/dashboard'
+        } else {
+          btn.textContent = 'Login / Register'
+          btn.href = '/login'
+        }
+      }
+    })
+  }
 })

@@ -18,8 +18,8 @@
 - add testing modules (`*.test.js`) that only check for errors
 - create a wiki to reflect the swagger docs
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async
-- alternate frontend with react?
+- npm packages to utilize; moment, pm2, async, sitemap
+- alternate frontend with vue/react?
 - finish revamping frontend with tailwind.css (and look into native tailwind)
 - fix normalizers in `fileUtils.js`, `pathUtils.js`, and `urlUtils.js`
 - fix issue of trying to logout and login not working

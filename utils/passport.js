@@ -54,7 +54,6 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // If user is logged in (linking), attach GitHub to their account
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
           if (user) {
@@ -62,6 +61,7 @@ passport.use(
             user.oauth.github = {
               id: profile.id,
               username: profile.username,
+              email: profile.emails[0].value,
               avatar: profile._json.avatar_url,
             }
             await user.save()
@@ -71,14 +71,12 @@ passport.use(
         }
         let user = await User.findOne({ 'oauth.github.id': profile.id })
         if (!user) {
-          // Try to find by email (if provided)
           const email =
             profile.emails && profile.emails[0] && profile.emails[0].value
               ? profile.emails[0].value
               : `${profile.id}@github.no-email.local`
           user = await User.findOne({ email })
           if (user) {
-            // Link GitHub to this existing user
             user.oauth = user.oauth || {}
             user.oauth.github = {
               id: profile.id,
@@ -88,7 +86,6 @@ passport.use(
             await user.save()
             debug('Linked GitHub to existing user by email:', user.username)
           } else {
-            // Create new user
             user = await User.create({
               username: profile.username,
               email,
@@ -132,7 +129,6 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // If user is logged in (linking), attach Discord to their account
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
           if (user) {
@@ -140,6 +136,7 @@ passport.use(
             user.oauth.discord = {
               id: profile.id,
               username: profile.username,
+              email: profile.email,
               avatar: profile.avatar,
             }
             await user.save()
@@ -154,12 +151,10 @@ passport.use(
             : profile.emails && profile.emails[0] && profile.emails[0].value
               ? profile.emails[0].value
               : `${profile.id}@discord.no-email.local`
-          // Try to find by email or username
           user = await User.findOne({
             $or: [{ email }, { username: profile.username }],
           })
           if (user) {
-            // Link Discord to this existing user
             user.oauth = user.oauth || {}
             user.oauth.discord = {
               id: profile.id,
@@ -172,7 +167,6 @@ passport.use(
               user.username
             )
           } else {
-            // Create new user
             user = await User.create({
               username: profile.username,
               email,
