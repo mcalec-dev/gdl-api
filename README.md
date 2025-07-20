@@ -1,14 +1,12 @@
 # gdl-api
 
-**CONTENT REMOVAL: removals[at]mcalec[dot]dev**
+an api thing i made for gallery-dl downloads. (it's poorly made)  
 
-A RESTful API I made for gallery-dl downloads. (it's poorly made)  
+OpenAPI (Swagger) documentation accessible at `/docs`
 
-Swagger documentation accessible at `/docs`
+make sure to download [MongoDB](https://www.mongodb.com/try/download/community)
 
-Make sure to download [MongoDB](https://www.mongodb.com/try/download/community)
-
-Sample `.env` file:
+sample `.env` file:
 
 ```env
 # all values here are imported with config.js
@@ -30,8 +28,8 @@ HOST=
 ALT_HOST=
 
 # the base path that comes after the host
-# leave as / if you dont know what to put
-BASE_PATH=
+# default is /
+BASE_PATH=/
 
 # the path where your files are
 BASE_DIR=
@@ -63,10 +61,13 @@ GITHUB_CLIENT_SECRET=
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 
+# the max depth for recursive scanning
+MAX_DEPTH=100
+
 # keep it on if you like big debugs
 DEBUG=gdl-api:*
 ```
 
-**Actual documentation coming soon**  
+**actual documentation coming soon (maybe)**  
 
 McAlec Development © 2025

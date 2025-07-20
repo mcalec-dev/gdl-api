@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const passport = require('./utils/passport')
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 const express = require('express')
 const app = express()
 const cors = require('cors')
@@ -32,7 +32,7 @@ const swaggerOptions = {
       title: NAME,
       version: process.env.npm_package_version,
     },
-    servers: [{ url: `https://alt-api.mcalec.dev` }],
+    servers: [{ url: HOST }],
   },
   apis: ['./routes/**/*.js', './utils/*.js'],
 }
@@ -73,9 +73,14 @@ app.use(morgan((tokens, req, res) => {
 */
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
-app.use(express.json({ limit: '1mb' }))
+app.use(
+  express.json({
+    limit: '500MB',
+    type: ['application/json', 'application/vnd.api+json'],
+  })
+)
 app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'public, max-age=0')
+  res.setHeader('Cache-Control', 'public, max-age=180')
   next()
 })
 app.use(
@@ -83,7 +88,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'css'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '10m',
   })
 )
 app.use(
@@ -91,7 +96,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'css', 'min'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '10m',
   })
 )
 app.use(
@@ -99,7 +104,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'js'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '10m',
   })
 )
 app.use(
@@ -107,7 +112,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'js', 'min'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '10m',
   })
 )
 app.use(
@@ -115,7 +120,15 @@ app.use(
   express.static(path.join(__dirname, 'public', 'img'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '1d',
+  })
+)
+app.use(
+  `${BASE_PATH}/svg`,
+  express.static(path.join(__dirname, 'public', 'svg'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '1d',
   })
 )
 app.use(
@@ -123,7 +136,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'favicon.ico'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '1d',
   })
 )
 app.use(
@@ -131,7 +144,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'robots.txt'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '1d',
   })
 )
 app.use(
@@ -139,21 +152,24 @@ app.use(
   express.static(path.join(__dirname, 'public', 'sitemap.xml'), {
     etag: true,
     lastModified: true,
-    maxAge: '1h',
+    maxAge: '10min',
   })
 )
 mongoose
-  .connect(MONGODB_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(MONGODB_URL)
   .then(() => debug('MongoDB connected'))
-  .catch((err) => debug('MongoDB connection error:', err))
+  .catch((error) => debug('MongoDB connection error:', error))
 app.get('/', (req, res) => {
   res.redirect(`${BASE_PATH}/`)
 })
-app.get(/^\/(?!gdl\/).*/, (req, res) => {
-  res.redirect(`${BASE_PATH}${req.path}`)
+app.post('/', (req, res) => {
+  res.redirect(BASE_PATH)
+})
+app.get(/^\/(?!gdl\/).*/, async (req, res) => {
+  res.redirect(BASE_PATH + req.path)
+})
+app.post(/^\/(?!gdl\/).*/, async (req, res) => {
+  res.redirect(BASE_PATH + req.path)
 })
 app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
@@ -163,82 +179,94 @@ app.get(`/favicon.ico`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'))
   res.setHeader('Content-Type', 'image/x-icon')
 })
-app.get(`/sitemap.xml`, (req, res) => {
-  const sitemap = require('./utils/sitemap')
-  res.setHeader('Content-Type', 'application/xml')
-  res.send(sitemap.defaultSitemap.toXML())
-})
-app.get(`${BASE_PATH}/`, (req, res) => {
+async function webVars() {
+  return {
+    title: NAME,
+    description: process.env.npm_package_description || 'description',
+    author: process.env.npm_package_author || 'author',
+    keywords: process.env.npm_package_keywords || 'keywords',
+    url: `${await HOST}`,
+    image: '/svg/nodejs.svg',
+  }
+}
+app.get(`${BASE_PATH}/`, async (req, res) => {
+  var vars = await webVars()
   res.render('index', {
     title: 'Home',
     currentPage: 'home',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/random/`, (req, res) => {
+app.get(`${BASE_PATH}/random/`, async (req, res) => {
+  const vars = await webVars()
   res.render('random', {
     title: 'Random',
     currentPage: 'random',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/stats/`, (req, res) => {
+app.get(`${BASE_PATH}/stats/`, async (req, res) => {
+  const vars = await webVars()
   res.render('stats', {
     title: 'Stats',
     currentPage: 'stats',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/search/`, (req, res) => {
+app.get(`${BASE_PATH}/search/`, async (req, res) => {
+  const vars = await webVars()
   res.render('search', {
     title: 'Search',
     currentPage: 'search',
+    ...vars,
   })
 })
-/*
-app.get(`${BASE_PATH}/files/`, (req, res) => {
+app.get(`${BASE_PATH}/files/`, async (req, res) => {
+  const vars = await webVars()
   res.render('files', {
     title: 'Files',
     currentPage: 'files',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/files/*`, (req, res) => {
+app.get(`${BASE_PATH}/files/*`, async (req, res) => {
+  const vars = await webVars()
   res.render('files', {
     title: 'Files',
     currentPage: 'files',
+    ...vars,
   })
 })
-*/
-app.get(`${BASE_PATH}/files/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'files.html'))
-  res.setHeader('Content-Type', 'text/html')
-})
-app.get(`${BASE_PATH}/files/*`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'files.html'))
-  res.setHeader('Content-Type', 'text/html')
-})
-app.get(`${BASE_PATH}/login/`, (req, res) => {
+app.get(`${BASE_PATH}/login/`, async (req, res) => {
+  var vars = await webVars()
   res.render('login', {
     title: 'Login',
     currentPage: 'login',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/register/`, (req, res) => {
+app.get(`${BASE_PATH}/register/`, async (req, res) => {
+  var vars = await webVars()
   res.render('register', {
     title: 'Register',
     currentPage: 'register',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/download/`, (req, res) => {
+app.get(`${BASE_PATH}/download/`, async (req, res) => {
+  var vars = await webVars()
   res.render('download', {
     title: 'Download',
     currentPage: 'download',
+    ...vars,
   })
 })
-app.get(`${BASE_PATH}/navbar/`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'navbar.html'))
-})
-app.get(`${BASE_PATH}/dashboard/`, (req, res) => {
+app.get(`${BASE_PATH}/dashboard/`, async (req, res) => {
+  var vars = await webVars()
   res.render('dashboard', {
     title: 'Dashboard',
     currentPage: 'dashboard',
+    ...vars,
   })
 })
 app.use(BASE_PATH, require('./routes'))
@@ -283,7 +311,7 @@ async function verifyConfiguration() {
   }
 }
 const displayBanner = async () => {
-  const banner = figlet.textSync(process.env.NAME, {
+  const banner = figlet.textSync(NAME, {
     font: 'Standard',
     horizontalLayout: 'full',
     verticalLayout: 'default',

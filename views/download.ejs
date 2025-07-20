@@ -3,18 +3,24 @@
   <%- include('partials/head') %>
   <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
     <%- include('partials/navbar') %>
-    <div id="container" class="w-full max-w-md rounded-xl shadow-lg p-8 mx-2 z-10 bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border border-white/20">
-      <h1 class="text-3xl font-light text-center text-white mb-8">File Downloader</h1>
+    <div id="container" class="mt-24 mb-24 md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-lg p-8 mx-2 z-10 backdrop-blur-lg backdrop-saturate-150 border border-white/20">
+      <h1 id="title" class="text-3xl font-light text-center text-white mb-8">
+        File Downloader
+      </h1>
       <div id="statusMessage" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
       <form id="downloadForm" class="space-y-5">
-        <div>
-          <label for="urlInput" class="block text-gray-300 mb-1">Enter URL to download</label>
-          <input type="text" id="urlInput" name="url" required placeholder="Paste file URL here" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
+        <div class="space-y-1 m-0">
+          <label for="urlInput" class="block text-gray-300">
+            Enter URL to download
+          </label>
+          <input type="text" id="urlInput" name="url" required placeholder="Paste file URL here" class="w-full px-3 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
         </div>
-        <button type="submit" class="w-full py-2 rounded bg-green-600 text-white font-semibold transition">Download</button>
+        <button type="submit" class="block w-full py-2 rounded bg-blue-600 text-white text-center mt-0">
+          Download
+        </button>
       </form>
     </div>
-    <script defer src="/js/min/download.min.js"></script>
+    <script type="module" src="/js/min/download.min.js" fetchPriority="high"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

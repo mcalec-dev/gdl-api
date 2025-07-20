@@ -3,15 +3,18 @@
   <%- include('partials/head') %>
   <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
     <%- include('partials/navbar') %>
-    <%- include('partials/consent') %>
-    <div id="container" class="w-full max-w-3xl rounded-2xl shadow-2xl p-4 sm:p-8 md:p-8 mx-auto z-10 bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border border-white/20 mt-24 mb-8 sm:mb-12 md:mb-16">
+    <div id="container" class="mt-24 mb-24 md:w-auto md:max-w-[65%] sm:w-full rounded-2xl shadow-2xl p-4 sm:p-8 md:p-8 mx-auto z-10 backdrop-blur-lg backdrop-saturate-150 border border-white/20">
       <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8">Home</h1>
       <p class="text-base text-gray-300 text-center mb-6 sm:mb-8">
         I suggest you to check the documentation of this API, which is available at
-        <a href="/gdl/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">/gdl/docs/</a>
+        <a href="/gdl/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">
+          /gdl/docs/
+        </a>
         <br />
         You can also visit my main site at
-        <a href="//mcalec.dev/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">mcalec.dev</a>
+        <a href="//mcalec.dev/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">
+          mcalec.dev
+        </a>
         <br />
         Contact me at: <span class="text-gray-400">hello[at]mcalec[dot]dev</span>
       </p>
@@ -19,81 +22,219 @@
         <table class="w-full text-sm text-left text-gray-400 border border-white/10 rounded-xl overflow-hidden bg-[#171717]/90 shadow-lg">
           <thead class="bg-[#131316] text-gray-300 border-white/10">
             <tr>
-              <th class="px-2 py-2 font-semibold border border-[#404040]">Endpoint/Page</th>
-              <th class="px-2 py-2 font-semibold border border-[#404040]">Description</th>
-              <th class="px-2 py-2 font-semibold border border-[#404040]">Link</th>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">
+                Endpoint/Page
+              </th>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">
+                Description
+              </th>
+              <th class="px-2 py-2 font-semibold border border-[#404040]">
+                Link
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Landing page</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/gdl/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Landing page
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/docs/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Swagger API Documentation</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/gdl/docs/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /docs/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Swagger API Documentation
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/docs/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/login/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Log into your account</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/login/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /login/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Log into your account
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/login/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/register/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Register a new account</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/register/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /register/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Register a new account
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/register/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/dashboard/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">View your account dashboard</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/dashboard/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /dashboard/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                View your account dashboard
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/dashboard/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/search/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Search interface</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/search/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /search/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Search interface
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/search/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/stats/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Detailed statistics dashboard</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/stats/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /stats/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Detailed statistics dashboard
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/stats/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/random/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Random images interface</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/random/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /random/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Random images interface
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/random/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/files/</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Browse all files</td>
-              <td class="px-2 py-2 border border-[#404040]"><a href="/files/" class="text-blue-500 hover:underline">link</a></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /files/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Browse all files
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/files/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/random</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Get a random image</td>
-              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /api/random
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Get a random image
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <em>
+                  endpoint
+                </em>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/stats</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Get collection statistics</td>
-              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /api/stats
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Get collection statistics
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <em>
+                  endpoint
+                </em>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/files</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Access individual files</td>
-              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /api/files
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Access individual files
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <em>
+                  endpoint
+                </em>
+              </td>
             </tr>
             <tr>
-              <td class="px-2 py-2 border border-[#404040]"><code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">/gdl/api/search?q=term</code></td>
-              <td class="px-2 py-2 border border-[#404040]">Search API endpoint</td>
-              <td class="px-2 py-2 border border-[#404040]"><em>endpoint</em></td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /api/search?q=term
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Search API endpoint
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <em>
+                  endpoint
+                </em>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <h2 class="text-xl sm:text-2xl text-white font-semibold mt-8 sm:mt-12 mb-3 sm:mb-4">API Usage</h2>
+      <h2 class="text-xl sm:text-2xl text-white font-semibold mt-8 sm:mt-12 mb-3 sm:mb-4">
+        API Usage
+      </h2>
       <p class="text-gray-300 mb-6 sm:mb-8">
         The API supports both JSON responses and direct file access. All endpoints should return the proper CORS headers.
       </p>

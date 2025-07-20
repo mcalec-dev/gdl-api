@@ -3,48 +3,63 @@
   <%- include('partials/head') %>
   <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
     <%- include('partials/navbar') %>
-    <div id="container" class="w-full max-w-md rounded-xl shadow-lg p-8 mx-2 z-10 bg-[#232329]/80 backdrop-blur-lg backdrop-saturate-150 border border-white/20">
-      <h1 class="text-3xl font-light text-center text-white mb-8">Register</h1>
-      <div id="loading" class="text-center text-gray-300 mb-4" style="display:none">Registering...</div>
+    <div id="container" class="mt-24 mb-24 md:w-auto md:min-w-[25%] md:max-w-[65%] sm:w-full rounded-xl shadow-lg p-8 mx-2 z-10 backdrop-blur-lg backdrop-saturate-150 border border-white/20">
+      <h1 id="title" class="text-3xl font-light text-center text-white mb-8">
+        Register
+      </h1>
+      <div id="loading" class="text-center text-gray-300 mb-4" style="display:none">
+        Registering...
+      </div>
       <div id="error" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
       <form id="registerForm" class="space-y-5">
         <div>
-          <label for="username" class="block text-gray-300 mb-1">Username</label>
+          <label for="username" class="block text-gray-300 mb-1">
+            Username
+          </label>
           <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
         </div>
         <div>
-          <label for="email" class="block text-gray-300 mb-1">Email <span class="text-gray-400 text-xs">(optional)</span></label>
+          <label for="email" class="block text-gray-300 mb-1">
+            Email <span class="text-gray-400 text-xs">(optional)</span>
+          </label>
           <input type="email" id="email" name="email" autocomplete="email" placeholder="Enter your email (optional)" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
         </div>
         <div>
-          <label for="password" class="block text-gray-300 mb-1">Password</label>
+          <label for="password" class="block text-gray-300 mb-1">
+            Password
+          </label>
           <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Enter your password" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
         </div>
         <div>
-          <label for="confirm" class="block text-gray-300 mb-1">Confirm Password</label>
+          <label for="confirm" class="block text-gray-300 mb-1">
+            Repeat Password
+          </label>
           <input type="password" id="confirm" name="confirm" required autocomplete="new-password" placeholder="Confirm your password" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
         </div>
-        <button type="submit" class="w-full py-2 rounded bg-green-600 text-white font-semibold transition">Register</button>
+        <button type="submit" class="w-full py-2 rounded bg-blue-600 text-white font-semibold">
+          Register
+        </button>
       </form>
       <div class="my-6 flex items-center justify-center">
-        <span class="text-gray-400 text-sm">or</span>
+        <span class="text-gray-400 text-sm">
+          or
+        </span>
       </div>
       <div class="flex flex-col gap-3">
-        <a href="/gdl/api/auth/discord" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#5865F2] text-white font-semibold transition">
-          <img src="/img/discord.svg" alt="Discord" class="invert h-5 w-5"> Register with Discord
+        <a href="/gdl/api/auth/discord" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#5662f6] text-white font-semibold">
+          <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5"> Register with Discord
         </a>
-        <a href="/gdl/api/auth/github" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#24292f] text-white font-semibold transition">
-          <img src="/img/github.svg" alt="GitHub" class="h-5 w-5"> Register with GitHub
+        <a href="/gdl/api/auth/github" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#212830] text-white font-semibold">
+          <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5"> Register with GitHub
         </a>
       </div>
       <div class="text-center mt-6">
-        <a href="/gdl/login/" class="text-blue-500 hover:underline">Already have an account? Login</a>
+        <a href="/gdl/login/" class="text-blue-500">
+          Already have an account? Login here
+        </a>
       </div>
     </div>
-    <div aria-hidden="true" class="pointer-events-none select-none absolute inset-0 w-full h-full z-0">
-      <img type="image/svg+xml" src="/img/bg.svg" class="w-full h-full">
-    </div>
-    <script defer src="/js/min/register.min.js"></script>
+    <script type="module" src="/js/min/register.min.js" fetchPriority="high"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

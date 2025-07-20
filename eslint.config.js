@@ -24,6 +24,8 @@ module.exports = defineConfig([
         console: 'readonly',
         URL: 'readonly',
         startTimeout: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortController: 'readonly',
       }
     }
   },
@@ -46,6 +48,7 @@ module.exports = defineConfig([
         history: 'readonly',
         URL: 'readonly',
         AbortController: 'readonly',
+        setTimeout: 'readonly',
       }
     }
   },

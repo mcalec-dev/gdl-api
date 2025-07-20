@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/min/files.min.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>File Browser</title>
+  </head>
+  <body>
+    <div class="container">
+      <div id="popup-viewer" class="popup-viewer">
+        <button id="close-popup" class="close-popup"><span>×</span></button>
+        <button id="open-new-tab" class="open-new-tab"><span>↗</span></button>
+        <button id="prev-image" class="nav-button prev-button">
+          <span>‹</span>
+        </button>
+        <button id="next-image" class="nav-button next-button">
+          <span>›</span>
+        </button>
+        <div class="popup-container">
+          <img id="popup-image" class="popup-image" src="" alt="" draggable="false" />
+          <video id="popup-video" class="popup-video" src="" alt="" draggable="false" controls autoplay></video>
+        </div>
+        <div class="image-info">
+          <div id="image-title" class="image-title"></div>
+          <div id="image-counter" class="image-counter"></div>
+        </div>
+      </div>
+      <div class="file-browser">
+        <div class="breadcrumb" id="breadcrumb">
+          <a href="/files/">Files</a>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="sort-toolbar"></div>
+        <div id="fileList" class="file-list">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/js/min/files.min.js" fetchPriority="high"></script>
+  </body>
+</html>

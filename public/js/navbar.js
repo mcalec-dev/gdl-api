@@ -1,6 +1,7 @@
 import { apiHost, getName } from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', async function () {
   const navbarTitle = document.getElementById('navbar-title')
+  const heading = document.getElementById('title')
   let name
   try {
     name = await getName()
@@ -9,8 +10,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     name = 'title'
   }
   if (name) {
-    navbarTitle.textContent = name
-    document.title = name
+    navbarTitle.textContent = `${name} - ${heading.textContent}`
+    document.title = `${name} - ${heading.textContent}`
+  } else {
+    navbarTitle.textContent = 'title'
+    document.title = 'title'
   }
   const mobileMenuButton = document.getElementById('mobile-menu-button')
   const mobileMenu = document.getElementById('mobile-navbar-menu')

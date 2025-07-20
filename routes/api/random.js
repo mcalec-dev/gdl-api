@@ -90,12 +90,11 @@ async function getRandomImagePath() {
  *                 type:
  *                   type: string
  */
-router.get('/', async (req, res) => {
+router.get(['/', ''], async (req, res) => {
   debug('Random image request received')
   try {
     const randomImage = await getRandomImagePath()
     let stats = { size: randomImage.size }
-    // Only call fs.stat if size is missing
     if (typeof randomImage.size !== 'number') {
       try {
         const statResult = await fs.stat(randomImage.path)

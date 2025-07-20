@@ -123,7 +123,7 @@ function sortContents(contents, sortBy, direction) {
     return direction === 'asc' ? comparison : -comparison
   })
 }
-async function loadDirectory(path = '', callback) {
+async function loadDirectory(path = '', callback, forceRefresh = false) {
   try {
     if (currentFetchController) {
       currentFetchController.abort()
@@ -145,7 +145,11 @@ async function loadDirectory(path = '', callback) {
     fileList.appendChild(loadingIndicator)
     updateBreadcrumb(path)
     const apiPath = path ? `/${path}/` : ''
-    if (!currentDirectoryData || currentDirectoryData.path !== path) {
+    if (
+      !currentDirectoryData ||
+      currentDirectoryData.path !== path ||
+      forceRefresh
+    ) {
       const response = await fetch(`${apiBasePath}${apiPath}`, { signal })
       const data = await response.json()
       if (!response.ok) {
@@ -223,7 +227,7 @@ window.addEventListener('popstate', (event) => {
           .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
           .replace(/\/+/g, '/')
           .replace(/^\/|\/$/g, '')
-  loadDirectory(currentPath)
+  loadDirectory(currentPath, null, true)
 })
 const initialLocation = window.location.pathname
 const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
@@ -320,7 +324,7 @@ function handleDirectoryClick(event) {
   const url = new URL(window.location.href)
   const params = url.search
   history.pushState({ path: cleanPath }, '', newPath + params)
-  loadDirectory(cleanPath)
+  loadDirectory(cleanPath, null, true)
   window.scrollTo(0, 0)
 }
 function getMediaUrl(item) {

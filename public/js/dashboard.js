@@ -26,10 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="mt-6">
           <div class="flex flex-col sm:flex-row gap-3 mt-4">
             <button id="link-github" class="px-4 py-3 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2">
-              <img src="/img/github.svg" alt="GitHub" class="h-5 w-5">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
+              <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
             </button>
             <button id="link-discord" class="px-4 py-3 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2">
-              <img src="/img/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
+              <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
           </div>
           <div class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</div>
@@ -43,33 +43,33 @@ document.addEventListener('DOMContentLoaded', () => {
         .getElementById('link-github')
         .addEventListener('click', async () => {
           if (githubLinked) {
-            await fetch('/gdl/api/auth/unlink/github', {
+            await fetch(document.location.origin + '/api/auth/unlink/github', {
               method: 'POST',
               credentials: 'include',
             })
             window.location.reload()
           } else {
-            window.location.href = '/gdl/api/auth/link/github'
+            window.location.href = '/api/auth/link/github'
           }
         })
       document
         .getElementById('link-discord')
         .addEventListener('click', async () => {
           if (discordLinked) {
-            await fetch('/gdl/api/auth/unlink/discord', {
+            await fetch(document.location.origin + '/api/auth/unlink/discord', {
               method: 'POST',
               credentials: 'include',
             })
             window.location.reload()
           } else {
-            window.location.href = '/gdl/api/auth/link/discord'
+            window.location.href = '/api/auth/link/discord'
           }
         })
       const logoutBtn = document.getElementById('logout')
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
           try {
-            await fetch('/api/auth/logout', {
+            await fetch(document.location.origin + '/api/auth/logout', {
               method: 'GET',
               credentials: 'include',
             })

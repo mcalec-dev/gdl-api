@@ -235,6 +235,23 @@ router.get(['/', ''], async (req, res) => {
     })
   }
 })
+/**
+ * @swagger
+ * /api/files/{collection}:
+ *   get:
+ *     summary: Get files in a collection
+ *     parameters:
+ *       - in: path
+ *         name: collection
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of files in the collection
+ *       404:
+ *         description: Collection not found
+ */
 router.get(
   ['/:collection', '/:collection/', '/:collection/*'],
   async (req, res) => {

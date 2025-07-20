@@ -73,6 +73,51 @@ async function handleDownload(req, res) {
       })
     })
 }
-router.get('/', handleDownload)
-router.post('/', express.json(), handleDownload)
+/**
+ * @swagger
+ * /api/download:
+ *   get:
+ *     summary: Download file
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       400:
+ *         description: Bad Request
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Not Found
+ */
+router.get(['/', ''], handleDownload)
+/**
+ * @swagger
+ * /api/download:
+ *   post:
+ *     summary: Download file
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               q:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       400:
+ *         description: Bad Request
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Not Found
+ */
+router.post(['/', ''], express.json(), handleDownload)
 module.exports = router
