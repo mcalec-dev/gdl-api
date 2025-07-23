@@ -50,9 +50,10 @@ async function handleDownload(req, res) {
   protocol
     .get(q, (fileRes) => {
       if (fileRes.statusCode !== 200) {
-        return res.status(404).json({
-          message: 'Not Found',
-          status: 404,
+        debug('File download error, server responded with code:', fileRes.statusCode)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
         })
       }
       const filename = decodeURIComponent(
@@ -65,11 +66,11 @@ async function handleDownload(req, res) {
       )
       fileRes.pipe(res)
     })
-    .on('error', (err) => {
-      debug('Download error:', err)
-      return res.status(404).json({
-        message: 'Not Found',
-        status: 404,
+    .on('error', (error) => {
+      debug('Download error:', error)
+      return res.status(500).json({
+        message: 'Internal Server Error',
+        status: 500,
       })
     })
 }

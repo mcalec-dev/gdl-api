@@ -1,4 +1,4 @@
-<nav id="navbar" class="backdrop-blur-lg backdrop-saturate-150 border-b border-l border-r border-white/20 fixed z-50 top-0 left-1/2 -translate-x-1/2 w-full lg:w-full lg:max-w-[65%] rounded-b-xl shadow-lg mb-6">
+<nav id="navbar" class="backdrop-blur-md border-b border-l border-r border-white/20 fixed z-50 top-0 left-1/2 -translate-x-1/2 w-full lg:w-full lg:max-w-[65%] rounded-b-xl shadow-lg mb-6">
   <div class="flex flex-wrap items-center justify-between p-4">
     <a href="/" class="flex items-center">
       <span id="navbar-title" class="self-center text-2xl mr-auto ml-0 font-semibold whitespace-nowrap text-white hover:text-blue-400 transition-colors duration-300">
@@ -13,7 +13,7 @@
         <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15" /></svg>
       </button>
     </div>
-    <div id="mobile-navbar-menu" class="absolute right-0 top-[100%] w-56 bg-[#232329]/90 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 z-50 hidden lg:hidden">
+    <div id="mobile-navbar-menu" class="absolute right-0 top-[100%] w-56 backdrop-blur-md rounded-xl shadow-lg border border-white/20 z-50 hidden lg:hidden">
       <ul class="flex flex-col space-y-2 p-4">
         <li>
           <a href="/" class="<%= currentPage === 'home' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'home' ? 'aria-current="page"' : '' %>>
@@ -21,36 +21,42 @@
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/files" class="<%= currentPage === 'files' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'files' ? 'aria-current="page"' : '' %>>
             Files
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/random" class="<%= currentPage === 'random' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'random' ? 'aria-current="page"' : '' %>>
             Random
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/download" class="<%= currentPage === 'download' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'download' ? 'aria-current="page"' : '' %>>
             Download
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/stats" class="<%= currentPage === 'stats' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'stats' ? 'aria-current="page"' : '' %>>
             Stats
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/search" class="<%= currentPage === 'search' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= currentPage === 'search' ? 'aria-current="page"' : '' %>>
             Search
             <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
           </a>
         </li>
+        <hr>
         <li>
           <a href="/login" id="login-register" class="<%= (currentPage === 'login' || currentPage === 'register') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded' : 'block py-2 pl-3 pr-4 text-gray-900 rounded dark:text-white' %>" <%= (currentPage === 'login' || currentPage === 'register') ? 'aria-current="page"' : '' %>>
             Login / Register

@@ -11,7 +11,6 @@
 - validator for json api data
 - complete the `README.md` file
 - add testing applications (like insomnia or postman)
-- `config.json` for frontend variables (refer to my personal website)
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
 - fix relevancy in `search.js` to find more relevant directories (score them and show in response)
@@ -23,3 +22,4 @@
 - finish revamping frontend with tailwind.css (and look into native tailwind)
 - fix normalizers in `fileUtils.js`, `pathUtils.js`, and `urlUtils.js`
 - fix issue of trying to logout and login not working
+- session persistence with database-backed session storage

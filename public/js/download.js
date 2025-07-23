@@ -1,22 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('downloadForm')
   const urlInput = document.getElementById('urlInput')
+  const downloadButton = document.getElementById('downloadButton')
   const statusMessage = document.getElementById('statusMessage')
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    statusMessage.textContent = ''
-    statusMessage.style.display = 'none'
-    const url = urlInput.value.trim()
-    if (!url) {
+  const API_URL = '/gdl/api/download'
+  async function performDownload(url) {
+    if (!url.length) {
       statusMessage.textContent = 'Please enter a URL.'
       statusMessage.style.display = 'block'
       return
     }
+    statusMessage.textContent = ''
+    statusMessage.style.display = 'none'
+    statusMessage.textContent = 'Downloading...'
+    statusMessage.style.display = 'block'
     try {
-      statusMessage.textContent = 'Downloading...'
-      statusMessage.style.display = 'block'
       const a = document.createElement('a')
-      a.href = `/gdl/api/download?q="${encodeURIComponent(url)}"`
+      a.href = `${API_URL}?q="${encodeURIComponent(url)}"`
       a.download = ''
       a.style.display = 'none'
       document.body.appendChild(a)
@@ -31,5 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
       statusMessage.style.display = 'block'
       console.error('Download error:', err)
     }
+  }
+  downloadButton.addEventListener('click', () => {
+    const url = urlInput.value.trim()
+    if (url) performDownload(url)
   })
 })

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <%- include('partials/head') %>
+  <%- include('partials/icons') %>
+  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+    <%- include('partials/navbar') %>
+    <div id="container" class="mt-24 mb-24 md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-2xl p-4 sm:p-8 md:p-8 mx-auto z-10 backdrop-blur-md border border-white/20">
+      <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
+        <%= currentPage %>
+      </h1>
+      <div id="breadcrumb" class="">
+        <a href="/files/">top</a>
+      </div>
+      <div id="toolbar" class="">
+      </div>
+      <hr>
+      <div id="files" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" style="display: grid;">
+        <div id="directory">
+          <div class="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden backdrop-blur-sm">
+            <div class="p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <h3 title="directory" class="text-white font-light text-lg truncate flex-1">
+                  directory
+                </h3>
+              </div>
+              <div class="space-y-1.5">
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  type
+                </p>
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                  collection
+                </p>
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  author
+                </p>
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  modified
+                </p>
+                <p class="text-gray-400 text-sm flex items-center gap-2">
+                  created
+                </p>
+              </div>
+              <div class="pt-3 flex justify-end">
+                <a href="" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded select-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"></path>
+                    <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"></path>
+                  </svg>
+                  View directory
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="file">
+
+        </div>
+        <div id="file">
+          
+        </div>
+        <div id="file">
+          
+        </div>
+      </div>
+    </div>
+    <%- include('partials/bg') %>
+  </body>
+</html>

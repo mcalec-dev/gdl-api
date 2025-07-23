@@ -397,6 +397,13 @@ router.get(
             transformer.pipe(res)
             return
           }
+          if (transformer === null) {
+            debug('Failure resizing image')
+            return res.status(500).json({
+              message: 'Internal Server Error',
+              status: 500,
+            })
+          }
         } catch (error) {
           debug('Error resizing image:', error)
           return res.status(500).json({

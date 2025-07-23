@@ -7,13 +7,13 @@ const cors = require('cors')
 const server = require('http').createServer(app)
 const path = require('path')
 const fs = require('fs').promises
-const morgan = require('morgan')
 const session = require('express-session')
 const debug = require('debug')('gdl-api:server')
 const chalk = require('chalk')
 const figlet = require('figlet')
 const swaggerJsdoc = require('swagger-jsdoc')
 const swaggerUi = require('swagger-ui-express')
+const request = require('./utils/requestUtils')
 const {
   NODE_ENV,
   PORT,
@@ -56,21 +56,6 @@ app.use(
 )
 app.use(passport.initialize())
 app.use(passport.session())
-app.use(morgan('dev'))
-/*
-morgan.token('full-url', (req) => `${req.protocol}://${req.get('host')}${req.originalUrl}`);
-morgan.token('client-ip', (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress);
-morgan.token('user-agent', (req) => req.get('user-agent'))
-app.use(morgan((tokens, req, res) => {
-  return [
-    debug(chalk.green(`IP: ${tokens['client-ip'](req, res)}`)),
-    debug(`${tokens.method(req, res)} ${tokens['full-url'](req, res)}`),
-    debug(chalk.yellow(`Status: ${tokens.status(req, res)}`)),
-    debug(chalk.red(`Response Time: ${tokens['response-time'](req, res)} ms`)),
-    debug(chalk.gray(`User-Agent: ${tokens['user-agent'](req, res)}`))
-  ]
-}));
-*/
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
 app.use(
@@ -237,6 +222,22 @@ app.get(`${BASE_PATH}/files/*`, async (req, res) => {
     ...vars,
   })
 })
+app.get(`${BASE_PATH}/revamp/`, async (req, res) => {
+  const vars = await webVars()
+  res.render('filesNew', {
+    title: 'Files',
+    currentPage: 'files',
+    ...vars,
+  })
+})
+app.get(`${BASE_PATH}/revamp/*`, async (req, res) => {
+  const vars = await webVars()
+  res.render('filesNew', {
+    title: 'Files',
+    currentPage: 'files',
+    ...vars,
+  })
+})
 app.get(`${BASE_PATH}/login/`, async (req, res) => {
   var vars = await webVars()
   res.render('login', {
@@ -270,6 +271,7 @@ app.get(`${BASE_PATH}/dashboard/`, async (req, res) => {
   })
 })
 app.use(BASE_PATH, require('./routes'))
+app.use(request)
 app.use((req, res, next) => {
   next()
 })

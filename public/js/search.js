@@ -78,20 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
             result.type === 'directory'
               ? `
             <div class="p-4 space-y-3">
-              <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start justify-between gap-2 mb-1">
                 <h3 class="text-white font-light text-lg truncate flex-1" title="${result.name}">${result.name}</h3>
-                <span class="text-xs px-2 py-1 rounded-full ${
-                  result.relevancy >= 80
-                    ? 'bg-blue-500/20 text-blue-200'
-                    : result.relevancy >= 60
-                      ? 'bg-green-500/20 text-green-200'
-                      : result.relevancy >= 40
-                        ? 'bg-yellow-500/20 text-yellow-200'
-                        : 'bg-gray-500/20 text-gray-200'
-                }">
-                  Score: ${Math.round(result.relevancy)} / 100
-                </span>
               </div>
+              <span class="text-xs px-2 py-1 rounded-2xl ${
+                result.relevancy >= 80
+                  ? 'bg-blue-500/20 text-blue-200'
+                  : result.relevancy >= 60
+                    ? 'bg-green-500/20 text-green-200'
+                    : result.relevancy >= 40
+                      ? 'bg-yellow-500/20 text-yellow-200'
+                      : 'bg-gray-500/20 text-gray-200'
+              }">
+                Score: ${Math.round(result.relevancy)} / 100
+              </span>
               <div class="space-y-1.5">
                 <p class="text-gray-400 text-sm flex items-center gap-2">
                   <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="pt-3 flex justify-end">
                 <a href="${formattedUrl(result.url, result.type)}" 
-                  class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded" 
+                  class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded select-none" 
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -131,25 +131,25 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="aspect-square w-full overflow-hidden bg-gray-900/50">
               ${
                 isVideo
-                  ? `<video src="${result.url}?x=50" controls preload="metadata" class="w-full h-full object-contain" style="background:#222;max-height:100%;"></video>`
+                  ? `<video src="${result.url}?x=50" controls preload="metadata" class="w-full h-full object-contain select-none" style="max-height:100%;"></video>`
                   : `<img src="${result.url}?x=50" alt="${result.name}" class="w-full h-full object-contain pointer-events-none select-none loading" loading="lazy">`
               }
             </div>
             <div class="p-4 space-y-3">
-              <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start justify-between gap-2 mb-1">
                 <h3 class="text-white font-light text-lg truncate flex-1" title="${result.name}">${result.name}</h3>
-                <span class="text-xs px-2 py-1 rounded-full ${
-                  result.relevancy >= 80
-                    ? 'bg-blue-500/20 text-blue-200'
-                    : result.relevancy >= 60
-                      ? 'bg-green-500/20 text-green-200'
-                      : result.relevancy >= 40
-                        ? 'bg-yellow-500/20 text-yellow-200'
-                        : 'bg-gray-500/20 text-gray-200'
-                }">
-                  Score: ${Math.round(result.relevancy)} / 100
-                </span>
               </div>
+              <span class="text-xs px-2 py-1 rounded-2xl ${
+                result.relevancy >= 80
+                  ? 'bg-blue-500/20 text-blue-200'
+                  : result.relevancy >= 60
+                    ? 'bg-green-500/20 text-green-200'
+                    : result.relevancy >= 40
+                      ? 'bg-yellow-500/20 text-yellow-200'
+                      : 'bg-gray-500/20 text-gray-200'
+              }">
+                Score: ${Math.round(result.relevancy)} / 100
+              </span>
               <div class="space-y-1.5">
                 <p class="text-gray-400 text-sm flex items-center gap-2">
                   <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,26 +232,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (query) performSearch(query)
     }
   })
-  // Add listeners for search type changes
   searchTypeButtons.forEach((button) => {
     button.addEventListener('change', () => {
       const query = searchInput.value.trim()
       if (query) performSearch(query)
     })
   })
-
-  // Handle initial load with URL parameters
   const urlParams = new URLSearchParams(window.location.search)
   const initialQuery = urlParams.get('q')
   const initialType = urlParams.get('type')
-
   if (initialType) {
     const typeButton = document.querySelector(
       `input[name="searchType"][value="${initialType}"]`
     )
     if (typeButton) typeButton.checked = true
   }
-
   if (initialQuery) {
     searchInput.value = initialQuery
     performSearch(initialQuery)
