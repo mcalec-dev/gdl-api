@@ -2,28 +2,29 @@ const express = require('express')
 const router = express.Router()
 const debug = require('debug')('gdl-api:api:download')
 const { HOST } = require('../../config')
+const { requireRole } = require('../../utils/authUtils')
 async function handleDownload(req, res) {
-  let q = req.query.q || req.body?.q
-  if (!q) {
-    debug('Missing ?q parameter')
+  let url = req.query.url || req.body?.url
+  if (!url) {
+    debug('Missing url parameter')
     return res.status(400).json({
       message: 'Bad Request',
       status: 400,
     })
   }
-  q = q.trim()
+  url = url.trim()
   if (
-    (q.startsWith('"') && q.endsWith('"')) ||
-    (q.startsWith("'") && q.endsWith("'"))
+    (url.startsWith('"') && url.endsWith('"')) ||
+    (url.startsWith("'") && url.endsWith("'"))
   ) {
-    q = q.slice(1, -1)
+    url = url.slice(1, -1)
   }
   let allowedHosts = []
   const outHost = await HOST
   allowedHosts.push(outHost.replace(/^https?:\/\//, '').replace(/\/$/, ''))
   let parsedUrl
   try {
-    parsedUrl = new URL(q)
+    parsedUrl = new URL(url)
   } catch (error) {
     debug('Malformed URL:', error.message)
     return res.status(400).json({
@@ -48,9 +49,12 @@ async function handleDownload(req, res) {
   const http = require('http')
   const protocol = parsedUrl.protocol === 'https:' ? https : http
   protocol
-    .get(q, (fileRes) => {
+    .get(url, (fileRes) => {
       if (fileRes.statusCode !== 200) {
-        debug('File download error, server responded with code:', fileRes.statusCode)
+        debug(
+          'File download error, server responded with code:',
+          fileRes.statusCode
+        )
         return res.status(500).json({
           message: 'Internal Server Error',
           status: 500,
@@ -76,29 +80,28 @@ async function handleDownload(req, res) {
 }
 /**
  * @swagger
- * /api/download:
+ * /api/download/:
  *   get:
  *     summary: Download file
  *     parameters:
  *       - in: query
- *         name: q
+ *         name: url
  *         required: true
  *         schema:
  *           type: string
- *     responses:
- *       200:
- *         description: File downloaded successfully
- *       400:
- *         description: Bad Request
- *       403:
- *         description: Forbidden
- *       404:
- *         description: Not Found
  */
-router.get(['/', ''], handleDownload)
+router.get(['/', ''], requireRole('user'), async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  await handleDownload(req, res)
+})
 /**
  * @swagger
- * /api/download:
+ * /api/download/:
  *   post:
  *     summary: Download file
  *     requestBody:
@@ -113,12 +116,15 @@ router.get(['/', ''], handleDownload)
  *     responses:
  *       200:
  *         description: File downloaded successfully
- *       400:
- *         description: Bad Request
- *       403:
- *         description: Forbidden
- *       404:
- *         description: Not Found
  */
-router.post(['/', ''], express.json(), handleDownload)
+router.post(['/', ''], express.json(), requireRole('user'), async (req, res) => {
+  if (!req.user) {
+    debug('Unauthorized access attempt')
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  await handleDownload(req, res)
+})
 module.exports = router

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoading(true)
     hideError()
     try {
-      const response = await fetch('/gdl/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       const data = await response.json()
       if (response.ok) {
-        window.location.href = '/gdl/'
+        window.location.href = '/dashboard'
       } else {
         showError(data.error || 'Login failed')
       }

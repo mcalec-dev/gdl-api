@@ -1,9 +1,8 @@
 const express = require('express')
 const router = express.Router()
 require('dotenv').config({ quiet: true })
-const { NAME, BASE_PATH } = require('../../config')
+const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api:routes')
-const { getAPIUrl } = require('../../utils/urlUtils')
 const pathUtils = require('../../utils/pathUtils')
 router.use((req, res, next) => {
   req.utils = {
@@ -14,6 +13,8 @@ router.use((req, res, next) => {
 })
 try {
   debug('Initializing routes')
+  debug('Mounting admin route')
+  router.use('/admin', require('./admin/index'))
   debug('Mounting auth route')
   router.use('/auth', require('./auth/index'))
   debug('Mounting download route')
@@ -34,30 +35,12 @@ try {
 }
 /**
  * @swagger
- * /api:
+ * /api/:
  *   get:
- *     summary: Get API root information
- *     responses:
- *       200:
- *         description: API root information
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 auth_url:
- *                   type: string
- *                 files_url:
- *                   type: string
- *                 random_url:
- *                   type: string
- *                 search_url:
- *                   type: string
- *                 stats_url:
- *                   type: string
+ *     summary: Get API information
  */
 router.get(['/', ''], (req, res) => {
-  const baseURL = getAPIUrl(req)
+  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
   res.json({
     api: 'v2',
     name: NAME,
@@ -66,6 +49,7 @@ router.get(['/', ''], (req, res) => {
     author: process.env.npm_package_author,
     keywords: process.env.npm_package_keywords,
     license: process.env.npm_package_license,
+    host: HOST,
     basePath: BASE_PATH,
     urls: {
       auth: baseURL + '/auth',

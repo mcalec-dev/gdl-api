@@ -6,25 +6,25 @@ function normalizeUrl(req, relativePath) {
   const host = req.get('host')
   const baseUrl = `${protocol}://${host}`
   const dirPath = path.resolve(relativePath).replace(/\\/g, '/')
-  const normalizedPath = dirPath.replace(/F:\/gdl-api\//i, '')
+  debug('Normalized path:', dirPath)
   return {
-    path: `${BASE_PATH}/api/files/${normalizedPath.replace(/^F:\/gallery-dl\//i, '')}`,
-    url: `${baseUrl}${BASE_PATH}/api/files/${normalizedPath.replace(/^F:\/gallery-dl\//i, '')}`,
+    path: `${BASE_PATH}/api/files/${dirPath}`,
+    url: `${baseUrl}${BASE_PATH}/api/files/${dirPath}`,
   }
 }
 function getAPIUrl(req) {
-  const protocol = req.protocol
-  const host = req.get('host')
-  const apiURL = `${protocol}://${host}${BASE_PATH}/api`
-  debug('Generated API URL:', apiURL)
-  return apiURL
+  return () => {
+    const apiURL = getHostUrl(req) + '/api'
+    return apiURL
+  }
 }
 function getHostUrl(req) {
-  const protocol = req.protocol
-  const host = req.get('host')
-  const hostURL = `${protocol}://${host}${BASE_PATH}`
-  debug('Generated host URL:', hostURL)
-  return hostURL
+  return () => {
+    const protocol = req.protocol
+    const host = req.get('host')
+    const hostURL = `${protocol}://${host}${BASE_PATH}`
+    return hostURL
+  }
 }
 module.exports = {
   normalizeUrl,

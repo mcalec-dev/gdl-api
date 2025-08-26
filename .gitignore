@@ -3,9 +3,9 @@
 *.tmp
 *.env
 
-ecosystem.config.js
 .DS_Store
 Thumbs.db
+package-lock.json
 
 dist/
 node_modules/
@@ -13,4 +13,3 @@ min/
 logs/
 
 /.vscode/
-/db/

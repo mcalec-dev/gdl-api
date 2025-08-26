@@ -4,28 +4,34 @@ const https = require('https')
 const http = require('http')
 dotenv.config({ quiet: true })
 const checkHostOnline = async (host) => {
-  return new Promise((resolve) => {
+  await new Promise((resolve) => {
     if (!host) return resolve(false)
-    const protocol = host.startsWith('https') ? https : http
-    const req = protocol.get(host, (res) => {
-      resolve(res.statusCode >= 200 && res.statusCode < 500)
+    const url =
+      host.startsWith('http://') || host.startsWith('https://')
+        ? host
+        : `http://${host}`
+    const protocol = url.startsWith('https') ? https : http
+    const req = protocol.get(url, (res) => {
+      return resolve(res.statusCode >= 200 && res.statusCode < 500)
     })
     req.on('error', () => resolve(false))
     req.setTimeout(3000, () => {
       req.destroy()
-      resolve(false)
+      return resolve(false)
     })
   })
 }
 async function getHost() {
-  const host = `https://${process.env.HOST}`
-  const altHost = `https://${process.env.ALT_HOST}`
+  const host = process.env.HOST
+  const altHost = process.env.ALT_HOST
+  const hostOnline = await checkHostOnline(host)
+  const altHostOnline = await checkHostOnline(altHost)
   try {
-    if (await checkHostOnline(host)) {
+    if (hostOnline) {
       debug('Primary host is online:', host)
       return host
     }
-    if (await checkHostOnline(altHost)) {
+    if (altHostOnline) {
       debug('Alternate host is online:', altHost)
       return altHost
     }

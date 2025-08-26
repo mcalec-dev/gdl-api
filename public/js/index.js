@@ -26,25 +26,6 @@ export function formatDate(timestamp) {
   }
   return date.toLocaleString('en-US', options)
 }
-export async function apiHost() {
-  const endpoints = [
-    'https://alt-api.mcalec.dev/gdl/api',
-    'https://api.mcalec.dev/gdl/api',
-  ]
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'GET',
-      })
-      if (response.ok) {
-        return endpoint
-      }
-    } catch (error) {
-      debug('An error occured when fetching api endpoints:', error)
-    }
-  }
-  debug('No API endpoints are available')
-}
 let cachedMimeDB = null
 export async function getFileType(file) {
   if (!cachedMimeDB) {
@@ -84,7 +65,7 @@ export async function getFileType(file) {
 export async function getName() {
   let name
   try {
-    const host = await apiHost()
+    const host = document.location.origin + '/api'
     if (!host) throw new Error('No API host available')
     const res = await fetch(host)
     if (res && typeof res.json === 'function') {

@@ -2,6 +2,7 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const DiscordStrategy = require('passport-discord').Strategy
+// const GoogleStrategy = require('passport-google-oauth20').Strategy
 const bcrypt = require('bcrypt')
 const User = require('../models/User')
 const { BASE_PATH } = require('../config')
@@ -9,21 +10,22 @@ const debug = require('debug')('gdl-api:utils:passport')
 require('dotenv').config({ quiet: true })
 passport.serializeUser((user, done) => {
   debug('Serializing user:', user.username)
-  done(null, user.id)
+  return done(null, user.id)
 })
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id)
-    done(null, user)
-  } catch (err) {
-    debug('Error deserializing user:', err)
-    done(err)
+    return done(null, user)
+  } catch (error) {
+    debug('Error deserializing user:', error)
+    return done(error)
   }
 })
 passport.use(
   new LocalStrategy(async (username, password, done) => {
     try {
       const user = await User.findOne({ username })
+      const match = await bcrypt.compare(password, user.password)
       if (!user) {
         debug('User not found:', username)
         return done(null, false, { message: 'Incorrect username.' })
@@ -32,16 +34,15 @@ passport.use(
         debug('User has no password set:', username)
         return done(null, false, { message: 'No password set.' })
       }
-      const match = await bcrypt.compare(password, user.password)
       if (!match) {
         debug('Incorrect password for user:', username)
         return done(null, false, { message: 'Incorrect password.' })
       }
       debug('User authenticated successfully:', user.username)
       return done(null, user)
-    } catch (err) {
-      debug('Error in local strategy:', err)
-      return done(err)
+    } catch (error) {
+      debug('Error in local strategy:', error)
+      return done(error)
     }
   })
 )
@@ -51,19 +52,31 @@ passport.use(
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       callbackURL: BASE_PATH + '/api/auth/github/callback',
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
+        let email = profile.email && profile.emails
+        let username = profile.username
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
           if (user) {
             user.oauth = user.oauth || {}
             user.oauth.github = {
               id: profile.id,
-              username: profile.username,
-              email: profile.emails[0].value,
-              avatar: profile._json.avatar_url,
+              username,
+              email,
+              avatar: profile._json?.avatar_url,
             }
+            if (!user.email) user.email = email
+            user.sessions = user.sessions || []
+            user.sessions.push({
+              created: new Date(),
+              expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              ip: req?.ip,
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
+            })
             await user.save()
             debug('Linked GitHub to existing user:', user.username)
             return done(null, user)
@@ -71,35 +84,51 @@ passport.use(
         }
         let user = await User.findOne({ 'oauth.github.id': profile.id })
         if (!user) {
-          const email =
-            profile.emails && profile.emails[0] && profile.emails[0].value
-              ? profile.emails[0].value
-              : `${profile.id}@github.no-email.local`
           user = await User.findOne({ email })
           if (user) {
             user.oauth = user.oauth || {}
             user.oauth.github = {
               id: profile.id,
-              username: profile.username,
-              avatar: profile._json.avatar_url,
+              username,
+              email,
+              avatar: profile._json?.avatar_url,
             }
+            if (!user.email) user.email = email
+            user.sessions = user.sessions || []
+            user.sessions.push({
+              created: new Date(),
+              expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              ip: req?.ip,
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
+            })
             await user.save()
             debug('Linked GitHub to existing user by email:', user.username)
           } else {
             user = await User.create({
-              username: profile.username,
+              username,
               email,
               roles: ['user'],
+              sessions: [
+                {
+                  created: new Date(),
+                  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                  ip: req?.ip,
+                  useragent:
+                    req?.headers['user-agent'] || req.get('User-Agent') || '',
+                },
+              ],
               oauth: {
                 github: {
                   id: profile.id,
-                  username: profile.username,
-                  avatar: profile._json.avatar_url,
+                  username,
+                  email,
+                  avatar: profile._json?.avatar_url,
                 },
               },
-            }).catch((err) => {
-              debug('Error creating user in GitHub strategy:', err)
-              return done(err)
+            }).catch((error) => {
+              debug('Error creating user in GitHub strategy:', error)
+              return done(error)
             })
           }
         }
@@ -109,16 +138,25 @@ passport.use(
             message: 'Unable to authenticate with GitHub.',
           })
         }
+        if (!user.sessions || user.sessions.length === 0) {
+          user.sessions = user.sessions || []
+          user.sessions.push({
+            created: new Date(),
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            ip: req?.ip,
+            useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+          })
+          await user.save()
+        }
         debug('User authenticated successfully:', user.username)
         return done(null, user)
-      } catch (err) {
-        debug('Error in GitHub strategy:', err)
-        return done(err)
+      } catch (error) {
+        debug('Error in GitHub strategy:', error)
+        return done(error)
       }
     }
   )
 )
-
 passport.use(
   new DiscordStrategy(
     {
@@ -126,9 +164,11 @@ passport.use(
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
       callbackURL: BASE_PATH + '/api/auth/discord/callback',
       scope: ['identify', 'email'],
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
+        let email = profile.email ? profile.email : profile.emails
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
           if (user) {
@@ -136,9 +176,18 @@ passport.use(
             user.oauth.discord = {
               id: profile.id,
               username: profile.username,
-              email: profile.email,
+              email,
               avatar: profile.avatar,
             }
+            if (!user.email) user.email = email
+            user.sessions = user.sessions || []
+            user.sessions.push({
+              created: new Date(),
+              expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              ip: req?.ip,
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
+            })
             await user.save()
             debug('Linked Discord to existing user:', user.username)
             return done(null, user)
@@ -146,11 +195,6 @@ passport.use(
         }
         let user = await User.findOne({ 'oauth.discord.id': profile.id })
         if (!user) {
-          const email = profile.email
-            ? profile.email
-            : profile.emails && profile.emails[0] && profile.emails[0].value
-              ? profile.emails[0].value
-              : `${profile.id}@discord.no-email.local`
           user = await User.findOne({
             $or: [{ email }, { username: profile.username }],
           })
@@ -159,28 +203,45 @@ passport.use(
             user.oauth.discord = {
               id: profile.id,
               username: profile.username,
+              email,
               avatar: profile.avatar,
             }
+            if (!user.email) user.email = email
+            user.sessions = user.sessions || []
+            user.sessions.push({
+              created: new Date(),
+              expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              ip: req?.ip,
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
+            })
             await user.save()
-            debug(
-              'Linked Discord to existing user by email/username:',
-              user.username
-            )
+            debug('Linked Discord to existing user', user.username)
           } else {
             user = await User.create({
               username: profile.username,
               email,
               roles: ['user'],
+              sessions: [
+                {
+                  created: new Date(),
+                  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                  ip: req?.ip,
+                  useragent:
+                    req?.headers['user-agent'] || req.get('User-Agent') || '',
+                },
+              ],
               oauth: {
                 discord: {
                   id: profile.id,
                   username: profile.username,
+                  email,
                   avatar: profile.avatar,
                 },
               },
-            }).catch((err) => {
-              debug('Error creating user in Discord strategy:', err)
-              return done(err)
+            }).catch((error) => {
+              debug('Error creating user in Discord strategy:', error)
+              return done(error)
             })
           }
         }
@@ -190,11 +251,23 @@ passport.use(
             message: 'Unable to authenticate with Discord.',
           })
         }
+        if (user.sessions && user.sessions.length > 0) {
+          // Already added above
+        } else {
+          user.sessions = user.sessions || []
+          user.sessions.push({
+            created: new Date(),
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            ip: req?.ip,
+            useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+          })
+          await user.save()
+        }
         debug('User authenticated successfully:', user.username)
         return done(null, user)
-      } catch (err) {
-        debug('Error in Discord strategy:', err)
-        return done(err)
+      } catch (error) {
+        debug('Error in Discord strategy:', error)
+        return done(error)
       }
     }
   )

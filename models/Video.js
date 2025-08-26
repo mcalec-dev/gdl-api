@@ -7,6 +7,8 @@ const videoSchema = new mongoose.Schema({
   mimetype: { type: String, required: true },
   created: { type: Date },
   modified: { type: Date },
+  tags: [{ type: String, index: true }],
   uuid: { type: String, default: uuid.v4 },
+  meta: {},
 })
 module.exports = mongoose.model('Video', videoSchema)

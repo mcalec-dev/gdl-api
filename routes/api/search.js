@@ -6,10 +6,11 @@ const { BASE_DIR } = require('../../config')
 const debug = require('debug')('gdl-api:api:search')
 const { normalizeUrl } = require('../../utils/urlUtils')
 const { normalizePath } = require('../../utils/pathUtils')
+const { requireRole } = require('../../utils/authUtils')
 const MAX_SEARCH_RESULTS = 2000
 /**
  * @swagger
- * /api/search:
+ * /api/search/:
  *   get:
  *     summary: Search for files and directories with relevancy ranking
  *     parameters:
@@ -38,46 +39,15 @@ const MAX_SEARCH_RESULTS = 2000
  *         schema:
  *           type: boolean
  *         description: Include directories in search results
- *     responses:
- *       200:
- *         description: Search results
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 query:
- *                   type: string
- *                 count:
- *                   type: integer
- *                 results:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       name:
- *                         type: string
- *                         description: Name of the file or directory
- *                       type:
- *                         type: string
- *                         description: Type of the item (file or directory)
- *                       collection:
- *                         type: string
- *                         description: Collection name from the first part of the path
- *                       author:
- *                         type: string
- *                         description: Author name from the second part of the path
- *                       path:
- *                         type: string
- *                         description: Normalized path to the item
- *                       url:
- *                         type: string
- *                         description: Complete URL to access the item
- *                       relevancy:
- *                         type: number
- *                         description: Search result relevancy score
  */
-router.get(['/', ''], async (req, res) => {
+router.get(['/', ''], requireRole('user'), async (req, res) => {
+  if (!req.user) {
+    debug('Unauthorized access attempt')
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
   const { q, type, files, directories } = req.query
   debug('Starting search for: "%s" with filter(s): %o', q, { type })
   if (!q || q.length === 0) {

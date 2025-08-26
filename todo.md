@@ -17,9 +17,14 @@
 - add testing modules (`*.test.js`) that only check for errors
 - create a wiki to reflect the swagger docs
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, sitemap
+- npm packages to utilize; moment, pm2, async, sitemap, express-rate-limit, glob
 - alternate frontend with vue/react?
 - finish revamping frontend with tailwind.css (and look into native tailwind)
 - fix normalizers in `fileUtils.js`, `pathUtils.js`, and `urlUtils.js`
 - fix issue of trying to logout and login not working
 - session persistence with database-backed session storage
+- autocomplete for search frontend (like google)
+- implement google oauth with passport.js
+- add proper url encoding within `urlUtils.js` and `uriUtils.js`
+- fix files from being improperly being encoded in `files.js` and in frontend `files.js`
+- fix discord bot embed buttons from not working

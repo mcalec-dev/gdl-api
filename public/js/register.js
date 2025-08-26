@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const payload = { username, password }
       if (email) payload.email = email
-      const response = await fetch('/gdl/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

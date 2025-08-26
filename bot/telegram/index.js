@@ -1,6 +1,6 @@
 const dotenv = require('dotenv')
 const path = require('path')
-dotenv.config({ path: path.join(__dirname, '..', '.env') })
+dotenv.config({ path: path.join(__dirname, '..', '.env'), quiet: true })
 const TelegramBot = require('node-telegram-bot-api')
 const axios = require('axios')
 const botToken = process.env.TELEGRAM_BOT_TOKEN

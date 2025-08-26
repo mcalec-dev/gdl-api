@@ -1,19 +1,20 @@
-const mongoose = require('mongoose')
-const passport = require('./utils/passport')
 require('dotenv').config({ quiet: true })
 const express = require('express')
-const app = express()
-const cors = require('cors')
-const server = require('http').createServer(app)
-const path = require('path')
-const fs = require('fs').promises
-const session = require('express-session')
-const debug = require('debug')('gdl-api:server')
-const chalk = require('chalk')
 const figlet = require('figlet')
 const swaggerJsdoc = require('swagger-jsdoc')
+const session = require('express-session')
+const cors = require('cors')
+const sessionStore = require('./utils/sessionStore')
+const app = express()
+const server = require('http').createServer(app)
+const path = require('path')
+const debug = require('debug')('gdl-api:server')
+const chalk = require('chalk')
 const swaggerUi = require('swagger-ui-express')
-const request = require('./utils/requestUtils')
+const passport = require('./utils/passport')
+const User = require('./models/User')
+const fs = require('fs').promises
+const mongoose = require('mongoose')
 const {
   NODE_ENV,
   PORT,
@@ -24,7 +25,7 @@ const {
   SESSION_SECRET,
   MONGODB_URL,
 } = require('./config')
-const SESSION_MAX_AGE = 30 * 60 * 1000
+const SESSION_COOKIE_MAX_AGE = 30 * 60 * 1000
 const swaggerOptions = {
   definition: {
     openapi: '3.0.3',
@@ -39,16 +40,17 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions)
 app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 app.use(cors())
-app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal'])
+app.set('trust proxy', true)
 app.use(
   session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     rolling: true,
+    store: sessionStore(),
     cookie: {
       secure: NODE_ENV === 'production',
-      maxAge: SESSION_MAX_AGE,
+      maxAge: SESSION_COOKIE_MAX_AGE,
       path: '/',
       httpOnly: true,
     },
@@ -60,102 +62,55 @@ app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
 app.use(
   express.json({
-    limit: '500MB',
-    type: ['application/json', 'application/vnd.api+json'],
+    limit: '100MB',
+    type: 'application/json',
   })
 )
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'public, max-age=180')
   next()
 })
+// host all files in the public dir
 app.use(
-  `${BASE_PATH}/css`,
-  express.static(path.join(__dirname, 'public', 'css'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '10m',
-  })
-)
-app.use(
-  `${BASE_PATH}/css/min`,
-  express.static(path.join(__dirname, 'public', 'css', 'min'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '10m',
-  })
-)
-app.use(
-  `${BASE_PATH}/js`,
-  express.static(path.join(__dirname, 'public', 'js'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '10m',
-  })
-)
-app.use(
-  `${BASE_PATH}/js/min`,
-  express.static(path.join(__dirname, 'public', 'js', 'min'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '10m',
-  })
-)
-app.use(
-  `${BASE_PATH}/img`,
-  express.static(path.join(__dirname, 'public', 'img'), {
+  BASE_PATH,
+  express.static(path.join(__dirname, 'public'), {
     etag: true,
     lastModified: true,
     maxAge: '1d',
   })
 )
-app.use(
-  `${BASE_PATH}/svg`,
-  express.static(path.join(__dirname, 'public', 'svg'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '1d',
+if (BASE_PATH) {
+  app.get('/', (req, res) => {
+    res.redirect(302, `${BASE_PATH}/`)
   })
-)
-app.use(
-  `${BASE_PATH}/favicon.ico`,
-  express.static(path.join(__dirname, 'public', 'favicon.ico'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '1d',
+  app.post('/', (req, res) => {
+    res.redirect(307, `${BASE_PATH}/`)
   })
-)
-app.use(
-  `${BASE_PATH}/robots.txt`,
-  express.static(path.join(__dirname, 'public', 'robots.txt'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '1d',
-  })
-)
-app.use(
-  `${BASE_PATH}/sitemap.xml`,
-  express.static(path.join(__dirname, 'public', 'sitemap.xml'), {
-    etag: true,
-    lastModified: true,
-    maxAge: '10min',
-  })
-)
-mongoose
-  .connect(MONGODB_URL)
-  .then(() => debug('MongoDB connected'))
-  .catch((error) => debug('MongoDB connection error:', error))
-app.get('/', (req, res) => {
-  res.redirect(`${BASE_PATH}/`)
+}
+app.use((req, res, next) => {
+  if (!req.url.startsWith(BASE_PATH)) {
+    return res.redirect(302, `${BASE_PATH}${req.url}`)
+  }
+  next()
 })
-app.post('/', (req, res) => {
-  res.redirect(BASE_PATH)
-})
-app.get(/^\/(?!gdl\/).*/, async (req, res) => {
-  res.redirect(BASE_PATH + req.path)
-})
-app.post(/^\/(?!gdl\/).*/, async (req, res) => {
-  res.redirect(BASE_PATH + req.path)
-})
+// initialize database connection and store
+async function initDatabase() {
+  const store = sessionStore()
+  try {
+    await mongoose.connect(MONGODB_URL)
+    debug('MongoDB connected')
+  } catch (error) {
+    debug('MongoDB connection error:', error)
+  }
+  try {
+    store.clear()
+    debug('All sessions cleared on server start.')
+    await User.updateMany({}, { $set: { sessions: [] } })
+    debug('All user sessions cleared for all users.')
+  } catch (error) {
+    debug('Failed to clear sessions on server start:', error)
+  }
+}
 app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
   res.setHeader('Content-Type', 'text/plain')
@@ -230,14 +185,6 @@ app.get(`${BASE_PATH}/revamp/`, async (req, res) => {
     ...vars,
   })
 })
-app.get(`${BASE_PATH}/revamp/*`, async (req, res) => {
-  const vars = await webVars()
-  res.render('filesNew', {
-    title: 'Files',
-    currentPage: 'files',
-    ...vars,
-  })
-})
 app.get(`${BASE_PATH}/login/`, async (req, res) => {
   var vars = await webVars()
   res.render('login', {
@@ -270,8 +217,17 @@ app.get(`${BASE_PATH}/dashboard/`, async (req, res) => {
     ...vars,
   })
 })
+app.get(`${BASE_PATH}/admin/`, async (req, res) => {
+  var vars = await webVars()
+  res.render('admin', {
+    title: 'Admin',
+    currentPage: 'admin',
+    ...vars,
+  })
+})
+// mount api routes
 app.use(BASE_PATH, require('./routes'))
-app.use(request)
+// 404 and error handlers
 app.use((req, res, next) => {
   next()
 })
@@ -281,15 +237,9 @@ app.use((req, res) => {
     status: 404,
   })
 })
-app.use((err, req, res, next) => {
-  debug(err.stack)
-  if (res.headersSent) {
-    return next(err)
-  }
-  res.status(500).json({
-    message: 'Internal Server Error',
-    status: 500,
-  })
+app.use((req, res, next, error) => {
+  debug(error.stack)
+  return next(error)
 })
 process.on('uncaughtException', (error) => {
   debug('Uncaught Exception:', error)
@@ -300,13 +250,32 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1)
 })
 process.on('SIGTERM', () => {
-  server.close(() => {
-    console.log('Process terminated')
-  })
+  const store = sessionStore()
+  if (store && typeof store.clear === 'function') {
+    store
+      .clear()
+      .then(() => {
+        console.log('All sessions cleared.')
+        server.close(() => {
+          console.log('Process terminated')
+        })
+      })
+      .catch((err) => {
+        console.error('Failed to clear sessions:', err)
+        server.close(() => {
+          console.log('Process terminated')
+        })
+      })
+  } else {
+    server.close(() => {
+      console.log('Process terminated')
+    })
+  }
 })
 async function verifyConfiguration() {
   try {
     await fs.access(BASE_DIR)
+    await HOST
   } catch {
     debug('Directory inaccessible:', BASE_DIR)
     process.exit(1)
@@ -319,26 +288,25 @@ const displayBanner = async () => {
     verticalLayout: 'default',
   })
   console.log(chalk.cyan(banner))
-  console.log(chalk.dim('━'.repeat(60)))
+  console.log(chalk.dim('━'.repeat(50)))
+  console.log(chalk.gray('⚡ '), chalk.white('Status:'), chalk.green('Online'))
+  console.log(chalk.gray('✨ '), chalk.white('Mode:'), chalk.green(NODE_ENV))
   console.log(
-    `${chalk.gray('⚡ ')} ${chalk.white('Status:')}  ${chalk.green('Online')}`
+    chalk.gray('🔗 '),
+    chalk.white('URL:'),
+    chalk.green(`${await HOST}${BASE_PATH}/`)
   )
+  console.log(chalk.gray('⚙️ '), chalk.white('Port:'), chalk.green(PORT))
   console.log(
-    `${chalk.gray('✨ ')} ${chalk.white('Mode:')}  ${chalk.green(NODE_ENV)}`
+    chalk.gray('📂 '),
+    chalk.white('Directory:'),
+    chalk.green(`${BASE_DIR}/`)
   )
-  console.log(
-    `${chalk.gray('🔗 ')} ${chalk.white('URL:')}  ${chalk.green(`${await HOST}${BASE_PATH}/`)}`
-  )
-  console.log(
-    `${chalk.gray('⚙️ ')} ${chalk.white('Port:')}  ${chalk.green(PORT)}`
-  )
-  console.log(
-    `${chalk.gray('📂 ')} ${chalk.white('Directory:')}  ${chalk.green(`${BASE_DIR}/`)}`
-  )
-  console.log(chalk.dim('━'.repeat(60)))
+  console.log(chalk.dim('━'.repeat(50)))
 }
 async function initializeServer() {
   await verifyConfiguration()
+  await initDatabase()
   app.listen(PORT, () => {
     debug(`Server is listening on port ${PORT}`)
     debug(`Server is running in ${NODE_ENV} mode`)

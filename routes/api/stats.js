@@ -6,7 +6,21 @@ const { isExcluded } = require('../../utils/fileUtils')
 const { BASE_DIR } = require('../../config')
 const { aggregateStats, getApiStats } = require('../../utils/statsUtils')
 const debug = require('debug')('gdl-api:api:stats')
-router.get(['/', ''], async (req, res) => {
+const { requireRole } = require('../../utils/authUtils')
+/**
+ * @swagger
+ * /api/stats/:
+ *   get:
+ *     summary: Get API statistics
+ */
+router.get(['/', ''], requireRole('user'), async (req, res) => {
+  if (!req.user) {
+    debug('Unauthorized access attempt')
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
   try {
     const stats = {
       api: await getApiStats(),

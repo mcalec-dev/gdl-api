@@ -15,7 +15,7 @@ const {
 } = require('../../config')
 const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
 const pathUtils = require('../../utils/pathUtils')
-const { resizeImage } = require('../../utils/imageUtils')
+const { resizeImage, getImageMeta } = require('../../utils/imageUtils')
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
@@ -54,6 +54,7 @@ async function createDbEntriesForContents(contents, parentPath = '') {
   for (const item of contents) {
     const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
     const dbPath = `${apiPrefix}/${relPath}`.replace(/\/+/g, '/')
+    const getMetadata = await getImageMeta(`${BASE_DIR}/${relPath}`)
     if (item.type === 'directory') {
       await upsertDirectoryEntry({
         name: item.name,
@@ -88,7 +89,7 @@ async function createDbEntriesForContents(contents, parentPath = '') {
           mimetype: item.mimetype || '',
           created: item.created || new Date(),
           modified: item.modified || new Date(),
-          exif: item.exif || {},
+          exif: getMetadata || {},
         })
       } else if (isVideo) {
         await upsertVideoEntry({
@@ -99,6 +100,9 @@ async function createDbEntriesForContents(contents, parentPath = '') {
           created: item.created || new Date(),
           modified: item.modified || new Date(),
         })
+      } else {
+        debug('File type not supported:', item)
+        return
       }
     }
   }
@@ -128,37 +132,17 @@ async function getDirectorySize(dirPath) {
 }
 /**
  * @swagger
- * /api/files:
+ * /api/files/:
  *   get:
  *     summary: Get all files
- *     responses:
- *       200:
- *         description: A list of all files
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   name:
- *                     type: string
- *                   type:
- *                     type: string
- *                   size:
- *                     type: integer
- *                   modified:
- *                     type: string
- *                     format: date-time
- *                   created:
- *                     type: string
- *                     format: date-time
- *                   path:
- *                     type: string
- *                   url:
- *                     type: string
  */
-router.get(['/', ''], async (req, res) => {
+router.get(['', '/'], async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
   try {
     const stats = await fs.stat(BASE_DIR)
     if (!stats.isDirectory()) {
@@ -209,7 +193,11 @@ router.get(['/', ''], async (req, res) => {
           .relative(BASE_DIR, entryPath)
           .replace(/\\/g, '/')
         const apiPrefix = `${BASE_PATH}/api/files`
-        const fullPath = `${apiPrefix}/${relativePath}`.replace(/\/+/g, '/')
+        const encodedPath = relativePath
+          .split('/')
+          .map(encodeURIComponent)
+          .join('/')
+        const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
         return {
           name: entry.name,
           type: entry.isDirectory() ? 'directory' : 'file',
@@ -221,11 +209,23 @@ router.get(['/', ''], async (req, res) => {
         }
       })
     )
-    res.json({
-      contents: results.filter(Boolean),
-    })
-    if (results && results.length) {
-      await createDbEntriesForContents(results.filter(Boolean), '')
+    const filteredResults = results.filter(Boolean)
+    //const directories = filteredResults.filter((entry) => entry.type === 'directory')
+    const files = filteredResults.filter((entry) => entry.type === 'file')
+    if (req.user) {
+      res.json({
+        contents: filteredResults,
+      })
+      if (filteredResults.length) {
+        await createDbEntriesForContents(filteredResults, '')
+      }
+    } else {
+      res.json({
+        contents: files,
+      })
+      if (files.length) {
+        await createDbEntriesForContents(files, '')
+      }
     }
   } catch (error) {
     debug('Error in root directory listing:', error)
@@ -253,14 +253,27 @@ router.get(['/', ''], async (req, res) => {
  *         description: Collection not found
  */
 router.get(
-  ['/:collection', '/:collection/', '/:collection/*'],
+  [
+    '/:collection/',
+    '/:collection/*',
+    '/:collection/:author/',
+    '/:collection/:author/*',
+  ],
   async (req, res) => {
+    if (!req.user) {
+      debug('Unauthorized access attempt')
+      return res.status(401).json({
+        message: 'Unauthorized',
+        status: 401,
+      })
+    }
     const collection = req.params.collection
-    const subPath = req.params[0] || ''
+    const author = req.params.author || ''
+    const additionalPath = req.params[0] || ''
     const normalizedDir = path.normalize(BASE_DIR)
     let realPath
     if (path.isAbsolute(collection)) {
-      realPath = path.join(collection, subPath)
+      realPath = path.join(collection, author, additionalPath)
       if (!realPath.startsWith(normalizedDir)) {
         debug('Access attempt outside of BASE_DIR:', realPath)
         return res.status(403).json({
@@ -269,8 +282,9 @@ router.get(
         })
       }
     } else {
-      realPath = path.join(normalizedDir, collection, subPath)
+      realPath = path.join(normalizedDir, collection, author, additionalPath)
     }
+    realPath = realPath.replace(/\/$/, '')
     if (!pathUtils.isSubPath(realPath, normalizedDir)) {
       debug(`Directory traversal attempt: ${realPath}`)
       return res.status(403).json({
@@ -299,6 +313,12 @@ router.get(
     }
     const stats = await fs.stat(realPath)
     if (stats.isDirectory()) {
+      if (!req.user) {
+        return res.status(403).json({
+          message: 'Forbidden',
+          status: 403,
+        })
+      }
       let entries = []
       try {
         entries = await fs.readdir(realPath, {
@@ -314,7 +334,12 @@ router.get(
       }
       const formattedContents = await Promise.all(
         entries.map(async (entry) => {
-          const entryRelativePath = path.join(collection, subPath, entry.name)
+          const entryRelativePath = path.join(
+            collection,
+            author,
+            additionalPath,
+            entry.name
+          )
           if (
             (await isExcluded(entryRelativePath)) ||
             DISALLOWED_DIRS.includes(entry.name) ||
@@ -346,7 +371,11 @@ router.get(
             return null
           }
           const apiPrefix = `${BASE_PATH}/api/files`
-          const fullPath = `${apiPrefix}/${relativePath}`.replace(/\/+/g, '/')
+          const encodedPath = relativePath
+            .split('/')
+            .map(encodeURIComponent)
+            .join('/')
+          const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
           return {
             name: entry.name,
             type: isDir ? 'directory' : 'file',
@@ -414,6 +443,13 @@ router.get(
       }
       res.download(realPath, (error) => {
         if (error) {
+          if (
+            error.code === 'ECONNABORTED' ||
+            error.message === 'Request aborted'
+          ) {
+            debug('Request aborted by the client:', error)
+            return
+          }
           debug('Error in file download:', error)
           if (!res.headersSent) {
             res.status(500).json({

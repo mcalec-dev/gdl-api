@@ -1,4 +1,4 @@
-import { formatSize, apiHost } from '../min/index.min.js'
+import { formatSize } from '../min/index.min.js'
 let API_URL = ''
 const loadImageBtn = document.getElementById('loadImageBtn')
 const backImageBtn = document.getElementById('backImageBtn')
@@ -9,18 +9,22 @@ const imageInfo = document.getElementById('imageInfo')
 const HISTORY_KEY = 'randomMediaHistory'
 const HISTORY_LIMIT = 10
 let history = []
-let historyIndex = -1
-function loadHistory() {
-  const h = JSON.parse(localStorage.getItem(HISTORY_KEY))
-  if (Array.isArray(h)) {
-    history = h
-    historyIndex = history.length - 1
-  }
-}
-function saveHistory() {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-}
+let historyIndex = 0
 function showMedia(data) {
+  if (!data || !data.url) {
+    console.error('Invalid media data:', data)
+    imageContainer.classList.remove('has-image')
+    loading.textContent = 'Failed to load media. Try again.'
+    loading.style.display = 'block'
+    imageInfo.style.display = 'none'
+    return
+  }
+  if (history.length === 0) {
+    imageContainer.classList.remove('has-image')
+    loading.textContent = 'Click the button to load media'
+    loading.style.display = 'block'
+    return
+  }
   imageContainer.classList.remove('has-image')
   loading.textContent = 'Loading...'
   loading.style.display = 'block'
@@ -37,23 +41,15 @@ function showMedia(data) {
   if (isVideo) {
     mediaElement.controls = true
     mediaElement.muted = false
-    mediaElement.loop = true
+    mediaElement.loop = false
     mediaElement.autoplay = false
   }
   imageInfo.innerHTML = `
-    <span id="image-author" class="font-semibold text-gray-300">${escapeHTML(data.author)}</span>
+    <span id="image-author" class="font-semibold text-gray-300">${data.author}</span>
     <span class="text-gray-400"> on </span>
-    <span id="image-collection" class="font-semibold text-gray-300">${escapeHTML(data.collection)}</span><br>
+    <span id="image-collection" class="font-semibold text-gray-300">${data.collection}</span><br>
     <span id="image-size" class="text-gray-400">${formatSize(data.size)}</span>
   `
-  function escapeHTML(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-  }
   const loadHandler = () => {
     loading.style.display = 'none'
     mediaElement.style.display = 'block'
@@ -76,15 +72,18 @@ async function loadRandomMedia() {
     const response = await fetch(API_URL)
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
     const data = await response.json()
+    if (history.length === 0) {
+      history.push({})
+    }
     if (historyIndex < history.length - 1) {
       history = history.slice(0, historyIndex + 1)
     }
     history.push(data)
-    if (history.length > HISTORY_LIMIT) {
-      history.shift()
+    if (history.length > HISTORY_LIMIT + 1) {
+      history.splice(1, 1)
     }
     historyIndex = history.length - 1
-    saveHistory()
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
     showMedia(data)
   } catch (error) {
     handleMediaError(error)
@@ -98,23 +97,69 @@ function handleMediaError(error) {
   console.error('Media load error:', error)
 }
 function showPreviousMedia() {
-  if (historyIndex > 0) {
-    historyIndex--
-    saveHistory()
-    showMedia(history[historyIndex], true)
+  if (history.length === 0 || historyIndex <= 0) {
+    historyIndex = 0
+    imageContainer.classList.remove('has-image')
+    loading.textContent = 'Click the button to load media'
+    loading.style.display = 'block'
+    imageInfo.style.display = 'none'
+    imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+  } else {
+    let previousIndex = historyIndex - 1
+    while (
+      previousIndex >= 0 &&
+      (!history[previousIndex] || !history[previousIndex].url)
+    ) {
+      console.error('Skipping invalid media data at index:', previousIndex)
+      previousIndex--
+    }
+    if (previousIndex >= 0) {
+      historyIndex = previousIndex
+      const mediaData = history[historyIndex]
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+      showMedia(mediaData, true)
+    } else {
+      console.error('No valid media data found when navigating back.')
+    }
   }
 }
 function showNextMedia() {
   if (historyIndex < history.length - 1) {
-    historyIndex++
-    saveHistory()
-    showMedia(history[historyIndex], true)
+    let nextIndex = historyIndex + 1
+    while (
+      nextIndex < history.length &&
+      (!history[nextIndex] || !history[nextIndex].url)
+    ) {
+      console.error('Skipping invalid media data at index:', nextIndex)
+      nextIndex++
+    }
+    if (nextIndex < history.length) {
+      historyIndex = nextIndex
+      const mediaData = history[historyIndex]
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+      showMedia(mediaData, true)
+    } else {
+      console.error('No valid media data found when navigating forward.')
+    }
+  } else {
+    historyIndex = Math.max(0, historyIndex)
+    imageContainer.classList.remove('has-image')
+    loading.textContent = 'Click the button to load media'
+    loading.style.display = 'block'
+    imageInfo.style.display = 'none'
+    imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  const apiBase = await apiHost()
-  API_URL = `${apiBase}/random`
-  loadHistory()
+  API_URL = `/api/random`
+  const h = JSON.parse(localStorage.getItem(HISTORY_KEY))
+  if (Array.isArray(h) && h.length > 0) {
+    history = h
+    historyIndex = history.length + 1
+  } else {
+    history = [{}]
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  }
   loadImageBtn.addEventListener('click', loadRandomMedia)
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)

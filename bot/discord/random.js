@@ -25,8 +25,6 @@ const commands = [
   new SlashCommandBuilder()
     .setName('random')
     .setDescription('Get a random image from the gallery')
-    .setDMPermission(true)
-    .setDefaultMemberPermissions(null)
     .toJSON(),
 ]
 const getActionRow = () => {
@@ -45,8 +43,9 @@ const getActionRow = () => {
       .setStyle(ButtonStyle.Secondary)
   )
 }
-function buildImageUrl(baseUrl, scale) {
-  const apiBase = `${HOST}${BASE_PATH}/api/`
+async function buildImageUrl(baseUrl, scale) {
+  const apiHost = await HOST
+  const apiBase = `${apiHost}${BASE_PATH}/api/`
   const url = baseUrl.startsWith('http')
     ? new URL(baseUrl)
     : new URL(baseUrl, apiBase)
@@ -54,7 +53,8 @@ function buildImageUrl(baseUrl, scale) {
   return url.toString()
 }
 async function getRandomImage() {
-  const baseUrl = `${await HOST}${BASE_PATH}/api/random`
+  const apiHost = await HOST
+  const baseUrl = `${apiHost}${BASE_PATH}/api/random`
   try {
     debug('Attempting to fetch from:', baseUrl)
     const response = await axios.get(baseUrl, {
@@ -223,8 +223,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     ) {
       try {
         await interaction.deferReply()
-      } catch {
-        debug('Failed to defer reply - interaction may have expired')
+      } catch (error) {
+        debug('Failed to defer reply - interaction may have expired', error)
         return
       }
       const imageData = await getRandomImage()

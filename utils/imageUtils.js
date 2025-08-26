@@ -8,6 +8,37 @@ const MAX_BUFFER_SIZE = 1 * 1024 * 1024 * 1024
 sharp.simd(true)
 sharp.cache(false)
 sharp.concurrency(5)
+async function getImageMeta(imagePath, ext) {
+  if (buffer.length > MAX_BUFFER_SIZE) return null
+  let metadata
+  const isImage = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.bmp',
+    '.gif',
+    '.tiff',
+    '.svg',
+    '.avif',
+  ].includes(ext)
+  const isVideo = ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
+  if (isImage) {
+    try {
+      metadata = await sharp(imagePath, {
+        failOnError: false,
+        useOriginalDate: true,
+        limitInputPixels: false,
+      }).metadata()
+      return metadata
+    } catch (error) {
+      debug('Failed to read image metadata', error)
+      return null
+    }
+  } else if (isVideo) {
+    return {}
+  }
+}
 async function resizeImage(imagePath, { width, height, scale }) {
   if (scale > MAX_SCALE) return null
   if (height > MAX_PIXELS || height > MAX_PIXELS) return null
@@ -119,4 +150,5 @@ async function resizeImage(imagePath, { width, height, scale }) {
 }
 module.exports = {
   resizeImage,
+  getImageMeta,
 }

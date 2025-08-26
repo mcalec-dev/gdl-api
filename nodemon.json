@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "server.js",
+    "routes/**/*.js",
+    "models/**/*.js",
+    "utils/**/*.js",
+    "views/**/*.ejs"
+  ],
+  "ignore": [
+    "node_modules",
+    "public",
+    "client",
+    "bot"
+  ],
+  "ext": "js",
+  "exec": "node server.js"
+}

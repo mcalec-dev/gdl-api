@@ -6,7 +6,8 @@ const directorySchema = new mongoose.Schema({
   size: { type: Number, required: true },
   created: { type: Date },
   modified: { type: Date },
+  tags: [{ type: String, index: true }],
   uuid: { type: String, default: uuid.v4 },
-  files: [],
+  files: [{}],
 })
 module.exports = mongoose.model('Directory', directorySchema)

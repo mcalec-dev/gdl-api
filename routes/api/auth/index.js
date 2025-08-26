@@ -26,9 +26,9 @@ try {
 }
 /**
  * @swagger
- * /api/auth:
+ * /api/auth/:
  *   get:
- *     summary: Get auth API status
+ *     summary: Get auth API info
  *     responses:
  *       200:
  *         description: Auth API is working
@@ -37,14 +37,14 @@ router.get(['/', ''], async (req, res) => {
   const baseURL = getAPIUrl(req)
   res.json({
     urls: {
-      login: baseURL + '/api/auth/login',
-      register: baseURL + '/api/auth/register',
-      link: baseURL + '/api/auth/link/:provider',
-      unlink: baseURL + '/api/auth/unlink/:provider',
-      check: baseURL + '/api/auth/check',
-      logout: baseURL + '/api/auth/logout',
-      github: baseURL + '/api/auth/github',
-      discord: baseURL + '/api/auth/discord',
+      login: baseURL + '/auth/login',
+      register: baseURL + '/auth/register',
+      link: baseURL + '/auth/link/:provider',
+      unlink: baseURL + '/auth/unlink/:provider',
+      check: baseURL + '/auth/check',
+      logout: baseURL + '/auth/logout',
+      github: baseURL + '/auth/github',
+      discord: baseURL + '/auth/discord',
     },
   })
 })
@@ -62,13 +62,15 @@ router.get(
         state: req.user.id,
       })(req, res, next)
     } else if (provider === 'discord') {
-      passport.authenticate('discord', { state: req.user.id })(req, res, next)
+      passport.authenticate('discord', {
+        state: req.user.id,
+      })(req, res, next)
     } else {
       res.status(400).json({ message: 'Invalid provider' })
     }
   }
 )
-router.post(
+router.get(
   '/unlink/:provider',
   requireAnyRole(['user', 'admin']),
   async (req, res) => {
@@ -135,6 +137,7 @@ router.get(
   '/github',
   passport.authenticate('github', {
     scope: ['user:email'],
+    passReqToCallback: true,
   })
 )
 router.get(
@@ -146,11 +149,18 @@ router.get(
     res.redirect('/')
   }
 )
-router.get('/discord', passport.authenticate('discord'))
+router.get(
+  '/discord',
+  passport.authenticate('discord', {
+    scope: ['identify', 'email'],
+    passReqToCallback: true,
+  })
+)
 router.get(
   '/discord/callback',
   passport.authenticate('discord', {
     failureRedirect: '/login',
+    passReqToCallback: true,
   }),
   (req, res) => {
     res.redirect('/')

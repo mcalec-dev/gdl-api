@@ -32,8 +32,52 @@ document.addEventListener('DOMContentLoaded', () => {
               <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
           </div>
-          <div class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</div>
-          <pre class="bg-gray-900/60 rounded p-3 text-xs text-gray-200 overflow-x-auto">${JSON.stringify(data.oauth, null, 2)}</pre>
+          <div class="mt-4 w-full md:max-w-full sm:max-w-full">
+            <span class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</span>
+            <pre class="bg-gray-900/60 rounded p-3 mb-3 text-xs text-gray-200 whitespace-pre">${JSON.stringify(data.oauth, null, 2)}</pre>
+            <span class="mt-4 text-gray-400 text-xs mb-1">Current Sessions:</span>
+            <div class="flex flex-col gap-4 mt-2">
+              ${(() => {
+                let html = ''
+                if (Array.isArray(data.sessions) && data.sessions.length > 0) {
+                  data.sessions.forEach((session) => {
+                    html += `
+                      <div class="rounded-lg border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200">
+                        <div class="flex flex-wrap gap-2 mb-1">
+                          <span class="font-semibold text-gray-300">First Seen:</span>
+                          <span>${session.created ? new Date(session.created).toLocaleString() : 'N/A'}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-1">
+                          <span class="font-semibold text-gray-300">Last Seen:</span>
+                          <span>${session.modified ? new Date(session.modified).toLocaleString() : 'N/A'}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-1">
+                          <span class="font-semibold text-gray-300">Expires:</span>
+                          <span>${session.expires ? new Date(session.expires).toLocaleString() : 'N/A'}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-1">
+                          <span class="font-semibold text-gray-300">IP:</span>
+                          <span>${session.ip}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-1">
+                          <span class="font-semibold text-gray-300">User Agent:</span>
+                          <span class="break-all">${session.useragent}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <span class="font-semibold text-gray-300">UUID:</span>
+                          <span class="break-all">${session.uuid}</span>
+                        </div>
+                      </div>
+                    `
+                  })
+                } else {
+                  html =
+                    '<div class="text-gray-400">No active sessions found.</div>'
+                }
+                return html
+              })()}
+            </div>
+          </div>
         </div>
         <div class="mt-12 flex justify-center">
           <button id="logout" class="px-12 py-3 rounded bg-red-600 text-white font-semibold flex items-center justify-center">Logout</button>
@@ -70,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutBtn.addEventListener('click', async () => {
           try {
             await fetch(document.location.origin + '/api/auth/logout', {
-              method: 'GET',
+              method: 'POST',
               credentials: 'include',
             })
           } catch (error) {

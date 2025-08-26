@@ -7,13 +7,55 @@
       <h1 id="title" class="text-3xl font-light text-center text-white mb-8 capitalize">
         <%= currentPage %>
       </h1>
-      <div id="statusMessage" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
-      <div class="flex flex-col sm:flex-row gap-3">
-        <input type="text" id="urlInput" placeholder="Paste file URL here" aria-label="Download URL" class="flex-1 px-3 py-2 text-base backdrop-blur-lg bg-[#1f1f1f] text-white border border-white/20 rounded" />
-        <button id="downloadButton" class="px-5 py-1 bg-blue-600 text-white rounded sm:w-auto w-full text-center select-none">
-          Download
-        </button>
+      <div id="client-download">
+        <h2 class="text-xl font-semibold text-white mb-2">
+          Download Client Installers
+        </h2>
+        <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-3">
+          <button id="windows-exe-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            Windows (exe)
+          </button>
+          <button id="windows-msi-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            Windows (msi)
+          </button>
+          <button id="linux-deb-download" class="px-4 py-3 rounded bg-[#E95420] text-white font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/ubuntu.svg" alt="Linux Download" class="invert h-5 w-5">
+            Ubuntu (deb)
+          </button>
+        </div>
+        <h2 class="text-xl font-semibold text-white mb-2 mt-2">
+          Download Client Archives
+        </h2>
+        <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-3">
+          <button id="windows-zip-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            Windows (zip)
+          </button>
+          <button id="linux-tar-archive-download" class="px-4 py-3 rounded bg-[#F4BC00] text-black font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/linux.svg" alt="Linux Download" class="h-5 w-5">
+            Linux (tar.gz)
+          </button>
+        </div>
       </div>
+      <div class="my-6 flex items-center justify-center">
+        <span class="text-gray-400 text-sm">
+          or
+        </span>
+      </div>
+      <div id="download-file">
+        <h2 class="text-xl font-semibold text-white mb-2">
+          Download File
+        </h2>
+        <div class="flex items-center gap-3">
+          <input type="text" id="urlInput" placeholder="Paste file URL here" aria-label="Download URL" class="flex-1 px-3 py-2 text-base backdrop-blur-lg bg-[#1f1f1f] text-white border border-white/20 rounded" />
+          <button id="downloadButton" class="px-5 py-2 bg-blue-600 text-white rounded sm:w-auto w-full text-center select-none">
+            Download
+          </button>
+        </div>
+      </div>
+      <div id="statusMessage" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
     </div>
     <script type="module" src="/js/min/download.min.js" fetchPriority="high"></script>
     <%- include('partials/bg') %>

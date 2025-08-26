@@ -1,11 +1,10 @@
-import {
-  formatSize,
-  formatDate,
-  apiHost,
-  getFileType,
-} from '../min/index.min.js'
-let frontendBasePath = '/gdl/files'
-let apiBasePath = '/gdl/api/files'
+import { formatSize, formatDate, getFileType } from '../min/index.min.js'
+let frontendBasePath = document.location.origin + '/files'
+let apiBasePath = document.location.origin + '/api/files'
+function constructApiPath(path) {
+  const cleanPath = path.replace(/^\/|\/$/g, '').replace(/^files\/?/, '')
+  return cleanPath ? `${apiBasePath}/${cleanPath}` : apiBasePath
+}
 const previewSize = '?x=50'
 const zoomedSize = '?x=400'
 const fileList = document.getElementById('fileList')
@@ -13,11 +12,15 @@ const breadcrumb = document.getElementById('breadcrumb')
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
-const icons = {
-  directory:
-    '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8z"/></svg>',
-  other:
-    '<svg viewBox="0 0 24 24"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm7 7V3.5L18.5 9z"/></svg>',
+let icons
+async function loadIcons() {
+  const response = await fetch('/icons.json')
+  const data = await response.json()
+  icons = {
+    directory: data.folder,
+    file: data.file.default,
+    other: data.file.text,
+  }
 }
 let currentDirectoryData = null
 let currentImageIndex = 0
@@ -46,13 +49,13 @@ function getSortIcon(state) {
 function updateBreadcrumb(path) {
   const parts = path.split('/').filter(Boolean)
   let currentPath = ''
-  let breadcrumbHtml = `<a href="${frontendBasePath}/">Home</a>`
+  let breadcrumbHtml = `<span>/</span><a href="${frontendBasePath}/">Files</a><span>/</span>`
   parts.forEach((part, index) => {
     currentPath += `/${part}`
     if (index < parts.length - 1) {
-      breadcrumbHtml += `<span>/</span><a href="${frontendBasePath}${currentPath}/">${part}</a>`
+      breadcrumbHtml += `<a href="${frontendBasePath}${currentPath}/">${part}</a><span>/</span>`
     } else {
-      breadcrumbHtml += `<span>/</span><span>${part}</span><span>/</span>`
+      breadcrumbHtml += `<span>${part}</span><span>/</span>`
     }
   })
   breadcrumb.innerHTML = breadcrumbHtml
@@ -138,19 +141,20 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
         .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
         .replace(/\/+/g, '/')
         .replace(/^\/|\/$/g, '')
+        .replace(/^files\/?/, '')
     }
     const loadingIndicator = document.createElement('div')
     loadingIndicator.className = 'loading'
     loadingIndicator.innerHTML = '<span>Loading...</span>'
     fileList.appendChild(loadingIndicator)
     updateBreadcrumb(path)
-    const apiPath = path ? `/${path}/` : ''
+    const apiPath = constructApiPath(path)
     if (
       !currentDirectoryData ||
       currentDirectoryData.path !== path ||
       forceRefresh
     ) {
-      const response = await fetch(`${apiBasePath}${apiPath}`, { signal })
+      const response = await fetch(apiPath, { signal })
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || 'Unknown error occurred')
@@ -318,7 +322,10 @@ function handleDirectoryClick(event) {
   event.preventDefault()
   const itemPath = target.dataset.path
   if (!itemPath) return
-  let newPath = `${frontendBasePath}/${itemPath}`.replace(/\/+/g, '/')
+  let newPath = `${frontendBasePath}/${itemPath}`
+    .replace(new RegExp(`^${document.location.origin}`), '')
+    .replace(/\/+/g, '/')
+    .replace(/\/\//g, '/')
   if (!newPath.endsWith('/')) newPath += '/'
   const cleanPath = itemPath.replace(new RegExp(`^${frontendBasePath}/?`), '')
   const url = new URL(window.location.href)
@@ -614,8 +621,7 @@ function getSortFromQuery() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  const apiBase = await apiHost()
-  apiBasePath = `${apiBase}/files`
+  await loadIcons()
   getSortFromQuery()
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
   const initialPath = window.location.pathname.replace(

@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:register')
 /**
  * @swagger
- * /api/auth/register:
+ * /api/auth/register/:
  *   post:
  *     summary: Register a new user
  *     requestBody:
@@ -21,11 +21,6 @@ const debug = require('debug')('gdl-api:api:auth:register')
  *                 type: string
  *               password:
  *                 type: string
- *     responses:
- *       200:
- *         description: User registered and logged in successfully
- *       409:
- *         description: Conflict (username or email already exists)
  */
 router.post(['/', ''], async (req, res) => {
   const { username, email, password } = req.body

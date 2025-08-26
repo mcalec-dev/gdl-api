@@ -7,7 +7,7 @@
       <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
         <%= currentPage %>
       </h1>
-      <div class="max-w-xl mx-auto mb-6">
+      <div class="max-w-xl mx-auto">
         <div class="flex flex-col sm:flex-row gap-3">
           <input type="text" id="searchInput" placeholder="Enter your search query" aria-label="Search query" class="flex-1 px-3 py-2 text-base backdrop-blur-lg bg-[#1f1f1f] text-white border border-white/20 rounded" />
           <button id="searchButton" class="px-5 py-1 bg-blue-600 text-white rounded sm:w-auto w-full text-center select-none">
@@ -15,21 +15,21 @@
           </button>
         </div>
         <div class="flex justify-center gap-4 mt-4">
-          <label class="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+          <label class="inline-flex items-center cursor-pointer">
             <input type="radio" name="searchType" value="all" class="sr-only peer" checked>
             <div class="w-4 h-4 border-2 border-gray-400 rounded-full peer-checked:border-blue-500 peer-checked:border-4"></div>
             <span class="ml-2 text-gray-300">
               All
             </span>
           </label>
-          <label class="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+          <label class="inline-flex items-center cursor-pointer">
             <input type="radio" name="searchType" value="files" class="sr-only peer">
             <div class="w-4 h-4 border-2 border-gray-400 rounded-full peer-checked:border-blue-500 peer-checked:border-4"></div>
             <span class="ml-2 text-gray-300">
               Files
             </span>
           </label>
-          <label class="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+          <label class="inline-flex items-center cursor-pointer">
             <input type="radio" name="searchType" value="directories" class="sr-only peer">
             <div class="w-4 h-4 border-2 border-gray-400 rounded-full peer-checked:border-blue-500 peer-checked:border-4"></div>
             <span class="ml-2 text-gray-300">
@@ -38,10 +38,10 @@
           </label>
         </div>
       </div>
-      <div id="loading" class="text-xl text-center text-white py-6 hidden">
+      <div id="loading" class="text-xl text-center text-white py-4 mt-4 hidden">
         Searching...
       </div>
-      <div id="searchInfo" class="text-white backdrop-blur-lg border border-white/20 rounded py-2 px-4 text-center max-w-max mx-auto mb-4 hidden"></div>
+      <div id="searchInfo" class="text-white backdrop-blur-lg border border-white/20 rounded py-2 px-4 text-center max-w-max mx-auto hidden"></div>
       <div id="results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 hidden"></div>
       <div id="noResults" class="text-lg text-gray-400 text-center py-10 hidden">
         No results found

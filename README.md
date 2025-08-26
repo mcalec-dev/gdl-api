@@ -2,7 +2,7 @@
 
 an api thing i made for gallery-dl downloads. (it's poorly made)  
 
-OpenAPI (Swagger) documentation accessible at `/docs`
+Swagger documentation accessible at `/docs/`
 
 make sure to download [MongoDB](https://www.mongodb.com/try/download/community)
 

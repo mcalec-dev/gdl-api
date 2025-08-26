@@ -8,7 +8,7 @@
         <%= currentPage %>
       </h1>
       <p class="text-base text-gray-300 text-center mb-6 sm:mb-8">
-        I suggest you to check the OpenAPI (Swagger) documentation
+        I suggest you to check the Swagger documentation
         <a href="/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">
           here
         </a>
@@ -59,11 +59,26 @@
             <tr>
               <td class="px-2 py-2 border border-[#404040]">
                 <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /dashboard/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                View your account dashboard
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/dashboard/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
                   /docs/
                 </code>
               </td>
               <td class="px-2 py-2 border border-[#404040]">
-                OpenAPI (Swagger) Documentation
+                Swagger Documentation
               </td>
               <td class="px-2 py-2 border border-[#404040]">
                 <a href="/docs/" class="text-blue-500 hover:underline">
@@ -82,36 +97,6 @@
               </td>
               <td class="px-2 py-2 border border-[#404040]">
                 <a href="/login/" class="text-blue-500 hover:underline">
-                  link
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /register/
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                Register a new account
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <a href="/register/" class="text-blue-500 hover:underline">
-                  link
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /dashboard/
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                View your account dashboard
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <a href="/dashboard/" class="text-blue-500 hover:underline">
                   link
                 </a>
               </td>
@@ -164,6 +149,21 @@
             <tr>
               <td class="px-2 py-2 border border-[#404040]">
                 <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
+                  /register/
+                </code>
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                Register a new account
+              </td>
+              <td class="px-2 py-2 border border-[#404040]">
+                <a href="/register/" class="text-blue-500 hover:underline">
+                  link
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td class="px-2 py-2 border border-[#404040]">
+                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
                   /files/
                 </code>
               </td>
@@ -174,66 +174,6 @@
                 <a href="/files/" class="text-blue-500 hover:underline">
                   link
                 </a>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /api/random
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                Get a random image
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <em>
-                  endpoint
-                </em>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /api/stats
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                Get collection statistics
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <em>
-                  endpoint
-                </em>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /api/files
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                Access individual files
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <em>
-                  endpoint
-                </em>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-2 py-2 border border-[#404040]">
-                <code class="bg-[#1f1f1f] text-white px-1 py-1 rounded">
-                  /api/search?q=term
-                </code>
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                Search API endpoint
-              </td>
-              <td class="px-2 py-2 border border-[#404040]">
-                <em>
-                  endpoint
-                </em>
               </td>
             </tr>
           </tbody>
@@ -247,5 +187,6 @@
       </p>
     </div>
     <%- include('partials/bg') %>
+    <%- include('partials/settings') %>
   </body>
 </html>

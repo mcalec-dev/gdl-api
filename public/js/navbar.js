@@ -1,4 +1,4 @@
-import { apiHost, getName } from '../min/index.min.js'
+import { getName } from '/js/min/index.min.js'
 document.addEventListener('DOMContentLoaded', async function () {
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
@@ -9,12 +9,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     console.error('Failed to fetch name:', error)
     name = 'title'
   }
+  if (!name) {
+    navbarTitle.textContent = 'title - undefined'
+    return console.warn('Site name is undefined or empty')
+  }
+  if (!heading) {
+    navbarTitle.textContent = `${name} - undefined`
+    return console.warn('Heading element is undefined or empty')
+  }
   if (name) {
     navbarTitle.textContent = `${name} - ${heading.textContent}`
     document.title = `${name} - ${heading.textContent}`
-  } else {
-    navbarTitle.textContent = 'title'
-    document.title = 'title'
   }
   const mobileMenuButton = document.getElementById('mobile-menu-button')
   const mobileMenu = document.getElementById('mobile-navbar-menu')
@@ -35,11 +40,10 @@ document.addEventListener('DOMContentLoaded', async function () {
       mobileMenu.classList.add('hidden')
     }
   })
-  const host = await apiHost()
   const loginRegisterButtons = document.querySelectorAll('#login-register')
   let checkAuthStatus = null
   try {
-    const res = await fetch(host + '/auth/check', { credentials: 'include' })
+    const res = await fetch('/api/auth/check')
     checkAuthStatus = await res.json()
   } catch (error) {
     console.error('Failed to fetch auth status:', error)

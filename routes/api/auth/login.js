@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:login')
 /**
  * @swagger
- * /api/auth/login:
+ * /api/auth/login/:
  *   post:
  *     summary: Login user
  *     requestBody:
@@ -21,18 +21,20 @@ const debug = require('debug')('gdl-api:api:auth:login')
  *                 type: string
  *               password:
  *                 type: string
- *     responses:
- *       200:
- *         description: User logged in successfully
- *       400:
- *         description: Bad request
- *       401:
- *         description: Invalid credentials
  */
 router.post(['/', ''], async (req, res) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    debug('User already logged in:', req.user.username || '')
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden',
+      status: 403,
+      user: req.user,
+    })
+  }
   const { username, email, password } = req.body
   if ((!username && !email) || !password) {
-    debug('Username/email or password not provided')
+    debug('Username/email or password was not provided')
     return res.status(400).json({
       message: 'Bad request',
       status: 400,
@@ -40,13 +42,9 @@ router.post(['/', ''], async (req, res) => {
   }
   let user
   if (email) {
-    user = await User.findOne({
-      email,
-    })
+    user = await User.findOne({ email })
   } else {
-    user = await User.findOne({
-      username,
-    })
+    user = await User.findOne({ username })
   }
   if (!user) {
     debug('User not found:', username, email)
@@ -64,12 +62,20 @@ router.post(['/', ''], async (req, res) => {
     })
   }
   try {
-    req.login(user, () => {
+    req.login(user, async () => {
+      user.sessions = user.sessions || []
+      user.sessions.push({
+        modified: new Date(),
+        ip: req.ip || '',
+        useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+      })
+      await user.save()
       debug('User logged in:', user.username)
       return res.status(200).json({
         success: true,
         status: 200,
         user,
+        session: user.sessions[user.sessions.length - 1],
       })
     })
   } catch (error) {

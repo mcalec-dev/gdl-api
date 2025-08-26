@@ -89,6 +89,7 @@ async function aggregateStats(dirPath, stats = null) {
   return stats
 }
 async function getApiStats() {
+  await Promise.resolve()
   return {
     version: process.env.npm_package_version,
     uptime: process.uptime(),

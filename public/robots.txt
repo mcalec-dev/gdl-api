@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: /gdl/api/*
-Disallow: /gdl/files/*
-Disallow: /gdl/docs/*
+Disallow: /api/*
+Disallow: /files/*
+Disallow: /docs/*

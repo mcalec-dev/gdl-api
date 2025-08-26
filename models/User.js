@@ -7,15 +7,35 @@ const userSchema = new mongoose.Schema({
   roles: [{ type: String }],
   uuid: { type: String, default: uuid.v4 },
   created: { type: Date, default: Date.now },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'banned'],
+    default: 'active',
+  },
+  sessions: [
+    {
+      uuid: { type: String, default: uuid.v4 },
+      created: { type: Date, default: Date.now },
+      modified: { type: Date, default: Date.now },
+      expires: {
+        type: Date,
+        default: () => Date.now() + 30 * 24 * 60 * 60 * 1000,
+      }, // 30 days
+      ip: { type: String },
+      useragent: { type: String },
+    },
+  ],
   oauth: {
     github: {
       id: String,
       username: String,
+      email: String,
       avatar: String,
     },
     discord: {
       id: String,
       username: String,
+      email: String,
       avatar: String,
     },
   },

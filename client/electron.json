@@ -25,8 +25,8 @@
       { "target": "zip", "arch": ["x64"] },
       { "target": "7z", "arch": ["x64"] }
     ],
-    "artifactName": "${productName}-Setup-${version}.${ext}",
-    "icon": "icon.png"
+    "artifactName": "${productName}_${os}-${arch}_${version}.${ext}",
+    "icon": "icon.ico"
   },
   "extraMetadata": {
     "main": "electron.js"

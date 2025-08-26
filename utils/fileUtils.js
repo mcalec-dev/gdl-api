@@ -17,16 +17,9 @@ async function safeReadJson(filePath) {
     return null
   }
 }
-function hasAllowedExtension(filePath, permission = 'default') {
+function hasAllowedExtension(filePath) {
   if (!filePath) return false
   const ext = path.extname(filePath).toLowerCase()
-  if (permission === 'all') return true
-  if (permission === 'admin') {
-    return !DISALLOWED_EXTENSIONS?.some((pattern) => {
-      if (pattern.startsWith('*.')) return ext === pattern.slice(1)
-      return ext === pattern
-    })
-  }
   const isDisallowed = DISALLOWED_EXTENSIONS?.some((pattern) => {
     if (pattern.startsWith('*.')) return ext === pattern.slice(1)
     return ext === pattern
@@ -37,14 +30,13 @@ const safeDisallowedDirs = Array.isArray(DISALLOWED_DIRS) ? DISALLOWED_DIRS : []
 const safeDisallowedFiles = Array.isArray(DISALLOWED_FILES)
   ? DISALLOWED_FILES
   : []
-async function isExcluded(dirName, permission = 'visitor', isRoot = false) {
+async function isExcluded(dirName, isRoot = false) {
   if (!dirName) return true
   const normalizeForDir = (s) =>
     normalizeString(s)
       .replace(/^\.*|\.*$|^\/|\/$/g, '')
       .toLowerCase()
   const normalizedName = normalizeForDir(dirName)
-  if (permission === 'all') return false
   const segments = normalizedName.split(/[\\/]/)
   if (
     safeDisallowedDirs.some((pattern) => {
@@ -69,8 +61,7 @@ async function isExcluded(dirName, permission = 'visitor', isRoot = false) {
     return true
   return false
 }
-function isFileExcluded(fileName, permission = 'visitor') {
-  if (permission === 'all') return false
+function isFileExcluded(fileName) {
   if (!fileName) return true
   const normalized = normalizeString(fileName).toLowerCase()
   if (
@@ -85,7 +76,6 @@ function isFileExcluded(fileName, permission = 'visitor') {
     })
   )
     return true
-  if (permission === 'admin') return false
   return DISALLOWED_FILES.some((pattern) => {
     if (pattern instanceof RegExp) {
       return pattern.test(normalized)
@@ -93,19 +83,14 @@ function isFileExcluded(fileName, permission = 'visitor') {
     return normalized.includes(pattern.toLowerCase())
   })
 }
-async function getAllDirectories(
-  dirPath,
-  relativePath = '',
-  depth = 0,
-  isAuthenticated = false
-) {
+async function getAllDirectories(dirPath, relativePath = '', depth = 0) {
   if (depth >= MAX_DEPTH) return []
   try {
     const entries = await fs.readdir(dirPath, {
       withFileTypes: true,
     })
     const dirs = entries.filter(
-      (entry) => entry.isDirectory() && !isExcluded(entry.name, isAuthenticated)
+      (entry) => entry.isDirectory() && !isExcluded(entry.name)
     )
     let results = dirs.map((dir) => {
       const dirRelativePath = relativePath
@@ -118,12 +103,7 @@ async function getAllDirectories(
       }
     })
     for (const dir of results) {
-      const subDirs = await getAllDirectories(
-        dir.fullPath,
-        dir.path,
-        depth + 1,
-        isAuthenticated
-      )
+      const subDirs = await getAllDirectories(dir.fullPath, dir.path, depth + 1)
       results = results.concat(subDirs)
     }
     return results
@@ -136,9 +116,7 @@ async function getAllDirectoriesAndFiles(
   dirPath,
   relativePath = '',
   depth = 0,
-  topLevelOnly = false,
-  isAuthenticated = false,
-  permission = 'default'
+  topLevelOnly = false
 ) {
   if (depth >= MAX_DEPTH)
     return {
@@ -155,7 +133,7 @@ async function getAllDirectoriesAndFiles(
       const batchPromises = batch.map(async (entry) => {
         const fullPath = path.join(dirPath, entry.name)
         const relPath = path.join(relativePath, entry.name)
-        if (await isExcluded(relPath, isAuthenticated, permission)) {
+        if (await isExcluded(relPath)) {
           return null
         }
         try {
@@ -166,9 +144,7 @@ async function getAllDirectoriesAndFiles(
                 fullPath,
                 relPath,
                 depth + 1,
-                false,
-                isAuthenticated,
-                permission
+                false
               )
               if (subDirContents.items.length > 0) {
                 return {
@@ -189,10 +165,7 @@ async function getAllDirectoriesAndFiles(
               size: 0,
               modified: stats.mtime,
             }
-          } else if (
-            !topLevelOnly &&
-            hasAllowedExtension(entry.name, isAuthenticated, permission)
-          ) {
+          } else if (!topLevelOnly && hasAllowedExtension(entry.names)) {
             return {
               type: 'file',
               fullPath,
