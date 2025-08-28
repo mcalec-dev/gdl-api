@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchTypeButtons = document.querySelectorAll(
     'input[name="searchType"]'
   )
-  const API_URL = '/gdl/api/search'
+  const API_URL = '/api/search'
   function getSearchType() {
     const selected = document.querySelector('input[name="searchType"]:checked')
     return selected ? selected.value : 'all'

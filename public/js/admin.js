@@ -61,9 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   announcementForm.addEventListener('submit', (e) => {
     e.preventDefault()
-    const title = document.getElementById('announcement-title').value
-    const message = document.getElementById('announcement-message').value
-    const severity = document.getElementById('announcement-severity').value
+    const title = document.getElementById('announcement-title-input').value
+    const message = document.getElementById('announcement-message-input').value
+    const severity = document.getElementById(
+      'announcement-severity-input'
+    ).value
     fetch('/api/admin/announcements', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

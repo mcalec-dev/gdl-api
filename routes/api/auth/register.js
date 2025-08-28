@@ -22,7 +22,7 @@ const debug = require('debug')('gdl-api:api:auth:register')
  *               password:
  *                 type: string
  */
-router.post(['/', ''], async (req, res) => {
+router.post(['/create', '/create/'], async (req, res) => {
   const { username, email, password } = req.body
   if (!username || !password) {
     debug('Username or password not provided')

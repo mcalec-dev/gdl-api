@@ -2,9 +2,8 @@ const express = require('express')
 const path = require('path')
 const router = express.Router()
 const { walkAndSearchFiles } = require('../../utils/searchUtils')
-const { BASE_DIR } = require('../../config')
+const { BASE_DIR, BASE_PATH } = require('../../config')
 const debug = require('debug')('gdl-api:api:search')
-const { normalizeUrl } = require('../../utils/urlUtils')
 const { normalizePath } = require('../../utils/pathUtils')
 const { requireRole } = require('../../utils/authUtils')
 const MAX_SEARCH_RESULTS = 2000
@@ -41,7 +40,7 @@ const MAX_SEARCH_RESULTS = 2000
  *         description: Include directories in search results
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user) {
+  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
@@ -76,23 +75,28 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
     }
     results.sort((a, b) => b.relevancy - a.relevancy)
     const simplifiedResults = results.map((result) => {
-      const relativePath = path.relative(BASE_DIR, result.path)
-      const pathParts = relativePath.split(path.sep)
+      const realPath = result.path.replace(/\\/g, '/')
+      const relativePath = path.relative(BASE_DIR, realPath).replace(/\\/g, '/')
+      const pathParts = relativePath.split('/')
       const collection = pathParts[0] || ''
       const author = pathParts[1] || ''
       const normalizedPath = normalizePath(relativePath)
-      const { url } = normalizeUrl(
-        req,
-        relativePath,
-        result.type === 'directory'
+      const encodedPath = relativePath
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')
+      const fullPath = `${BASE_PATH}/api/files/${encodedPath}`.replace(
+        /\/+/g,
+        '/'
       )
+      const url = req.protocol + '://' + req.hostname + fullPath
       return {
         name: result.name,
         type: result.type,
-        collection: collection,
-        author: author,
+        collection,
+        author,
         path: normalizedPath,
-        url: url,
+        url,
         relevancy: result.relevancy,
       }
     })

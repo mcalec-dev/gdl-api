@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "Gallery-DL API",
   "author": "McAlec",
   "keywords": [
@@ -37,6 +37,7 @@
     "express-session": "^1.18.2",
     "figlet": "^1.8.2",
     "mongoose": "^8.16.4",
+    "morgan": "^1.10.1",
     "node-cache": "^5.1.2",
     "node-telegram-bot-api": "^0.66.0",
     "passport": "^0.7.0",

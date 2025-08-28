@@ -2,6 +2,7 @@
 <html lang="en">
   <%- include('partials/head') %>
   <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+    <%- include('partials/announcements') %>
     <%- include('partials/navbar') %>
     <div id="container" class="mt-24 mb-24 md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-lg p-8 mx-2 z-10 backdrop-blur-md border border-white/20">
       <h1 id="title" class="text-3xl font-light text-center text-white mb-8 capitalize">
@@ -13,30 +14,38 @@
         </h2>
         <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-3">
           <button id="windows-exe-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
-            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            <img src="/svg/windows.svg" alt="Windows EXE installer Download" class="invert h-5 w-5">
             Windows (exe)
           </button>
           <button id="windows-msi-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
-            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            <img src="/svg/windows.svg" alt="Windows MSI installer Download" class="invert h-5 w-5">
             Windows (msi)
           </button>
+          <!--
           <button id="linux-deb-download" class="px-4 py-3 rounded bg-[#E95420] text-white font-semibold flex items-center justify-center gap-2">
             <img src="/svg/ubuntu.svg" alt="Linux Download" class="invert h-5 w-5">
             Ubuntu (deb)
           </button>
+          -->
         </div>
         <h2 class="text-xl font-semibold text-white mb-2 mt-2">
           Download Client Archives
         </h2>
         <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-3">
+          <button id="windows-7z-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
+            <img src="/svg/windows.svg" alt="Windows 7-Zip Download" class="invert h-5 w-5">
+            Windows (7z)
+          </button>
           <button id="windows-zip-download" class="px-4 py-3 rounded bg-[#00A4EF] text-white font-semibold flex items-center justify-center gap-2">
-            <img src="/svg/windows.svg" alt="Windows Download" class="invert h-5 w-5">
+            <img src="/svg/windows.svg" alt="Windows Zip Download" class="invert h-5 w-5">
             Windows (zip)
           </button>
+          <!--
           <button id="linux-tar-archive-download" class="px-4 py-3 rounded bg-[#F4BC00] text-black font-semibold flex items-center justify-center gap-2">
             <img src="/svg/linux.svg" alt="Linux Download" class="h-5 w-5">
             Linux (tar.gz)
           </button>
+          -->
         </div>
       </div>
       <div class="my-6 flex items-center justify-center">

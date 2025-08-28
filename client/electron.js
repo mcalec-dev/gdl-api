@@ -2,7 +2,7 @@ const { app, BrowserWindow } = require('electron')
 const path = require('path')
 const https = require('https')
 const http = require('http')
-const SITES = ['https://alt-api.mcalec.dev/gdl/', 'https://api.mcalec.dev/gdl/']
+const SITES = ['https://gdl.mcalec.dev/', 'https://alt.gdl.mcalec.dev/']
 function checkSite(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
@@ -77,7 +77,6 @@ async function createWindow() {
       `);
       */
     })
-    // Enable default context menu
     win.webContents.on('context-menu', (params) => {
       win.webContents.executeJavaScript(`
         document.dispatchEvent(

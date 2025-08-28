@@ -151,7 +151,7 @@ function showNextMedia() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  API_URL = `/api/random`
+  API_URL = `/api/random/test`
   const h = JSON.parse(localStorage.getItem(HISTORY_KEY))
   if (Array.isArray(h) && h.length > 0) {
     history = h

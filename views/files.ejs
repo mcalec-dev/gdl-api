@@ -20,27 +20,31 @@
     <link rel="stylesheet" href="/css/min/files.min.css" />
     <title>File Browser</title>
   </head>
-  <body>
+  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+    <%- include('partials/announcements') %>
     <%- include('partials/navbar') %>
-    <div id="container" class="container">
-      <div id="popup-viewer" class="popup-viewer">
-        <button id="close-popup" class="close-popup"><span>×</span></button>
-        <button id="open-new-tab" class="open-new-tab"><span>↗</span></button>
-        <button id="prev-image" class="nav-button prev-button">
-          <span>‹</span>
-        </button>
-        <button id="next-image" class="nav-button next-button">
-          <span>›</span>
-        </button>
-        <div class="popup-container">
-          <img id="popup-image" class="popup-image" src="" alt="" draggable="false" />
-          <video id="popup-video" class="popup-video" src="" alt="" draggable="false" controls autoplay></video>
-        </div>
-        <div class="image-info">
-          <div id="image-title" class="image-title"></div>
-          <div id="image-counter" class="image-counter"></div>
-        </div>
+    <div id="popup-viewer" class="popup-viewer">
+      <button id="close-popup" class="close-popup"><span>×</span></button>
+      <button id="open-new-tab" class="open-new-tab"><span>↗</span></button>
+      <button id="prev-image" class="nav-button prev-button">
+        <span>‹</span>
+      </button>
+      <button id="next-image" class="nav-button next-button">
+        <span>›</span>
+      </button>
+      <div class="popup-container">
+        <img id="popup-image" class="popup-image" src="" alt="" draggable="false" />
+        <video id="popup-video" class="popup-video" src="" alt="" draggable="false" controls autoplay></video>
       </div>
+      <div class="image-info">
+        <div id="image-title" class="image-title"></div>
+        <div id="image-counter" class="image-counter"></div>
+      </div>
+    </div>
+    <div id="container" class="mt-24 mb-24 md:w-full md:max-w-[65%] sm:w-full rounded-xl shadow-2xl p-4 sm:p-8 md:p-8 mx-auto z-10 backdrop-blur-md border border-white/20">
+      <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
+        <%= currentPage %>
+      </h1>
       <div class="file-browser">
         <div class="breadcrumb" id="breadcrumb">
           <a href="/files/">Files</a>
@@ -53,5 +57,6 @@
       </div>
     </div>
     <script type="module" src="/js/min/files.min.js" fetchPriority="high"></script>
+    <%- include('partials/bg') %>
   </body>
 </html>

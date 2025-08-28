@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const uuid = require('uuid')
-const directorySchema = new mongoose.Schema({
+const fileSchema = new mongoose.Schema({
   name: { type: String, required: true },
   paths: {
     local: { type: String, required: true },
@@ -8,10 +8,13 @@ const directorySchema = new mongoose.Schema({
     remote: { type: String, required: true },
   },
   size: { type: Number, required: true },
+  type: { type: String, required: true },
+  collection: { type: String, required: true },
+  author: { type: String, required: true },
   created: { type: Date },
   modified: { type: Date },
   tags: [{ type: String, index: true }],
   meta: {},
   uuid: { type: String, default: uuid.v4 },
 })
-module.exports = mongoose.model('Directory', directorySchema)
+module.exports = mongoose.model('File', fileSchema)

@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const content = document.getElementById('dashboard-content')
   const loadingDiv = document.getElementById('loading')
   const errorDiv = document.getElementById('error')
-  fetch(`/api/auth/dashboard`, { credentials: 'include' })
+  fetch(`/api/user/dashboard`, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
         content.innerHTML = `<div class="text-center text-red-400">You are not logged in.</div>`

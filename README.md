@@ -20,8 +20,7 @@ NODE_ENV=production
 PORT=3030
 
 # name of your site
-# default is gdl-api
-NAME=gdl-api
+NAME=
 
 # will check if either host is online and use it
 HOST=
@@ -44,12 +43,11 @@ DISALLOWED_FILES=[]
 DISALLOWED_EXTENSIONS=[]
 
 # the url to your mongodb instance
-# default is mongodb://127.0.0.1:27017/{your_db_name}
-MONGODB_URL=mongodb://127.0.0.1:27017/gdl
+# example: mongodb://127.0.0.1:27017/{your_db_name}
+MONGODB_URL=
 
 # session secret for express-session
-# change this to something else in production
-SESSION_SECRET=devsecret
+SESSION_SECRET=
 
 # github application credentials
 # create an application at https://github.com/settings/developers

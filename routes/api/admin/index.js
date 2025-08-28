@@ -1,18 +1,23 @@
 const express = require('express')
 const router = express.Router()
-const debug = require('debug')('gdl-api:api:auth:admin')
+const debug = require('debug')('gdl-api:api:admin')
 const { requireRole } = require('../../../utils/authUtils')
-const Announcement = require('../../../models/Announcement')
 router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
   req.utils = {
     ...req.utils,
   }
   next()
 })
+try {
+  debug('Mounting announcements route')
+  router.use('/announcements', require('./announcements'))
+} catch (error) {
+  debug('Error initializing admin routes:', error)
+}
 const User = require('../../../models/User')
 const Directory = require('../../../models/Directory')
-const Image = require('../../../models/Image')
-const Video = require('../../../models/Video')
+const File = require('../../../models/File')
 const uptimeStart = Date.now()
 const { countActiveSessions } = require('../../../utils/authUtils')
 /**
@@ -22,18 +27,11 @@ const { countActiveSessions } = require('../../../utils/authUtils')
  *     summary: Get admin statistics
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  if (!req.user) {
+  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('admin')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
       status: 401,
-    })
-  }
-  if (!req.user.roles.includes('admin')) {
-    debug('Unauthorized access attempt')
-    return res.status(403).json({
-      message: 'Forbidden',
-      status: 403,
     })
   }
   try {
@@ -42,19 +40,14 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
     const loggedInUsers = await countActiveSessions()
     // Top tags (stub, implement real tag logic if tags exist)
     const topTags = []
-    const imageStorage = await Image.aggregate([
-      { $group: { _id: null, total: { $sum: '$size' } } },
-    ])
-    const videoStorage = await Video.aggregate([
+    const fileStorage = await File.aggregate([
       { $group: { _id: null, total: { $sum: '$size' } } },
     ])
     const dirStorage = await Directory.aggregate([
       { $group: { _id: null, total: { $sum: '$size' } } },
     ])
     const storageUsage =
-      (imageStorage[0]?.total || 0) +
-      (videoStorage[0]?.total || 0) +
-      (dirStorage[0]?.total || 0)
+      (fileStorage[0]?.total || 0) + (dirStorage[0]?.total || 0)
     // Flags (stub, implement real flag logic if exists)
     const flags = 0
     return res.json({
@@ -150,237 +143,4 @@ router.post('/cache/purge', requireRole('admin'), (req, res) => {
   // TODO: purge caches
   res.json({ success: true })
 })
-/**
- * @swagger
- * /api/admin/announcements:
- *   get:
- *     summary: Get all announcements
- */
-router.get(
-  ['/announcements', '/announcements/'],
-  requireRole('admin'),
-  async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    if (!req.user.roles.includes('admin')) {
-      debug('Unauthorized access attempt')
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
-    }
-    try {
-      const announcements = await Announcement.find()
-        .sort({ created: -1 })
-        .lean()
-      return res.json(announcements)
-    } catch (error) {
-      debug('Error fetching announcements:', error)
-      return res.status(500).json({
-        error: 'Internal Server Error',
-        status: 500,
-      })
-    }
-  }
-)
-/**
- * @swagger
- * /api/admin/announcements:
- *   post:
- *     summary: Create a new announcement
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message:
- *                 type: string
- *               severity:
- *                 type: string
- *                 enum: [info, warning, error]
- */
-router.post(
-  ['/announcements', '/announcements/'],
-  requireRole('admin'),
-  async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    if (!req.user.roles.includes('admin')) {
-      debug('Unauthorized access attempt')
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
-    }
-    try {
-      const { title, message, severity } = req.body
-      if (!message) {
-        return res.status(400).json({
-          error: 'Message required',
-          status: 400,
-        })
-      }
-      const announcement = new Announcement({
-        title,
-        message,
-        severity,
-        createdBy: req.user.username,
-      })
-      await announcement.save()
-      debug('Announcement created:', announcement)
-      return res.json({ success: true, announcement })
-    } catch (error) {
-      debug('Error creating announcement:', error)
-      return res.status(500).json({
-        error: 'Internal Server Error',
-        status: 500,
-      })
-    }
-  }
-)
-/**
- * @swagger
- * /api/admin/announcements/{id}:
- *   put:
- *     summary: Update an announcement
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message:
- *                 type: string
- *               severity:
- *                 type: string
- *                 enum: [info, warning, error]
- */
-router.put(
-  ['/announcements/:id', '/announcements/:id/'],
-  requireRole('admin'),
-  async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    if (!req.user.roles.includes('admin')) {
-      debug('Unauthorized access attempt')
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
-    }
-    try {
-      const { title, message, severity } = req.body
-      if (!message) {
-        return res.status(400).json({
-          error: 'Message required',
-          status: 400,
-        })
-      }
-      const updatedAnnouncement = await Announcement.findByIdAndUpdate(
-        req.params.id,
-        {
-          title,
-          message,
-          severity,
-          updatedBy: req.user.username,
-          updatedAt: new Date(),
-        },
-        { new: true }
-      )
-      if (!updatedAnnouncement) {
-        return res.status(404).json({
-          error: 'Announcement not found',
-          status: 404,
-        })
-      }
-      debug('Announcement updated:', updatedAnnouncement)
-      return res.json({ success: true, announcement: updatedAnnouncement })
-    } catch (error) {
-      debug('Error updating announcement:', error)
-      return res.status(500).json({
-        error: 'Internal Server Error',
-        status: 500,
-      })
-    }
-  }
-)
-/**
- * @swagger
- * /api/admin/announcements/{id}:
- *   delete:
- *     summary: Delete an announcement
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- */
-router.delete(
-  ['/announcements/:id', '/announcements/:id/'],
-  requireRole('admin'),
-  async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    if (!req.user.roles.includes('admin')) {
-      debug('Unauthorized access attempt')
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
-    }
-    try {
-      const deletedAnnouncement = await Announcement.findByIdAndDelete(
-        req.params.id
-      )
-      if (!deletedAnnouncement) {
-        return res.status(404).json({
-          error: 'Announcement not found',
-          status: 404,
-        })
-      }
-      debug('Announcement deleted:', deletedAnnouncement)
-      return res.json({ success: true })
-    } catch (error) {
-      debug('Error deleting announcement:', error)
-      return res.status(500).json({
-        error: 'Internal Server Error',
-        status: 500,
-      })
-    }
-  }
-)
 module.exports = router

@@ -21,7 +21,7 @@ async function handleDownload(req, res) {
   }
   let allowedHosts = []
   const outHost = await HOST
-  allowedHosts.push(outHost.replace(/^https?:\/\//, '').replace(/\/$/, ''))
+  allowedHosts.push(outHost)
   let parsedUrl
   try {
     parsedUrl = new URL(url)
@@ -32,14 +32,8 @@ async function handleDownload(req, res) {
       status: 400,
     })
   }
-  const urlHostParam = parsedUrl.hostname.toLowerCase()
-  const notAllowedHosts = !allowedHosts.some(
-    (h) =>
-      urlHostParam === h.replace(/:.*/, '') ||
-      urlHostParam === 'www.' + h.replace(/:.*/, '')
-  )
-  if (notAllowedHosts) {
-    debug('Host not allowed:', notAllowedHosts)
+  if (!allowedHosts) {
+    debug('Host not allowed:', req.hostname)
     return res.status(403).json({
       message: 'Forbidden',
       status: 403,
@@ -50,16 +44,6 @@ async function handleDownload(req, res) {
   const protocol = parsedUrl.protocol === 'https:' ? https : http
   protocol
     .get(url, (fileRes) => {
-      if (fileRes.statusCode !== 200) {
-        debug(
-          'File download error, server responded with code:',
-          fileRes.statusCode
-        )
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          status: 500,
-        })
-      }
       const filename = decodeURIComponent(
         (parsedUrl.pathname || '').split('/').pop() || 'download'
       )
@@ -91,7 +75,8 @@ async function handleDownload(req, res) {
  *           type: string
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user) {
+  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
+    debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
       status: 401,
@@ -117,14 +102,19 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
  *       200:
  *         description: File downloaded successfully
  */
-router.post(['/', ''], express.json(), requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+router.post(
+  ['/', ''],
+  express.json(),
+  requireRole('user'),
+  async (req, res) => {
+    if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
+      debug('Unauthorized access attempt')
+      return res.status(401).json({
+        message: 'Unauthorized',
+        status: 401,
+      })
+    }
+    await handleDownload(req, res)
   }
-  await handleDownload(req, res)
-})
+)
 module.exports = router

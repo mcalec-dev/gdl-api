@@ -2,8 +2,8 @@ const express = require('express')
 const router = express.Router()
 const path = require('path')
 const Directory = require('../../models/Directory')
-const Image = require('../../models/Image')
-const Video = require('../../models/Video')
+const File = require('../../models/File')
+const { requireRole } = require('../../utils/authUtils')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
 const {
@@ -29,82 +29,83 @@ const isDisallowedExtension = (filename) => {
   )
 }
 async function upsertDirectoryEntry(dirObj) {
-  await Directory.findOneAndUpdate(
-    { path: dirObj.path },
-    { $set: dirObj },
-    { upsert: true, new: true }
-  )
+  try {
+    await Directory.findOneAndUpdate(
+      {
+        paths: {
+          local: dirObj.path,
+          relative: dirObj.relativePath,
+          remote: dirObj.remotePath,
+        },
+      },
+      { $set: dirObj },
+      { upsert: true, new: true }
+    )
+  } catch (error) {
+    debug('Error upserting directory entry:', error)
+  }
 }
-async function upsertImageEntry(imgObj) {
-  await Image.findOneAndUpdate(
-    { path: imgObj.path },
-    { $set: imgObj },
-    { upsert: true, new: true }
-  )
+async function upsertFileEntry(fileObj) {
+  try {
+    await File.findOneAndUpdate(
+      {
+        paths: {
+          local: fileObj.path,
+          relative: fileObj.relativePath,
+          remote: fileObj.remotePath,
+        },
+      },
+      { $set: fileObj },
+      { upsert: true, new: true }
+    )
+  } catch (error) {
+    debug('Error upserting file entry:', error)
+  }
 }
-async function upsertVideoEntry(vidObj) {
-  await Video.findOneAndUpdate(
-    { path: vidObj.path },
-    { $set: vidObj },
-    { upsert: true, new: true }
-  )
-}
-async function createDbEntriesForContents(contents, parentPath = '') {
-  const apiPrefix = `${BASE_PATH}/api/files`
-  for (const item of contents) {
-    const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
-    const dbPath = `${apiPrefix}/${relPath}`.replace(/\/+/g, '/')
-    const getMetadata = await getImageMeta(`${BASE_DIR}/${relPath}`)
-    if (item.type === 'directory') {
-      await upsertDirectoryEntry({
-        name: item.name,
-        path: dbPath,
-        size: item.size || 0,
-        created: item.created || new Date(),
-        modified: item.modified || new Date(),
-        files: item.files || [],
-      })
-      if (item.contents) {
-        await createDbEntriesForContents(item.contents, relPath)
+async function createDbEntriesForContents(items, parentPath = '') {
+  try {
+    for (const item of items) {
+      const apiPrefix = `${BASE_PATH}/api/files`
+      const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
+      const dbPath = `${apiPrefix}/${relPath}`.replace(/\/+/g, '/')
+      const localPath = `${BASE_DIR}/${relPath}`.replace(/\\/g, '/')
+      const getMetadata = await getImageMeta(localPath)
+      if (item.type === 'directory') {
+        await upsertDirectoryEntry({
+          name: item.name,
+          paths: {
+            local: localPath,
+            relative: relPath,
+            remote: dbPath,
+          },
+          size: item.size || 0,
+          created: item.created || null,
+          modified: item.modified || null,
+        })
+        if (item.contents) {
+          await createDbEntriesForContents(item.contents, relPath)
+        }
       }
-    } else if (item.type === 'file') {
-      const ext = path.extname(item.name).toLowerCase()
-      const isImage = [
-        '.jpg',
-        '.jpeg',
-        '.png',
-        '.webp',
-        '.bmp',
-        '.gif',
-        '.tiff',
-        '.svg',
-        '.avif',
-      ].includes(ext)
-      const isVideo = ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
-      if (isImage) {
-        await upsertImageEntry({
+      if (item.type === 'file') {
+        await upsertFileEntry({
           name: item.name,
-          path: dbPath,
+          paths: {
+            local: `${BASE_DIR}/${relPath}`,
+            relative: relPath,
+            remote: dbPath,
+          },
           size: item.size || 0,
-          mimetype: item.mimetype || '',
-          created: item.created || new Date(),
-          modified: item.modified || new Date(),
-          exif: getMetadata || {},
+          type: item.type || null,
+          collection: item.collection || null,
+          author: item.author || null,
+          created: item.created || null,
+          modified: item.modified || null,
+          meta: { ...getMetadata },
         })
-      } else if (isVideo) {
-        await upsertVideoEntry({
-          name: item.name,
-          path: dbPath,
-          size: item.size || 0,
-          mimetype: item.mimetype || '',
-          created: item.created || new Date(),
-          modified: item.modified || new Date(),
-        })
-      } else {
-        debug('File type not supported:', item)
-        return
       }
     }
+  } catch (error) {
+    debug('Error creating DB entries for contents:', error)
   }
 }
 async function getDirectorySize(dirPath) {
@@ -136,7 +137,7 @@ async function getDirectorySize(dirPath) {
  *   get:
  *     summary: Get all files
  */
-router.get(['', '/'], async (req, res) => {
+router.get(['', '/'], requireRole('admin'), async (req, res) => {
   if (!req.user) {
     return res.status(401).json({
       message: 'Unauthorized',
@@ -198,6 +199,7 @@ router.get(['', '/'], async (req, res) => {
           .map(encodeURIComponent)
           .join('/')
         const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+        const url = req.protocol + '://' + req.hostname + fullPath
         return {
           name: entry.name,
           type: entry.isDirectory() ? 'directory' : 'file',
@@ -205,7 +207,7 @@ router.get(['', '/'], async (req, res) => {
           modified: mtime,
           created: ctime,
           path: fullPath,
-          url: fullPath,
+          url,
         }
       })
     )
@@ -259,8 +261,9 @@ router.get(
     '/:collection/:author/',
     '/:collection/:author/*',
   ],
+  requireRole('user'),
   async (req, res) => {
-    if (!req.user) {
+    if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
       debug('Unauthorized access attempt')
       return res.status(401).json({
         message: 'Unauthorized',
@@ -284,7 +287,7 @@ router.get(
     } else {
       realPath = path.join(normalizedDir, collection, author, additionalPath)
     }
-    realPath = realPath.replace(/\/$/, '')
+    realPath = realPath.replace(/\/$/, '').replace(/\\/g, '/')
     if (!pathUtils.isSubPath(realPath, normalizedDir)) {
       debug(`Directory traversal attempt: ${realPath}`)
       return res.status(403).json({
@@ -376,6 +379,7 @@ router.get(
             .map(encodeURIComponent)
             .join('/')
           const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+          const url = req.protocol + '://' + req.hostname + fullPath
           return {
             name: entry.name,
             type: isDir ? 'directory' : 'file',
@@ -383,7 +387,7 @@ router.get(
             modified: mtime,
             created: ctime,
             path: fullPath,
-            url: fullPath,
+            url,
           }
         })
       )

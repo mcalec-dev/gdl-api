@@ -1,26 +1,23 @@
 const express = require('express')
 const router = express.Router()
-const debug = require('debug')('gdl-api:api:auth:routes')
+const debug = require('debug')('gdl-api:api:auth')
 const { getAPIUrl } = require('../../../utils/urlUtils')
 router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
   req.utils = {
     ...req.utils,
   }
   next()
 })
 try {
-  debug('Initializing auth routes')
   debug('Mounting check route')
   router.use('/check', require('./check'))
-  debug('Mounting dashboard route')
-  router.use('/dashboard', require('./dashboard'))
   debug('Mounting logout route')
   router.use('/logout', require('./logout'))
   debug('Mounting login route')
   router.use('/login', require('./login'))
   debug('Mounting register route')
   router.use('/register', require('./register'))
-  debug('All auth routes mounted successfully')
 } catch (error) {
   debug('Error mounting auth routes:', error)
 }

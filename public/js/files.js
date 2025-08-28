@@ -1,4 +1,9 @@
-import { formatSize, formatDate, getFileType } from '../min/index.min.js'
+import {
+  formatSize,
+  formatDate,
+  getFileType,
+  getIcons,
+} from '../min/index.min.js'
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
 function constructApiPath(path) {
@@ -14,12 +19,11 @@ function escapeRegExp(string) {
 }
 let icons
 async function loadIcons() {
-  const response = await fetch('/icons.json')
-  const data = await response.json()
+  const icon = await getIcons()
   icons = {
-    directory: data.folder,
-    file: data.file.default,
-    other: data.file.text,
+    directory: icon.folder,
+    file: icon.file.default,
+    other: icon.file.text,
   }
 }
 let currentDirectoryData = null
@@ -31,9 +35,9 @@ let currentFetchController = null
 let imageLoadControllers = new Map()
 const SORT_STATES = {
   name: 'none',
-  size: 'none',
-  type: 'none',
   modified: 'none',
+  type: 'none',
+  size: 'none',
   created: 'none',
 }
 function getSortIcon(state) {
@@ -66,17 +70,17 @@ function renderSortToolbar() {
       <span>Name</span>
       <span class="sort-icon">${getSortIcon(SORT_STATES.name)}</span>
     </button>
-    <button class="sort-button" data-sort="size">
-      <span>Size</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.size)}</span>
+    <button class="sort-button" data-sort="modified">
+      <span>Modified</span>
+      <span class="sort-icon">${getSortIcon(SORT_STATES.modified)}</span>
     </button>
     <button class="sort-button" data-sort="type">
       <span>Type</span>
       <span class="sort-icon">${getSortIcon(SORT_STATES.type)}</span>
     </button>
-    <button class="sort-button" data-sort="modified">
-      <span>Modified</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.modified)}</span>
+    <button class="sort-button" data-sort="size">
+      <span>Size</span>
+      <span class="sort-icon">${getSortIcon(SORT_STATES.size)}</span>
     </button>
     <button class="sort-button" data-sort="created">
       <span>Created</span>
@@ -107,8 +111,8 @@ function sortContents(contents, sortBy, direction) {
           numeric: true,
         })
         break
-      case 'size':
-        comparison = (a.size || 0) - (b.size || 0)
+      case 'modified':
+        comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
         break
       case 'type': {
         const extA = a.name.split('.').pop() || ''
@@ -116,8 +120,8 @@ function sortContents(contents, sortBy, direction) {
         comparison = extA.localeCompare(extB)
         break
       }
-      case 'modified':
-        comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
+      case 'size':
+        comparison = (a.size || 0) - (b.size || 0)
         break
       case 'created':
         comparison = new Date(a.created || 0) - new Date(b.created || 0)

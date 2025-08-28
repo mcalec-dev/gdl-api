@@ -4,6 +4,7 @@ const figlet = require('figlet')
 const swaggerJsdoc = require('swagger-jsdoc')
 const session = require('express-session')
 const cors = require('cors')
+const morgan = require('morgan')
 const sessionStore = require('./utils/sessionStore')
 const app = express()
 const server = require('http').createServer(app)
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'public, max-age=180')
   next()
 })
+app.use(morgan('dev'))
 // host all files in the public dir
 app.use(
   BASE_PATH,

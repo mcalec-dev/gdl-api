@@ -1,6 +1,6 @@
 import { formatSize } from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', function () {
-  const API_URL = '/gdl/api/stats'
+  const API_URL = '/api/stats'
   async function updateStats() {
     const loading = document.getElementById('loading')
     const errorEl = document.getElementById('error')

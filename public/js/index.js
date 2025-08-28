@@ -80,3 +80,13 @@ export async function getName() {
   }
   return name
 }
+export async function getIcons() {
+  const response = await fetch('/icons.json')
+  const data = await response.json()
+  return data
+}
+export async function parseEmojis(text) {
+  return text.replace(/:([a-zA-Z0-9_+-]+):/g, async (match, key) => {
+    return await getIcons().then((icons) => icons[key] || match)
+  })
+}

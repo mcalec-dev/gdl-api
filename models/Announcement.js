@@ -12,4 +12,4 @@ const announcementSchema = new mongoose.Schema({
   createdBy: { type: String, required: true },
   uuid: { type: String, default: uuid.v4 },
 })
-module.exports = mongoose.model('Announcement', announcementSchema)
+module.exports = mongoose.model('Announcements', announcementSchema)

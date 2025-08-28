@@ -10,16 +10,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     name = 'title'
   }
   if (!name) {
+    document.title = 'title - undefined'
     navbarTitle.textContent = 'title - undefined'
     return console.warn('Site name is undefined or empty')
   }
   if (!heading) {
-    navbarTitle.textContent = `${name} - undefined`
+    document.title = name
+    navbarTitle.textContent = name
     return console.warn('Heading element is undefined or empty')
   }
   if (name) {
-    navbarTitle.textContent = `${name} - ${heading.textContent}`
     document.title = `${name} - ${heading.textContent}`
+    navbarTitle.textContent = `${name} - ${heading.textContent}`
   }
   const mobileMenuButton = document.getElementById('mobile-menu-button')
   const mobileMenu = document.getElementById('mobile-navbar-menu')

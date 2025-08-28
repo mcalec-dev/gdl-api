@@ -9,7 +9,7 @@ const {
   DISALLOWED_EXTENSIONS,
 } = require('../config')
 const { isExcluded, hasAllowedExtension } = require('./fileUtils')
-const { minimatch } = require('minimatch')
+const minimatch = require('minimatch')
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase()
   return DISALLOWED_EXTENSIONS.some(

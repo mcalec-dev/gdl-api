@@ -20,10 +20,10 @@ router.post(['/', ''], async (req, res) => {
     debug('Logging out user:', req.user.username)
     if (req.session) {
       try {
-        await User.updateOne(
-          { uuid: req.user.uuid },
-          { $pull: { sessions: { uuid: req.user.sessions.uuid } } }
-        )
+        await User.updateOne({
+          $pull: { sessions: { uuid: req.user.sessions.uuid } },
+        })
+        await User.bulkSave()
         debug('Removed session from user.sessions:', req.user.sessions.uuid)
       } catch (error) {
         debug('Failed to remove session from user.sessions:', error)
@@ -52,7 +52,7 @@ router.post(['/', ''], async (req, res) => {
             })
           }
           res.clearCookie('connect.sid')
-          return res.status(200).json({
+          return res.json({
             success: true,
             status: 200,
           })
@@ -60,7 +60,7 @@ router.post(['/', ''], async (req, res) => {
       } else {
         debug('No session found to destroy')
         res.clearCookie('connect.sid')
-        return res.status(200).json({
+        return res.json({
           success: true,
           status: 200,
         })
