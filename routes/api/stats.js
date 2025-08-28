@@ -14,7 +14,7 @@ const { requireRole } = require('../../utils/authUtils')
  *     summary: Get API statistics
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
+  if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',

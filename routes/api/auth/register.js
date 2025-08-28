@@ -44,7 +44,7 @@ router.post(['/create', '/create/'], async (req, res) => {
     username,
     email,
     password: hash,
-    roles: ['user'],
+    roles: ['visitor'],
   })
   try {
     req.login(user, () => {

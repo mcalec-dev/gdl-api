@@ -4,7 +4,6 @@ require('dotenv').config({ quiet: true })
 const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api')
 const pathUtils = require('../../utils/pathUtils')
-const { requireRole } = require('../../utils/authUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
   req.utils = {
@@ -41,14 +40,7 @@ try {
  *   get:
  *     summary: Get API information
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('user')) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
+router.get(['/', ''], async (req, res) => {
   const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
   res.json({
     api: 'v2',

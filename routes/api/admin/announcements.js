@@ -10,7 +10,7 @@ const Announcement = require('../../../models/Announcement')
  *     summary: Get all announcements
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  if (!req.user || !req.user.isAuthenticated() || !req.user.hasRole('admin')) {
+  if (!req.user || !req.user.hasRole('admin')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
