@@ -1,33 +1,39 @@
-const path = require('path')
 const { BASE_PATH } = require('../config')
-const debug = require('debug')('gdl-api:utils:url')
-function normalizeUrl(req, relativePath) {
-  const protocol = req.protocol
-  const host = req.get('host')
-  const baseUrl = `${protocol}://${host}`
-  const dirPath = path.resolve(relativePath).replace(/\\/g, '/')
-  debug('Normalized path:', dirPath)
-  return {
-    path: `${BASE_PATH}/api/files/${dirPath}`,
-    url: `${baseUrl}${BASE_PATH}/api/files/${dirPath}`,
-  }
+function normalizeUrl(url) {
+  return url.replace(/\\/g, '/').replace(/\/+/g, '/').normalize()
 }
-function getAPIUrl(req) {
+function normalizeUrlPath(path) {
+  return path.replace(/\\/g, '/').replace(/\/+/g, '/').normalize()
+}
+function encodeUrl(url) {
+  return encodeURI(url).replace(/%20/g, '+')
+}
+function encodeUrlPath(path) {
+  return encodeURIComponent(path).replace(/%20/g, '+')
+}
+function decodeUrl(url) {
+  return decodeURI(url.replace(/\+/g, ' '))
+}
+function decodeUrlPath(path) {
+  return decodeURIComponent(path.replace(/\+/g, ' '))
+}
+function getApiUrl(req) {
   return () => {
-    const apiURL = getHostUrl(req) + '/api'
-    return apiURL
+    return `${req.protocol}://${req.hostname}${BASE_PATH}/api`
   }
 }
 function getHostUrl(req) {
   return () => {
-    const protocol = req.protocol
-    const host = req.get('host')
-    const hostURL = `${protocol}://${host}${BASE_PATH}`
-    return hostURL
+    return `${req.protocol}://${req.hostname}${BASE_PATH}`
   }
 }
 module.exports = {
   normalizeUrl,
-  getAPIUrl,
+  normalizeUrlPath,
+  encodeUrl,
+  encodeUrlPath,
+  decodeUrl,
+  decodeUrlPath,
+  getApiUrl,
   getHostUrl,
 }

@@ -37,6 +37,8 @@ async function upsertDirectoryEntry(dirObj) {
           relative: dirObj.relativePath,
           remote: dirObj.remotePath,
         },
+        collection: dirObj.collection || null,
+        author: dirObj.author || null,
       },
       { $set: dirObj },
       { upsert: true, new: true }
@@ -54,6 +56,8 @@ async function upsertFileEntry(fileObj) {
           relative: fileObj.relativePath,
           remote: fileObj.remotePath,
         },
+        collection: fileObj.collection || null,
+        author: fileObj.author || null,
       },
       { $set: fileObj },
       { upsert: true, new: true }

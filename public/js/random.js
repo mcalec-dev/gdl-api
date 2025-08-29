@@ -36,7 +36,7 @@ function showMedia(data) {
     ? document.createElement('video')
     : document.createElement('img')
   mediaElement.classList =
-    'object-contain w-full h-full overflow-hidden border-none rounded'
+    'object-contain w-auto h-auto max-w-full max-h-[60vh] overflow-hidden border-none rounded transition-transform duration-500'
   mediaElement.style.display = 'none'
   if (isVideo) {
     mediaElement.controls = true

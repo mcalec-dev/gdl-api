@@ -1,19 +1,20 @@
 <!doctype html>
 <html lang="en">
   <%- include('partials/head') %>
-  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+  <body class="bg-black min-h-screen flex items-center justify-center relative">
     <%- include('partials/announcements') %>
     <%- include('partials/navbar') %>
-    <div id="container" class="mt-24 mb-24 h-auto md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-2xl p-4 sm:p-8 md:p-8 mx-1 sm:mx-0 z-10 backdrop-blur-md border border-white/20 flex flex-col items-center">
+    <%- include('partials/settings') %>
+    <div id="container" class="mt-24 mb-12 h-auto max-h-[80vh] md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-2xl p-4 sm:p-8 md:p-8 mx-1 sm:mx-0 z-10 backdrop-blur-md border border-white/20 flex flex-col items-center">
       <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
         <%= currentPage %>
       </h1>
-      <div class="flex-1 flex justify-center items-center">
-        <div id="imageContainer" class="image-container group relative bg-transparent overflow-hidden border-none inline-flex items-center justify-center transition-all duration-200 mx-auto aspect max-w-3xl">
+      <div class="flex justify-center items-center">
+        <div id="imageContainer" class="image-container group relative bg-transparent overflow-hidden border-none inline-flex items-center justify-center mx-auto w-full h-auto transition-transform duration-500">
           <div id="loading" class="loading text-lg text-white bg-opacity-95 px-4 py-3 rounded z-20">
             Click the button to load media
           </div>
-          <div id="imageInfo" class="image-info absolute bottom-0 left-0 right-0 bg-black bg-opacity-95 text-white px-3 py-2 text-center text-sm opacity-0 group-hover:opacity-95 transition-opacity duration-350 z-20" style="display: none"></div>
+          <div id="imageInfo" class="image-info absolute bottom-0 left-0 right-0 bg-black bg-opacity-95 text-white px-3 py-2 text-center text-sm opacity-0 group-hover:opacity-95 transition-opacity duration-400 z-20" style="display: none"></div>
         </div>
       </div>
       <div class="controls w-full flex flex-row justify-center items-center gap-3 mt-6">

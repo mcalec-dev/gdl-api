@@ -1,4 +1,3 @@
-@import url('https://cdn.mcalec.dev/web/css/font/roboto.min.css');
 :root {
   --primary-font: RobotoRegular, Arial, sans-serif;
   --secondary-font: RobotoThin, Arial, sans-serif;
@@ -13,95 +12,10 @@
   --background-color: #121212;
   --border-color: #404040;
 
-  --file-background: #2d2d2d;
-
   --border-radius: 12px;
   --container-gap: 20px;
   --container-padding: 20px;
   --display-type: grid;
-}
-
-/* General Styles */
-.container {
-  max-width: 100%;
-  margin: 0 auto;
-  gap: var(--container-gap);
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Breadcrumb Styles */
-.breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  background: #2d2d2d;
-  border: 1px solid #404040;
-  width: 100%;
-  box-sizing: border-box;
-  align-items: center;
-  z-index: 10;
-}
-.breadcrumb a {
-  color: #66b3ff;
-  text-decoration: none;
-  margin: 0 4px;
-}
-.breadcrumb a:hover {
-  color: #99ccff;
-}
-.breadcrumb span {
-  color: #bbbbbb;
-  margin: 0 4px;
-}
-
-/* File Browser Styles */
-.file-browser {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  background: var(--secondary-color);
-  padding: 20px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Sort Toolbar Styles */
-.sort-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  background: #2d2d2d;
-  border: 1px solid #404040;
-  width: 100%;
-  box-sizing: border-box;
-  align-items: center;
-  z-index: 10;
-}
-.sort-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 120px;
-  padding: 8px 16px;
-  background: #3d3d3d;
-  border: 1px solid #4d4d4d;
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: 14px;
-}
-.sort-button:hover {
-  background: #4d4d4d;
-  transform: translateX(1px) translateY(-2px);
-}
-.sort-button .sort-icon {
-  margin-left: 8px;
-  font-weight: bold;
 }
 
 /* File List Styles */
@@ -112,29 +26,8 @@
   width: 100%;
   box-sizing: border-box;
 }
-.file-list.grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
-  gap: 20px;
-}
 
 /* File Item Styles */
-.file-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background: #2d2d2d;
-  border: 1px solid #404040;
-  pointer-events: visible;
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 100%;
-  overflow: hidden;
-}
-.file-item:hover {
-  transform: scale(1.015);
-}
 .file-item .file-details.directory {
   display: block;
   flex: 1;
@@ -156,25 +49,6 @@
 .file-item.file:hover .file-details {
   display: block;
 }
-.file-name {
-  color: var(--text-color);
-  text-decoration: none;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.file-item .file-meta {
-  font-size: 12px;
-  color: #bbbbbb;
-  margin-top: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.file-list .file-item.directory {
-  border-left: 4px solid #66b3ff;
-}
 
 /* Grid View Specific Styles */
 .grid-view .file-item {
@@ -184,10 +58,6 @@
   padding: 0;
   position: relative;
   overflow: hidden;
-  background: #2d2d2d;
-}
-.grid-view .file-item:hover {
-  transform: scale(1.05);
 }
 .grid-view .preview-container {
   width: 100%;
@@ -221,28 +91,9 @@
   background: rgba(45, 45, 45, 0.95);
   border-top: 1px solid #404040;
 }
-.grid-view .file-name {
-  font-size: 12px;
-  color: var(--text-color);
-  margin-bottom: 2px;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.grid-view .file-meta {
-  font-size: 11px;
-  color: #bbbbbb;
-  overflow-wrap: break-word;
-  word-break: break-all;
-}
 .grid-view .file-item.directory {
   border-left: none;
 }
-/*.grid-view .file-item.file:hover {
-  border-left: none;
-  border-bottom: 4px solid #4CAF50;
-}*/
 
 /* File Icon Styles */
 .file-icon {
@@ -478,25 +329,5 @@
   }
   .image-title {
     max-width: 250px;
-  }
-}
-@media (max-width: 540px) {
-  .file-list.grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  }
-  .sort-button {
-    width: 100%;
-    justify-content: center;
-    padding: 10px;
-  }
-}
-@media (max-width: 480px) {
-  .file-list.grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  }
-  .sort-button {
-    width: 100%;
-    justify-content: center;
-    padding: 10px;
   }
 }

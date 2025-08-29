@@ -13,7 +13,6 @@ function constructApiPath(path) {
 const previewSize = '?x=50'
 const zoomedSize = '?x=400'
 const fileList = document.getElementById('fileList')
-const breadcrumb = document.getElementById('breadcrumb')
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -50,44 +49,35 @@ function getSortIcon(state) {
       return '↕'
   }
 }
-function updateBreadcrumb(path) {
-  const parts = path.split('/').filter(Boolean)
-  let currentPath = ''
-  let breadcrumbHtml = `<span>/</span><a href="${frontendBasePath}/">Files</a><span>/</span>`
-  parts.forEach((part, index) => {
-    currentPath += `/${part}`
-    if (index < parts.length - 1) {
-      breadcrumbHtml += `<a href="${frontendBasePath}${currentPath}/">${part}</a><span>/</span>`
-    } else {
-      breadcrumbHtml += `<span>${part}</span><span>/</span>`
-    }
-  })
-  breadcrumb.innerHTML = breadcrumbHtml
-}
 function renderSortToolbar() {
+  const sortToolbar = document.getElementById('sort-toolbar')
+  sortToolbar.classList.remove('invisible')
+  const sortButtonStyle =
+    'flex justify-between min-w-[8vw] px-3 py-2 transparent backdrop-blur-md border border-white/10 rounded-xl pointer text-white'
+  const sortStateStyle = 'font-black'
   const sortToolbarHtml = `
-    <button class="sort-button" data-sort="name">
+    <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
       <span>Name</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.name)}</span>
+      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
     </button>
-    <button class="sort-button" data-sort="modified">
+    <button id="sortByModified" class="${sortButtonStyle}" data-sort="modified">
       <span>Modified</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.modified)}</span>
+      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.modified)}</span>
     </button>
-    <button class="sort-button" data-sort="type">
+    <button id="sortByType" class="${sortButtonStyle}" data-sort="type">
       <span>Type</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.type)}</span>
+      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.type)}</span>
     </button>
-    <button class="sort-button" data-sort="size">
+    <button id="sortBySize" class="${sortButtonStyle}" data-sort="size">
       <span>Size</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.size)}</span>
+      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.size)}</span>
     </button>
-    <button class="sort-button" data-sort="created">
+    <button id="sortByCreated" class="${sortButtonStyle}" data-sort="created">
       <span>Created</span>
-      <span class="sort-icon">${getSortIcon(SORT_STATES.created)}</span>
+      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.created)}</span>
     </button>
   `
-  document.querySelector('.sort-toolbar').innerHTML = sortToolbarHtml
+  sortToolbar.innerHTML = sortToolbarHtml
 }
 function sortContents(contents, sortBy, direction) {
   if (direction === 'none') {
@@ -151,7 +141,6 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
     loadingIndicator.className = 'loading'
     loadingIndicator.innerHTML = '<span>Loading...</span>'
     fileList.appendChild(loadingIndicator)
-    updateBreadcrumb(path)
     const apiPath = constructApiPath(path)
     if (
       !currentDirectoryData ||
@@ -166,11 +155,15 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       currentDirectoryData = { path, contents: data.contents }
     }
     fileList.removeChild(loadingIndicator)
-    const isRoot = !path
-    const shouldUseGridView =
-      !isRoot &&
-      currentDirectoryData.contents.some((item) => item.type === 'file')
-    fileList.classList.toggle('grid-view', shouldUseGridView)
+    //const isRoot = !path
+    //const shouldUseGridView =!isRoot && currentDirectoryData.contents.some((item) => item.type === 'file')
+    fileList.classList.add('grid-view')
+    fileList.classList.add(
+      'grid',
+      'grid-cols-5',
+      'place-items-stretch',
+      'gap-4'
+    )
     renderDirectory(currentDirectoryData.contents, path)
     if (callback) {
       callback()
@@ -504,7 +497,14 @@ function setupImagePopupEvents() {
   })
 }
 function setupSortButtons() {
-  document.querySelectorAll('.sort-button').forEach((button) => {
+  const sortButtons = [
+    document.getElementById('sortByName'),
+    document.getElementById('sortByModified'),
+    document.getElementById('sortByType'),
+    document.getElementById('sortBySize'),
+    document.getElementById('sortByCreated'),
+  ]
+  sortButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const sortBy = button.dataset.sort
       Object.keys(SORT_STATES).forEach((key) => {
@@ -563,39 +563,47 @@ async function renderDirectory(contents, path) {
         previewUrl += previewSize
       }
     }
-    html += `<div class="file-item ${item.type}" data-type="${itemType}" data-path="${itemPath}">`
+    const fileItemStyle =
+      'flex items-center w-full h-auto max-w-full p-6 border border-white/10 rounded-xl pointer text-white pointer-events-auto box-border overflow-hidden'
+    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemStyle}" data-type="${itemType}" data-path="${itemPath}">`
     if (itemType === 'directory') {
       html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
     } else if (previewUrl) {
       if (itemType === 'video') {
-        html += `<div class="video-preview-container">
-          <video 
-            class="file-preview video loading" 
-            data-src="${previewUrl}"
-            preload="none"
-            onmouseover="if(this.src) { this.play(); this.muted=false; }" 
-            onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
-            draggable="false"
-          ></video>
-        </div>`
+        html += `
+          <div class="video-preview-container">
+            <video 
+              class="file-preview video loading" 
+              data-src="${previewUrl}"
+              preload="none"
+              onmouseover="if(this.src) { this.play(); this.muted=false; }" 
+              onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
+              draggable="false"
+            ></video>
+          </div>
+        `
       } else if (itemType === 'image') {
-        html += `<div class="preview-container">
-          <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
-        </div>`
+        html += `
+          <div class="preview-container">
+            <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+          </div>
+        `
       } else {
         html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
       }
     } else {
       html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
     }
-    html += `<div class="file-details">
-      <div class="file-name">${item.name}</div>
-      <div class="file-meta">
-        <span>${formatDate(item.modified)}</span><br>
-        <span>${formatSize(item.size)}</span>
+    html += `
+      <div class="file-details">
+        <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+        <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+          <span>${formatDate(item.modified)}</span><br>
+          <span>${formatSize(item.size)}</span>
+        </div>
       </div>
     </div>
-    </div>`
+    `
   }
   fileList.innerHTML = html
   setupSortButtons()

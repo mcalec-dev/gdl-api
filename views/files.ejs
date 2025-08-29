@@ -20,9 +20,10 @@
     <link rel="stylesheet" href="/css/min/files.min.css" />
     <title>File Browser</title>
   </head>
-  <body class="bg-gray-950 min-h-screen flex items-center justify-center relative">
+  <body class="bg-black min-h-screen flex items-center justify-center relative">
     <%- include('partials/announcements') %>
     <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
     <div id="popup-viewer" class="popup-viewer">
       <button id="close-popup" class="close-popup"><span>×</span></button>
       <button id="open-new-tab" class="open-new-tab"><span>↗</span></button>
@@ -45,12 +46,8 @@
       <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
         <%= currentPage %>
       </h1>
-      <div class="file-browser">
-        <div class="breadcrumb" id="breadcrumb">
-          <a href="/files/">Files</a>
-        </div>
-        <div class="divider" id="divider"></div>
-        <div class="sort-toolbar"></div>
+      <div id="file-browser" class="file-browser w-full">
+        <div id="sort-toolbar" class="invisible flex flex-wrap gap-3 p-3 mb-4 border border-white/10 rounded-xl" ></div>
         <div id="fileList" class="file-list">
           <div class="loading">Loading...</div>
         </div>
