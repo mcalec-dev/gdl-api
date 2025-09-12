@@ -1,67 +1,73 @@
 <!doctype html>
 <html lang="en">
   <%- include('partials/head') %>
-  <body class="bg-black min-h-screen flex items-center justify-center relative">
-    <%- include('partials/announcements') %>
-    <%- include('partials/navbar') %>
-    <%- include('partials/settings') %>
-    <div id="container" class="mt-24 mb-24 md:w-auto md:min-w-[25%] md:max-w-[65%] sm:w-full rounded-xl shadow-lg p-8 mx-2 z-10 backdrop-blur-md border border-white/20">
-      <h1 id="title" class="text-3xl font-light text-center text-white mb-8 capitalize">
-        <%= currentPage %>
-      </h1>
-      <div id="loading" class="text-center text-gray-300 mb-4" style="display:none">
-        Registering...
-      </div>
-      <div id="error" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
-      <form id="registerForm" class="space-y-5">
+  <body class="relative flex min-h-screen items-center justify-center bg-black">
+    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] w-full rounded-xl border border-white/20 p-4 shadow-lg backdrop-blur-md sm:p-8 md:w-auto md:min-w-[30%] md:max-w-[65%]">
+      <h1 id="title" class="mb-8 text-center text-3xl font-light capitalize text-white"><%= currentPage %></h1>
+      <div id="error" class="error-message mb-4 text-center text-red-500" hidden></div>
+      <form id="registerForm" class="space-y-4">
         <div>
-          <label for="username" class="block text-gray-300 mb-1">
-            Username
-          </label>
-          <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
+          <label for="username" class="mb-1 block text-gray-300">Username</label>
+          <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
         <div>
-          <label for="email" class="block text-gray-300 mb-1">
-            Email <span class="text-gray-400 text-xs">(optional)</span>
+          <label for="email" class="mb-1 block text-gray-300">
+            Email
+            <span class="text-xs text-gray-400">(optional)</span>
           </label>
-          <input type="email" id="email" name="email" autocomplete="email" placeholder="Enter your email (optional)" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="Enter your email (optional)" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
         <div>
-          <label for="password" class="block text-gray-300 mb-1">
-            Password
-          </label>
-          <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Enter your password" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
+          <label for="password" class="mb-1 block text-gray-300">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Enter your password" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
         <div>
-          <label for="confirm" class="block text-gray-300 mb-1">
-            Repeat Password
-          </label>
-          <input type="password" id="confirm" name="confirm" required autocomplete="new-password" placeholder="Confirm your password" class="w-full px-4 py-2 rounded bg-[#1f1f1f] text-white border border-white/20" />
+          <label for="confirm" class="mb-1 block text-gray-300">Repeat Password</label>
+          <input type="password" id="confirm" name="confirm" required autocomplete="new-password" placeholder="Confirm your password" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
-        <button type="submit" class="w-full py-2 rounded bg-blue-600 text-white font-semibold">
-          Register
-        </button>
+        <div>
+          <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+          <div id="cf-turnstile" class="cf-turnstile w-full" data-sitekey="0x4AAAAAAAXoeQTEYHCuF4f1" data-theme="auto" data-size="flexible" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" data-expired-callback="onTurnstileExpired"></div>
+          <button id="submit-btn" type="submit" class="w-full rounded bg-blue-600 py-2 font-semibold text-white" hidden>Register</button>
+          <script>
+            function onTurnstileSuccess(token) {
+              console.log('Turnstile success:', token)
+              document.getElementById('submit-btn').hidden = false
+              document.getElementById('cf-turnstile').hidden = true
+            }
+            function onTurnstileError(errorCode) {
+              console.error('Turnstile error:', errorCode)
+              document.getElementById('submit-btn').hidden = true
+            }
+            function onTurnstileExpired() {
+              console.warn('Turnstile token expired')
+              document.getElementById('submit-btn').hidden = true
+            }
+          </script>
+        </div>
       </form>
-      <div class="my-6 flex items-center justify-center">
-        <span class="text-gray-400 text-sm">
-          or
-        </span>
+      <div id="loading" class="mt-4 text-center text-gray-300" hidden>Registering...</div>
+      <div class="flex items-center justify-center py-5">
+        <span class="text-sm text-gray-400">or</span>
       </div>
-      <div class="flex flex-col gap-3">
-        <a href="/api/auth/discord" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#5662f6] text-white font-semibold">
-          <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5"> Register with Discord
+      <div class="flex flex-col gap-2 md:flex-row">
+        <a href="/api/auth/discord" class="flex w-full items-center justify-center gap-2 rounded bg-[#5662f6] px-4 py-2 font-semibold text-white">
+          <img src="/svg/discord.svg" alt="Discord" class="h-5 w-5 invert" />
+          Register with Discord
         </a>
-        <a href="/api/auth/github" class="w-full py-2 rounded flex items-center justify-center gap-2 bg-[#212830] text-white font-semibold">
-          <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5"> Register with GitHub
+        <a href="/api/auth/github" class="flex w-full items-center justify-center gap-2 rounded bg-[#212830] px-4 py-2 font-semibold text-white">
+          <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5" />
+          Register with GitHub
         </a>
       </div>
-      <div class="text-center mt-6">
-        <a href="/login/" class="text-blue-500">
-          Already have an account? Login here
-        </a>
+      <div class="mt-5 text-center">
+        Already have an account?
+        <br />
+        <a href="/login/" class="text-blue-500">Login here</a>
       </div>
     </div>
-    <script type="module" src="/js/min/register.min.js" fetchPriority="high"></script>
+    <script type="module" src="/js/min/register.min.js" fetchpriority="high"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

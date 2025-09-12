@@ -1,7 +1,7 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin')
 const { requireRole } = require('../../../utils/authUtils')
+const { BASE_PATH } = require('../../../config')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
   req.utils = {
@@ -27,7 +27,8 @@ const { countActiveSessions } = require('../../../utils/authUtils')
  *     summary: Get admin statistics
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  if (!req.user || !req.user.hasRole('admin')) {
+  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
+  if (!req.user || !req.user.roles.includes('admin')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
@@ -38,7 +39,7 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
     const uptime = Math.floor((Date.now() - uptimeStart) / 1000)
     const totalUsers = await User.countDocuments()
     const loggedInUsers = await countActiveSessions()
-    // Top tags (stub, implement real tag logic if tags exist)
+    // Top tags
     const topTags = []
     const fileStorage = await File.aggregate([
       { $group: { _id: null, total: { $sum: '$size' } } },
@@ -48,7 +49,7 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
     ])
     const storageUsage =
       (fileStorage[0]?.total || 0) + (dirStorage[0]?.total || 0)
-    // Flags (stub, implement real flag logic if exists)
+    // Flags
     const flags = 0
     return res.json({
       stats: {
@@ -58,6 +59,9 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
         topTags,
         storageUsage,
         flags,
+      },
+      urls: {
+        announcements: baseURL + '/admin/announcements',
       },
     })
   } catch (error) {

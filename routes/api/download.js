@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:download')
 const { HOST } = require('../../config')
 const { requireRole } = require('../../utils/authUtils')
@@ -84,37 +83,4 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
   }
   await handleDownload(req, res)
 })
-/**
- * @swagger
- * /api/download/:
- *   post:
- *     summary: Download file
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               q:
- *                 type: string
- *     responses:
- *       200:
- *         description: File downloaded successfully
- */
-router.post(
-  ['/', ''],
-  express.json(),
-  requireRole('user'),
-  async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    await handleDownload(req, res)
-  }
-)
 module.exports = router

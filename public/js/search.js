@@ -1,3 +1,5 @@
+'use strict'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput')
   const searchButton = document.getElementById('searchButton')
@@ -54,7 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
           searchUrl.searchParams.set('files', 'true')
           searchUrl.searchParams.set('directories', 'true')
       }
-      const response = await fetch(searchUrl)
+      const response = await fetch(searchUrl).catch((error) => {
+        utils.handleError(error)
+        loading.style.display = 'none'
+        searchInfo.style.display = 'none'
+        noResults.style.display = 'block'
+        noResults.textContent = error.message
+      })
       const data = await response.json()
       loading.style.display = 'none'
       if (data.results?.length > 0) {
@@ -215,11 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
         noResults.style.display = 'block'
         noResults.textContent = 'No results found'
       }
-    } catch {
+    } catch (error) {
+      utils.handleError(error)
       loading.style.display = 'none'
       searchInfo.style.display = 'none'
       noResults.style.display = 'block'
-      noResults.textContent = 'Search failed. Please try again.'
+      noResults.textContent = error.message
     }
   }
   searchButton.addEventListener('click', () => {

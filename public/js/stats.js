@@ -1,4 +1,5 @@
-import { formatSize } from '../min/index.min.js'
+'use strict'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', function () {
   const API_URL = '/api/stats'
   async function updateStats() {
@@ -12,12 +13,18 @@ document.addEventListener('DOMContentLoaded', function () {
       const data = await response.json()
       setText('total-directories', data.collections.totalDirectories)
       setText('total-files', data.collections.totalFiles)
-      setText('total-size', formatSize(data.collections.totalSize))
-      setText('average-file-size', formatSize(data.collections.averageFileSize))
-      setText('largest-file-size', formatSize(data.collections.largestFileSize))
+      setText('total-size', utils.formatSize(data.collections.totalSize))
+      setText(
+        'average-file-size',
+        utils.formatSize(data.collections.averageFileSize)
+      )
+      setText(
+        'largest-file-size',
+        utils.formatSize(data.collections.largestFileSize)
+      )
       setText(
         'smallest-file-size',
-        formatSize(data.collections.smallestFileSize)
+        utils.formatSize(data.collections.smallestFileSize)
       )
       setText('total-collections', data.collections.total)
       updateFileTypes(data.collections.fileTypes)
@@ -32,9 +39,10 @@ document.addEventListener('DOMContentLoaded', function () {
       errorEl.style.display = 'none'
       content.style.display = 'block'
     } catch (error) {
+      utils.handleError(error)
       loading.style.display = 'none'
       errorEl.style.display = 'block'
-      errorEl.textContent = `Failed to load stats: ${error.message}`
+      errorEl.textContent = error.message
     }
   }
   function setText(id, value) {
@@ -59,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tr.innerHTML = `
         <td class="px-2 py-2 font-mono text-white border border-[#232329]">${type}</td>
         <td class="px-2 py-2 font-mono border border-[#232329]">${(info.count ?? 0).toLocaleString()}</td>
-        <td class="px-2 py-2 font-mono border border-[#232329]">${formatSize(info.size ?? 0)}</td>
+        <td class="px-2 py-2 font-mono border border-[#232329]">${utils.formatSize(info.size ?? 0)}</td>
       `
       container.appendChild(tr)
     })
@@ -78,10 +86,10 @@ document.addEventListener('DOMContentLoaded', function () {
         tr.innerHTML = `
           <td class="px-2 py-2 font-mono text-white border border-[#404040]">${name}</td>
           <td class="px-2 py-2 font-mono border border-[#404040]">${(info.files ?? 0).toLocaleString()}</td>
-          <td class="px-2 py-2 font-mono border border-[#404040]">${formatSize(info.size ?? 0)}</td>
+          <td class="px-2 py-2 font-mono border border-[#404040]">${utils.formatSize(info.size ?? 0)}</td>
           <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.lastModified ? new Date(info.lastModified).toLocaleString() : ''}</td>
-          <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.largestFileSize ? formatSize(info.largestFileSize) : ''}</td>
-          <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.smallestFileSize ? formatSize(info.smallestFileSize) : ''}</td>
+          <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.largestFileSize ? utils.formatSize(info.largestFileSize) : ''}</td>
+          <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.smallestFileSize ? utils.formatSize(info.smallestFileSize) : ''}</td>
         `
         container.appendChild(tr)
       })
@@ -94,19 +102,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const memoryItems = [
       {
         label: 'Heap Used',
-        value: formatSize(memory.heapUsed ?? memory.formatted?.heapUsed ?? 0),
+        value: utils.formatSize(
+          memory.heapUsed ?? memory.formatted?.heapUsed ?? 0
+        ),
       },
       {
         label: 'RSS',
-        value: formatSize(memory.rss ?? memory.formatted?.rss ?? 0),
+        value: utils.formatSize(memory.rss ?? memory.formatted?.rss ?? 0),
       },
       {
         label: 'External',
-        value: formatSize(memory.external ?? 0),
+        value: utils.formatSize(memory.external ?? 0),
       },
       {
         label: 'Array Buffers',
-        value: formatSize(memory.arrayBuffers ?? 0),
+        value: utils.formatSize(memory.arrayBuffers ?? 0),
       },
     ]
     memoryItems.forEach((item) => {

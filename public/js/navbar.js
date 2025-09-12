@@ -1,11 +1,13 @@
-import { getName } from '/js/min/index.min.js'
+'use strict'
+import * as utils from '/js/min/index.min.js'
 document.addEventListener('DOMContentLoaded', async function () {
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
   let name
   try {
-    name = await getName()
+    name = await utils.getName()
   } catch (error) {
+    utils.handleError(error)
     console.error('Failed to fetch name:', error)
     name = 'title'
   }
@@ -48,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const res = await fetch('/api/auth/check')
     checkAuthStatus = await res.json()
   } catch (error) {
+    utils.handleError(error)
     console.error('Failed to fetch auth status:', error)
     checkAuthStatus = null
   }

@@ -1,3 +1,5 @@
+'use strict'
+import * as utils from './index.js'
 document.addEventListener('DOMContentLoaded', () => {
   const loading = document.getElementById('loading')
   const announcementForm = document.getElementById('announcement-form')
@@ -17,34 +19,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 let html = ''
                 announcements.forEach((announcement) => {
                   html += `
-                    <div class="rounded-lg border border-gray-700 p-4 shadow-md text-xs text-gray-200">
-                      <div class="flex flex-wrap gap-1 mb-1">
-                        <span class="font-semibold text-gray-300">Title:</span>
-                        <span>${announcement.title}</span>
+                    <div id="announcement-${announcement.uuid}" class="rounded-lg border border-gray-700 p-4 shadow-md text-xs text-gray-200">
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
+                        <span class="font-semibold text-gray-300 text-center">Title:</span>
+                        <span id="announcement-title">${announcement.title}</span>
                       </div>
-                      <div class="flex flex-wrap gap-1 mb-1">
-                        <span class="font-semibold text-gray-300">Message:</span>
-                        <span>${announcement.message}</span>
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
+                        <span class="font-semibold text-gray-300 text-center">Message:</span>
+                        <span id="announcement-message">${announcement.message}</span>
                       </div>
-                      <div class="flex flex-wrap gap-1 mb-1">
-                        <span class="font-semibold text-gray-300">Severity:</span>
-                        <span>${announcement.severity}</span>
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
+                        <span class="font-semibold text-gray-300 text-center">Severity:</span>
+                        <span id="announcement-severity">${announcement.severity}</span>
                       </div>
-                      <div class="flex flex-wrap gap-1 mb-1">
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300">Created By:</span>
-                        <span>${announcement.createdBy}</span>
+                        <span class="select-all">${announcement.author}</span>
                       </div>
-                      <div class="flex flex-wrap gap-1 mb-1">
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300">Created At:</span>
                         <span>${new Date(announcement.created).toLocaleString()}</span>
                       </div>
-                      <div class="flex flex-wrap gap-1 mb-1">
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
+                        <span class="font-semibold text-gray-300">Modified At:</span>
+                        <span>${new Date(announcement.modified).toLocaleString()}</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300">UUID:</span>
-                        <span>${announcement.uuid}</span>
+                        <span><code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${announcement.uuid}</code></span>
                       </div>
                       <div class="flex gap-2 mt-2">
-                        <button class="px-2 py-1 bg-blue-700 text-white rounded" onclick="editAnnouncement('${announcement._id}')">Edit</button>
-                        <button class="px-2 py-1 bg-red-600 text-white rounded" onclick="deleteAnnouncement('${announcement._id}')">Delete</button>
+                        <button id="edit-btn" class="px-2 py-1 bg-blue-700 text-white rounded items-center text-center" onclick="editAnnouncement('${announcement.uuid}', ${JSON.stringify(announcement).replace(/"/g, '&quot;')})">Edit</button>
+                        <button id="delete-btn" class="px-2 py-1 bg-red-600 text-white rounded items-center text-center" onclick="deleteAnnouncement('${announcement.uuid}')">Delete</button>
                       </div>
                     </div>
                   `
@@ -56,7 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `
       })
       .catch((error) => {
-        console.error('Failed to load announcements:', error)
+        utils.handleError(error)
+        loading.style.display = 'none'
+        error.style.display = ''
+        error.textContent = error.message
       })
   }
   announcementForm.addEventListener('submit', (e) => {
@@ -72,26 +81,113 @@ document.addEventListener('DOMContentLoaded', () => {
       body: JSON.stringify({ title, message, severity }),
     })
       .then((res) => res.json())
-      .then(() => {
+      .then(async () => {
         loadAnnouncements()
-        announcementForm.reset()
+        await announcementForm.reset()
+        await window.fetchAnnouncements()
       })
       .catch((error) => {
-        console.error('Failed to create announcement:', error)
+        utils.handleError(error)
+        loading.style.display = 'none'
+        error.style.display = ''
+        error.textContent = error.message
       })
   })
+  function editAnnouncement(uuid, announcement) {
+    const announcementDiv = document.getElementById(`announcement-${uuid}`)
+    const { title, message, severity } = announcement
+    const titleEl = announcementDiv.querySelector('#announcement-title')
+    const messageEl = announcementDiv.querySelector('#announcement-message')
+    const severityEl = announcementDiv.querySelector('#announcement-severity')
+    const deleteBtn = announcementDiv.querySelector('#delete-btn')
+    const editBtn = announcementDiv.querySelector('#edit-btn')
+    titleEl.innerHTML = `<input type="text" id="edit-title-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" value="${title}"></input>`
+    messageEl.innerHTML = `<textarea id="edit-message-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" rows="2" value="${message}">${message}</textarea>`
+    severityEl.innerHTML = `
+      <select id="edit-severity-input-${uuid}" class="flex px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded">
+        <option value="info" ${severity === 'info' ? 'selected' : ''}>Info</option>
+        <option value="warning" ${severity === 'warning' ? 'selected' : ''}>Warning</option>
+        <option value="error" ${severity === 'error' ? 'selected' : ''}>Error</option>
+      </select>
+    `
+    deleteBtn.textContent = 'Cancel'
+    deleteBtn.classList =
+      'px-2 py-1 bg-gray-600 text-white rounded items-center text-center'
+    deleteBtn.onclick = () => cancelEdit(uuid, title, message, severity)
+    editBtn.textContent = 'Save'
+    editBtn.classList =
+      'px-2 py-1 bg-green-600 text-white rounded items-center text-center'
+    editBtn.onclick = () => saveAnnouncement(uuid)
+  }
+  function saveAnnouncement(uuid) {
+    const announcementDiv = document.getElementById(`announcement-${uuid}`)
+    const title = announcementDiv.querySelector(
+      `#edit-title-input-${uuid}`
+    ).value
+    const message = announcementDiv.querySelector(
+      `#edit-message-input-${uuid}`
+    ).value
+    const severity = announcementDiv.querySelector(
+      `#edit-severity-input-${uuid}`
+    ).value
+    fetch(`/api/admin/announcements/${uuid}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, message, severity }),
+    })
+      .then((res) => res.json())
+      .then(async () => {
+        loadAnnouncements()
+        await window.fetchAnnouncements()
+      })
+      .catch((error) => {
+        utils.handleError(error)
+        loading.style.display = 'none'
+        error.style.display = ''
+        error.textContent = error.message
+      })
+  }
+  function cancelEdit(uuid, originalTitle, originalMessage, originalSeverity) {
+    const announcementDiv = document.getElementById(`announcement-${uuid}`)
+    announcementDiv.querySelector('#announcement-title').textContent =
+      originalTitle
+    announcementDiv.querySelector('#announcement-message').textContent =
+      originalMessage
+    announcementDiv.querySelector('#announcement-severity').textContent =
+      originalSeverity
+    const deleteBtn = announcementDiv.querySelector('#delete-btn')
+    const editBtn = announcementDiv.querySelector('#edit-btn')
+    deleteBtn.textContent = 'Delete'
+    deleteBtn.classList =
+      'px-2 py-1 bg-red-600 text-white rounded items-center text-center'
+    deleteBtn.onclick = () => deleteAnnouncement(uuid)
+    editBtn.textContent = 'Edit'
+    editBtn.classList =
+      'px-2 py-1 bg-blue-700 text-white rounded items-center text-center'
+    editBtn.onclick = () =>
+      editAnnouncement(uuid, {
+        title: originalTitle,
+        message: originalMessage,
+        severity: originalSeverity,
+      })
+  }
   function deleteAnnouncement(id) {
     fetch(`/api/admin/announcements/${id}`, {
       method: 'DELETE',
     })
       .then((res) => res.json())
       .then(async () => {
-        await loadAnnouncements()
+        loadAnnouncements()
+        await window.fetchAnnouncements()
       })
       .catch((error) => {
-        console.error('Failed to delete announcement:', error)
+        utils.handleError(error)
+        loading.style.display = 'none'
+        error.style.display = ''
+        error.textContent = error.message
       })
   }
+  window.editAnnouncement = editAnnouncement
   window.deleteAnnouncement = deleteAnnouncement
   fetch('/api/admin')
     .then((res) => res.json())
@@ -107,9 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     })
     .catch((error) => {
+      utils.handleError(error)
       loading.style.display = 'none'
       error.style.display = ''
-      error.textContent = 'Failed to load dashboard.'
+      error.textContent = error.message
     })
   loadAnnouncements()
 })

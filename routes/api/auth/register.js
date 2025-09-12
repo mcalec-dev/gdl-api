@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:register')
@@ -22,7 +21,7 @@ const debug = require('debug')('gdl-api:api:auth:register')
  *               password:
  *                 type: string
  */
-router.post(['/create', '/create/'], async (req, res) => {
+router.post(['', '/'], async (req, res) => {
   const { username, email, password } = req.body
   if (!username || !password) {
     debug('Username or password not provided')
@@ -44,10 +43,20 @@ router.post(['/create', '/create/'], async (req, res) => {
     username,
     email,
     password: hash,
-    roles: ['visitor'],
+    roles: ['user'],
   })
   try {
-    req.login(user, () => {
+    const uuid = require('uuid').v4()
+    req.login(user, async () => {
+      user.sessions = user.sessions || []
+      user.sessions.push({
+        uuid,
+        modified: new Date(),
+        ip: req.ip || '',
+        useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+      })
+      await user.save()
+      req.session.uuid = uuid
       debug('Login after registration succeeded:', user)
       return res.status(200).json({
         success: true,

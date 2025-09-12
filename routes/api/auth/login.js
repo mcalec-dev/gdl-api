@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:login')
@@ -53,7 +52,7 @@ router.post(['/', ''], async (req, res) => {
       status: 401,
     })
   }
-  const match = await bcrypt.compare(password, user.password)
+  const match = bcrypt.compare(password, user.password)
   if (!match) {
     debug('Password mismatch:', username, email)
     return res.status(401).json({
@@ -62,14 +61,17 @@ router.post(['/', ''], async (req, res) => {
     })
   }
   try {
+    const uuid = require('uuid').v4()
     req.login(user, async () => {
       user.sessions = user.sessions || []
       user.sessions.push({
+        uuid,
         modified: new Date(),
         ip: req.ip || '',
         useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
       })
       await user.save()
+      req.session.uuid = uuid
       debug('User logged in:', user.username)
       return res.status(200).json({
         success: true,

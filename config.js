@@ -1,10 +1,11 @@
+const ms = require('ms')
 const dotenv = require('dotenv')
 const debug = require('debug')('gdl-api:config')
 const https = require('https')
 const http = require('http')
 dotenv.config({ quiet: true })
-const checkHostOnline = async (host) => {
-  await new Promise((resolve) => {
+function checkHostOnline(host) {
+  return new Promise((resolve) => {
     if (!host) return resolve(false)
     const url =
       host.startsWith('http://') || host.startsWith('https://')
@@ -24,6 +25,10 @@ const checkHostOnline = async (host) => {
 async function getHost() {
   const host = process.env.HOST
   const altHost = process.env.ALT_HOST
+  if (!host) return null
+  if (!altHost) return host
+  if (!host && !altHost) return null
+  if (host === altHost) return host
   const hostOnline = await checkHostOnline(host)
   const altHostOnline = await checkHostOnline(altHost)
   try {
@@ -36,7 +41,7 @@ async function getHost() {
       return altHost
     }
   } catch (error) {
-    debug('Both hosts are offline!\n', error)
+    debug('Both hosts are offline:', error)
     return null
   }
 }
@@ -62,6 +67,10 @@ const MONGODB_URL = process.env.MONGODB_URL
 debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
+const MAX_DEPTH = process.env.MAX_DEPTH
+debug('Max depth:', MAX_DEPTH)
+const SESSION_COOKIE_MAX_AGE = ms(process.env.SESSION_COOKIE_MAX_AGE)
+debug('Session cookie max age (ms):', SESSION_COOKIE_MAX_AGE)
 module.exports = {
   NODE_ENV,
   PORT,

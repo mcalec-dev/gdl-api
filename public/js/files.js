@@ -1,9 +1,5 @@
-import {
-  formatSize,
-  formatDate,
-  getFileType,
-  getIcons,
-} from '../min/index.min.js'
+'use strict'
+import * as utils from '../min/index.min.js'
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
 function constructApiPath(path) {
@@ -16,13 +12,26 @@ const fileList = document.getElementById('fileList')
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+function getFileType(mime) {
+  if (!mime || mime === 'n/a') return 'other'
+  if (mime.includes('application')) return 'other'
+  if (mime.includes('audio')) return 'audio'
+  if (mime.includes('image')) return 'image'
+  if (mime.includes('text')) return 'text'
+  if (mime.includes('video')) return 'video'
+  if (mime === 'application/mp4') return 'video'
+  return 'other'
+}
 let icons
 async function loadIcons() {
-  const icon = await getIcons()
+  const icon = await utils.getIcons()
   icons = {
     directory: icon.folder,
-    file: icon.file.default,
-    other: icon.file.text,
+    image: icon.file.image,
+    video: icon.file.video,
+    audio: icon.file.audio,
+    text: icon.file.text,
+    other: icon.file.default,
   }
 }
 let currentDirectoryData = null
@@ -32,6 +41,7 @@ let currentSort = 'name'
 let currentSortDir = 'none'
 let currentFetchController = null
 let imageLoadControllers = new Map()
+let isInitialized = false
 const SORT_STATES = {
   name: 'none',
   modified: 'none',
@@ -116,6 +126,10 @@ function sortContents(contents, sortBy, direction) {
       case 'created':
         comparison = new Date(a.created || 0) - new Date(b.created || 0)
         break
+      default:
+        comparison = a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+        })
     }
     return direction === 'asc' ? comparison : -comparison
   })
@@ -147,11 +161,17 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       currentDirectoryData.path !== path ||
       forceRefresh
     ) {
-      const response = await fetch(apiPath, { signal })
+      const response = await fetch(apiPath, { signal }).catch((error) => {
+        utils.handleError(error)
+        if (error.name !== 'AbortError') {
+          fileList.innerHTML = `
+            <div class="error">
+              Error loading directory contents<br>
+              <small>${error.message}</small>
+            </div>`
+        }
+      })
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Unknown error occurred')
-      }
       currentDirectoryData = { path, contents: data.contents }
     }
     fileList.removeChild(loadingIndicator)
@@ -160,7 +180,9 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
     fileList.classList.add('grid-view')
     fileList.classList.add(
       'grid',
-      'grid-cols-5',
+      'lg:grid-cols-4',
+      'md:grid-cols-3',
+      'sm:grid-cols-1',
       'place-items-stretch',
       'gap-4'
     )
@@ -169,11 +191,12 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       callback()
     }
   } catch (error) {
+    utils.handleError(error)
     if (error.name !== 'AbortError') {
       fileList.innerHTML = `
         <div class="error">
-            Error loading directory contents<br>
-            <small>${error.message}</small>
+          Error loading directory contents<br>
+          <small>${error.message}</small>
         </div>`
     }
   }
@@ -182,18 +205,18 @@ function setupFileClickHandlers() {
   const fileList = document.getElementById('fileList')
   fileList.addEventListener('click', (event) => {
     const media = event.target.closest(
-      '.file-item[data-type="image"], .file-item[data-type="video"]'
+      '.file-item[data-file-type="image"], .file-item[data-file-type="video"]'
     )
     if (media) {
       event.preventDefault()
       currentImageList = Array.from(
         fileList.querySelectorAll(
-          '.file-item[data-type="image"], .file-item[data-type="video"]'
+          '.file-item[data-file-type="image"], .file-item[data-file-type="video"]'
         )
       ).map((media) => {
         const preview = media.querySelector('img, video')
         const mediaPath = media.dataset.path
-        const fileType = getFileType(mediaPath)
+        const fileType = media.dataset.fileType
         const encodedPath = mediaPath
           .split('/')
           .map((part) => encodeURIComponent(part))
@@ -230,17 +253,6 @@ window.addEventListener('popstate', (event) => {
           .replace(/^\/|\/$/g, '')
   loadDirectory(currentPath, null, true)
 })
-const initialLocation = window.location.pathname
-const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
-const currentPath =
-  initialLocation === frontendBasePath ||
-  initialLocation === `${frontendBasePath}/`
-    ? ''
-    : initialLocation
-        .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
-        .replace(/\/+/g, '/')
-        .replace(/^\/|\/$/g, '')
-loadDirectory(currentPath)
 function setupLazyLoading() {
   if (window.lazyLoadObserver) {
     window.lazyLoadObserver.disconnect()
@@ -351,14 +363,22 @@ function showImagePopup(index) {
   const nextButton = document.getElementById('next-image')
   popupImage.style.display = 'none'
   popupVideo.style.display = 'none'
+  popupVideo.pause()
   const url = getMediaUrl(item)
   if (item.type === 'video') {
     popupVideo.src = url
     popupVideo.style.display = 'block'
+    popupVideo.controls = true
+    popupVideo.style.maxHeight = '85vh'
+    popupVideo.style.maxWidth = '85vw'
+    popupVideo.style.height = 'auto'
+    popupVideo.style.width = 'auto'
   } else {
     popupImage.src = url
     popupImage.style.display = 'block'
     popupImage.style.cursor = 'zoom-in'
+    popupImage.style.maxHeight = '85vh'
+    popupImage.style.maxWidth = '85vw'
   }
   imageTitle.textContent = item.name
   imageCounter.textContent = `${index + 1} / ${currentImageList.length}`
@@ -377,6 +397,7 @@ function setupImagePopupEvents() {
   const popupViewer = document.getElementById('popup-viewer')
   const closeButton = document.getElementById('close-popup')
   const newTabButton = document.getElementById('open-new-tab')
+  const downloadButton = document.getElementById('download-file')
   const prevButton = document.getElementById('prev-image')
   const nextButton = document.getElementById('next-image')
   const popupImage = document.getElementById('popup-image')
@@ -397,6 +418,21 @@ function setupImagePopupEvents() {
     const item = currentImageList[currentImageIndex]
     const fullUrl = getMediaUrl(item)
     window.open(fullUrl, '_blank')
+  })
+  downloadButton.addEventListener('click', () => {
+    const item = currentImageIndex[currentImageIndex]
+    const fullUrl = getMediaUrl(item)
+    const dlUrl =
+      document.location.protocol +
+      '//' +
+      document.location.hostname +
+      '/api/download/'
+    const a = document.createElement('a')
+    a.href = `${dlUrl}?url="${encodeURIComponent(fullUrl)}"`
+    a.download = ''
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   })
   closeButton.addEventListener('click', closePopup)
   popupViewer.addEventListener('click', (e) => {
@@ -441,6 +477,8 @@ function setupImagePopupEvents() {
             }
             showImagePopup(currentImageIndex + 1)
           }
+          break
+        default:
           break
       }
     }
@@ -543,17 +581,15 @@ async function renderDirectory(contents, path) {
   let html = ''
   for (const item of sortedContents) {
     const itemPath = path ? `${path}/${item.name}` : item.name
-    let itemType = 'directory'
-    if (item.type === 'file') {
-      try {
-        itemType = await getFileType(item.name)
-      } catch (e) {
-        console.warn(`Error detecting type for ${item.name}`, e)
-        itemType = 'other'
-      }
-    }
+    const itemType =
+      item.type === 'directory'
+        ? 'directory'
+        : getFileType(item.mime) || item.fileType
     let previewUrl = null
-    if (item.type === 'file') {
+    if (
+      item.type === 'file' &&
+      (itemType === 'image' || itemType === 'video')
+    ) {
       const encodedPath = itemPath
         .split('/')
         .map((part) => encodeURIComponent(part))
@@ -565,41 +601,37 @@ async function renderDirectory(contents, path) {
     }
     const fileItemStyle =
       'flex items-center w-full h-auto max-w-full p-6 border border-white/10 rounded-xl pointer text-white pointer-events-auto box-border overflow-hidden'
-    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemStyle}" data-type="${itemType}" data-path="${itemPath}">`
+    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemStyle}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">`
     if (itemType === 'directory') {
       html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
-    } else if (previewUrl) {
-      if (itemType === 'video') {
-        html += `
-          <div class="video-preview-container">
-            <video 
-              class="file-preview video loading" 
-              data-src="${previewUrl}"
-              preload="none"
-              onmouseover="if(this.src) { this.play(); this.muted=false; }" 
-              onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
-              draggable="false"
-            ></video>
-          </div>
-        `
-      } else if (itemType === 'image') {
-        html += `
-          <div class="preview-container">
-            <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
-          </div>
-        `
-      } else {
-        html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
-      }
+    } else if (itemType === 'image' && previewUrl) {
+      html += `
+        <div class="preview-container">
+          <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+        </div>
+      `
+    } else if (itemType === 'video' && previewUrl) {
+      html += `
+        <div class="video-preview-container">
+          <video 
+            class="file-preview video loading" 
+            data-src="${previewUrl}"
+            preload="none"
+            onmouseover="if(this.src) { this.play(); this.muted=false; }" 
+            onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
+            draggable="false"
+          ></video>
+        </div>
+      `
     } else {
-      html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
+      html += `<div class="file-icon ${itemType}">${icons[itemType] || icons.other}</div>`
     }
     html += `
       <div class="file-details">
         <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
         <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-          <span>${formatDate(item.modified)}</span><br>
-          <span>${formatSize(item.size)}</span>
+          <span>${utils.formatDate(item.modified)}</span><br>
+          <span>${utils.formatSize(item.size)}</span>
         </div>
       </div>
     </div>
@@ -632,14 +664,18 @@ function getSortFromQuery() {
     Object.keys(SORT_STATES).forEach((key) => (SORT_STATES[key] = 'none'))
   }
 }
-document.addEventListener('DOMContentLoaded', async () => {
+async function initializeApp() {
+  if (isInitialized) return
+  isInitialized = true
   await loadIcons()
   getSortFromQuery()
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
-  const initialPath = window.location.pathname.replace(
-    new RegExp(`^${frontendBasePathEscaped}`),
-    ''
-  )
-  loadDirectory(initialPath)
-})
-document.addEventListener('click', handleDirectoryClick)
+  const initialPath = window.location.pathname
+    .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
+    .replace(/\/+/g, '/')
+    .replace(/^\/|\/$/g, '')
+    .replace(/^files\/?/, '')
+  document.addEventListener('click', handleDirectoryClick)
+  await loadDirectory(initialPath)
+}
+document.addEventListener('DOMContentLoaded', initializeApp)

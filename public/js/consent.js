@@ -1,3 +1,4 @@
+'use strict'
 function setConsentCookie(value) {
   document.cookie = `site_consent=${value}; path=/; max-age=31536000; samesite=strict`
 }

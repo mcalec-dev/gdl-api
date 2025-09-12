@@ -54,12 +54,13 @@ async function buildImageUrl(baseUrl, scale) {
 }
 async function getRandomImage() {
   const apiHost = await HOST
-  const baseUrl = `${apiHost}${BASE_PATH}/api/random`
+  const baseUrl = `https://${apiHost}${BASE_PATH}/api/random`
   try {
     debug('Attempting to fetch from:', baseUrl)
     const response = await axios.get(baseUrl, {
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'GDL-api-BOT/1.0',
       },
       timeout: 60 * 1000,
     })
@@ -143,6 +144,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
         })
         return
       }
+      if (interaction.replied || interaction.deferred) {
+        debug('Interaction already replied/deferred')
+        return
+      }
       await interaction.deferUpdate()
       let imageData
       let newScale = currentScale
@@ -161,7 +166,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           break
       }
       currentScale = newScale
-      const imageUrl = buildImageUrl(
+      const imageUrl = await buildImageUrl(
         interaction.customId === 'regenerate' ? imageData.url : imageData.url,
         currentScale
       )
@@ -211,6 +216,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!isVideo) {
         embed.setImage(imageUrl)
       }
+      if (!interaction.deferred) {
+        debug('Interaction is no longer deferred')
+        return
+      }
       await interaction.editReply({
         content: isVideo ? `Video: ${imageUrl}` : null,
         embeds: [embed],
@@ -221,34 +230,47 @@ client.on(Events.InteractionCreate, async (interaction) => {
       interaction.isChatInputCommand() &&
       interaction.commandName === 'random'
     ) {
+      if (interaction.replied || interaction.deferred) {
+        debug('Interaction already replied/deferred')
+        return
+      }
       try {
         await interaction.deferReply()
+        debug('Successfully deferred reply')
       } catch (error) {
         debug('Failed to defer reply - interaction may have expired', error)
         return
       }
-      const imageData = await getRandomImage()
-      await sendImageEmbed(interaction, imageData)
+      try {
+        const imageData = await getRandomImage()
+        await sendImageEmbed(interaction, imageData)
+      } catch (apiError) {
+        debug('API Error:', apiError.message)
+        if (interaction.deferred && !interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Sorry, I couldn't fetch an image right now. The API might be experiencing issues. Please try again later.",
+            components: [],
+          })
+        }
+      }
     }
   } catch (error) {
     debug('Error handling interaction:', error)
     if (!interaction.replied && !interaction.deferred) {
       try {
         await interaction.reply({
-          content: 'Error fetching random image. Please try again later.',
-          flags: [1 << 6],
+          content: 'An error occurred while processing your request.',
+          ephemeral: true,
         })
       } catch (innerError) {
         debug('Error sending error response:', innerError)
       }
-      return
-    }
-    if (interaction.deferred) {
+    } else if (interaction.deferred && !interaction.replied) {
       try {
-        const actionRow = getActionRow()
         await interaction.editReply({
-          content: 'Error fetching random image. Please try again later.',
-          components: [actionRow],
+          content: 'An error occurred while processing your request.',
+          components: [],
         })
       } catch (innerError) {
         debug('Error editing error response:', innerError)

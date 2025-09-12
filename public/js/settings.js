@@ -1,3 +1,4 @@
+'use strict'
 const settingsButton = document.getElementById('settings-button')
 const settingsContainer = document.getElementById('settings-container')
 const backgroundColors = ['auto', 'dark', 'light', 'true-dark', 'true-light']

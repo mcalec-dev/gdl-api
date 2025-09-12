@@ -1,3 +1,5 @@
+'use strict'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const content = document.getElementById('dashboard-content')
   const loadingDiv = document.getElementById('loading')
@@ -16,11 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
       content.innerHTML = `
         <div class="flex flex-col items-center gap-2">
           <div class="text-lg font-semibold">${data.message}</div>
-          <div class="text-gray-300 text-sm">Username: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.username}</code></div>
-          <div class="text-gray-300 text-sm">Email: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.email}</code></div>
+          <div class="text-gray-300 text-sm">Username: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.username}</code></div>
+          <div class="text-gray-300 text-sm">Email: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.email}</code></div>
           <div class="text-gray-300 text-sm">Roles: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.roles.join(', ')}</code></div>
-          <div class="text-gray-300 text-sm">ID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.id}</code></div>
-          <div class="text-gray-300 text-sm">UUID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.uuid}</code></div>
+          <div class="text-gray-300 text-sm">ID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.id}</code></div>
+          <div class="text-gray-300 text-sm">UUID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.uuid}</code></div>
           <div class="text-gray-300 text-sm">Created: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.created ? new Date(data.created).toLocaleString() : ''}</code></div>
         </div>
         <div class="mt-6">
@@ -34,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="mt-4 w-full md:max-w-full sm:max-w-full">
             <span class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</span>
-            <pre class="bg-gray-900/60 rounded p-3 mb-3 text-xs text-gray-200 whitespace-pre">${JSON.stringify(data.oauth, null, 2)}</pre>
+            <pre class="bg-gray-900/60 rounded p-3 mb-3 text-xs text-gray-200 whitespace-pre select-all">${JSON.stringify(data.oauth, null, 2)}</pre>
             <span class="mt-4 text-gray-400 text-xs mb-1">Current Sessions:</span>
             <div class="flex flex-col gap-4 mt-2">
               ${(() => {
@@ -118,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
               credentials: 'include',
             })
           } catch (error) {
+            utils.handleError(error)
             console.error('Failed to log out:', error)
           }
           window.location.href = '/'
@@ -125,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     })
     .catch((error) => {
+      utils.handleError(error)
       console.error('Failed to load dashboard:', error)
       errorDiv.style.display = 'block'
       errorDiv.textContent = 'Failed to load dashboard.'

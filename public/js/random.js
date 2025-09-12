@@ -1,4 +1,5 @@
-import { formatSize } from '../min/index.min.js'
+'use strict'
+import * as utils from '../min/index.min.js'
 let API_URL = ''
 const loadImageBtn = document.getElementById('loadImageBtn')
 const backImageBtn = document.getElementById('backImageBtn')
@@ -14,7 +15,7 @@ function showMedia(data) {
   if (!data || !data.url) {
     console.error('Invalid media data:', data)
     imageContainer.classList.remove('has-image')
-    loading.textContent = 'Failed to load media. Try again.'
+    loading.textContent = ''
     loading.style.display = 'block'
     imageInfo.style.display = 'none'
     return
@@ -36,7 +37,7 @@ function showMedia(data) {
     ? document.createElement('video')
     : document.createElement('img')
   mediaElement.classList =
-    'object-contain w-auto h-auto max-w-full max-h-[60vh] overflow-hidden border-none rounded transition-transform duration-500'
+    'object-contain w-auto h-auto max-w-full max-h-[50vh] overflow-hidden border-none rounded transition-transform duration-500'
   mediaElement.style.display = 'none'
   if (isVideo) {
     mediaElement.controls = true
@@ -48,7 +49,7 @@ function showMedia(data) {
     <span id="image-author" class="font-semibold text-gray-300">${data.author}</span>
     <span class="text-gray-400"> on </span>
     <span id="image-collection" class="font-semibold text-gray-300">${data.collection}</span><br>
-    <span id="image-size" class="text-gray-400">${formatSize(data.size)}</span>
+    <span id="image-size" class="text-gray-400">${utils.formatSize(data.size)}</span>
   `
   const loadHandler = () => {
     loading.style.display = 'none'
@@ -69,7 +70,10 @@ async function loadRandomMedia() {
     loading.style.display = 'block'
     loading.classList.remove('error')
     imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
-    const response = await fetch(API_URL)
+    const response = await fetch(API_URL).catch((error) => {
+      utils.handleError(error)
+      handleMediaError(error)
+    })
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
     const data = await response.json()
     if (history.length === 0) {
@@ -86,15 +90,15 @@ async function loadRandomMedia() {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
     showMedia(data)
   } catch (error) {
+    utils.handleError(error)
     handleMediaError(error)
   }
 }
 function handleMediaError(error) {
-  ;((loading.textContent = 'Failed to load media. Try again.'), error)
+  loading.textContent = error.message
   loading.classList.add('error')
   imageInfo.style.display = 'none'
   imageContainer.classList.remove('has-image')
-  console.error('Media load error:', error)
 }
 function showPreviousMedia() {
   if (history.length === 0 || historyIndex <= 0) {

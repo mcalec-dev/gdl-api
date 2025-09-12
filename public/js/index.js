@@ -1,3 +1,4 @@
+'use strict'
 export const url = window.location.origin
 export const host = window.location.hostname
 export const path = window.location.pathname
@@ -26,42 +27,6 @@ export function formatDate(timestamp) {
   }
   return date.toLocaleString('en-US', options)
 }
-let cachedMimeDB = null
-export async function getFileType(file) {
-  if (!cachedMimeDB) {
-    try {
-      const res = await fetch('https://cdn.jsdelivr.net/npm/mime-db/db.json')
-      cachedMimeDB = await res.json()
-    } catch (error) {
-      console.error('Failed to fetch MIME database...', error)
-      cachedMimeDB = {}
-    }
-  }
-  const ext = file.split('.').pop().toLowerCase()
-  function getMimeType() {
-    for (const [type, data] of Object.entries(cachedMimeDB)) {
-      if (data.extensions && data.extensions.includes(ext)) {
-        return type
-      }
-    }
-    return null
-  }
-  const mimeType = getMimeType()
-  const videoFallbacks = ['mp4', 'mkv', 'webm', 'mov', 'avi']
-  const imageFallbacks = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']
-  if (!mimeType) {
-    console.warn(`Unknown file ext:`, ext)
-    if (imageFallbacks.includes(ext)) return 'image'
-    if (videoFallbacks.includes(ext)) return 'video'
-    return 'other'
-  }
-  console.log(`${file} = ${mimeType}`)
-  if (mimeType.startsWith('image/')) return 'image'
-  if (mimeType.startsWith('video/')) return 'video'
-  if (imageFallbacks.includes(ext)) return 'image'
-  if (videoFallbacks.includes(ext)) return 'video'
-  return 'other'
-}
 export async function getName() {
   let name
   try {
@@ -86,7 +51,12 @@ export async function getIcons() {
   return data
 }
 export async function parseEmojis(text) {
-  return text.replace(/:([a-zA-Z0-9_+-]+):/g, async (match, key) => {
-    return await getIcons().then((icons) => icons[key] || match)
+  const icons = await getIcons()
+  return text.replace(/:([a-zA-Z0-9_+-]+):/g, (match, key) => {
+    return icons[key] || match
   })
+}
+export function handleError(error) {
+  console.error(error)
+  window.alert(`${error.message || error}`)
 }

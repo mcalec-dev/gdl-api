@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 require('dotenv').config({ quiet: true })
 const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api')
@@ -42,7 +41,7 @@ try {
  */
 router.get(['/', ''], async (req, res) => {
   const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
-  res.json({
+  return res.json({
     api: 'v2',
     name: NAME,
     version: process.env.npm_package_version,
@@ -50,11 +49,15 @@ router.get(['/', ''], async (req, res) => {
     author: process.env.npm_package_author,
     keywords: process.env.npm_package_keywords,
     license: process.env.npm_package_license,
-    host: HOST,
+    host: await HOST,
     basePath: BASE_PATH,
     urls: {
+      admin: baseURL + '/admin',
       auth: baseURL + '/auth',
+      user: baseURL + '/user',
+      download: baseURL + '/download',
       files: baseURL + '/files',
+      health: baseURL + '/health',
       random: baseURL + '/random',
       search: baseURL + '/search',
       stats: baseURL + '/stats',

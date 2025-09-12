@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const { requireRole } = require('../../../utils/authUtils')
 const debug = require('debug')('gdl-api:api:user:dashboard')
 /**

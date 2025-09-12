@@ -1,2 +1,1 @@
-const icons = require('../public/icons.json')
-module.exports = icons
+module.exports = require('../public/icons.json')

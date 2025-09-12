@@ -11,6 +11,7 @@ const fileSchema = new mongoose.Schema({
   type: { type: String, required: true },
   collection: { type: String, required: true },
   author: { type: String, required: true },
+  mime: { type: String, required: true },
   created: { type: Date },
   modified: { type: Date },
   tags: [{ type: String, index: true }],

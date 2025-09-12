@@ -1,3 +1,5 @@
+'use strict'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm')
   const errorDiv = document.getElementById('error')
@@ -22,29 +24,34 @@ document.addEventListener('DOMContentLoaded', () => {
           username,
           password,
         }),
+      }).catch((error) => {
+        utils.handleError(error)
+        showError(error)
       })
       const data = await response.json()
       if (response.ok) {
         window.location.href = '/dashboard'
       } else {
-        showError(data.error || 'Login failed')
+        utils.handleError(data.error)
+        showError(data.error)
       }
-    } catch {
-      showError('An error occurred while trying to log in')
+    } catch (error) {
+      utils.handleError(error)
+      showError(error)
     } finally {
       showLoading(false)
     }
   }
-  function showError(message) {
-    errorDiv.textContent = message
-    errorDiv.style.display = 'block'
+  function showError(error) {
+    errorDiv.textContent = error.message
+    errorDiv.hidden = false
   }
   function hideError() {
-    errorDiv.style.display = 'none'
+    errorDiv.hidden = true
   }
   function showLoading(show) {
     if (loadingDiv) {
-      loadingDiv.style.display = show ? 'block' : 'none'
+      loadingDiv.hidden = show ? true : false
     }
   }
   document.getElementById('password').addEventListener('keypress', (e) => {

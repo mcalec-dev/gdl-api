@@ -1,6 +1,6 @@
-import { parseEmojis } from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', () => {
-  // Announcements
+'use strict'
+import * as utils from '../min/index.min.js'
+async function fetchAnnouncements() {
   fetch('/api/user/announcements/')
     .then((res) => res.json())
     .then((announcements) => {
@@ -8,23 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   async function renderAnnouncement(announcement) {
     const container = document.getElementById('announcements-container')
-    if (!container) return
     if (!announcement) {
-      container.style.display = 'none'
+      container.hidden = true
       return
     }
-    container.style.display = ''
+    if (announcement.severity) {
+      if (announcement.severity === 'info')
+        container.classList.add('bg-blue-600')
+      if (announcement.severity === 'success')
+        container.classList.add('bg-green-600')
+      if (announcement.severity === 'warning')
+        container.classList.add('bg-yellow-600')
+      if (announcement.severity === 'error')
+        container.classList.add('bg-red-600')
+    }
+    container.hidden = false
     document.getElementById('announcement-title').innerHTML = announcement.title
     document.getElementById('announcement-message').innerHTML =
-      await parseEmojis(announcement.message)
-    // Optionally set icon/color based on severity
-    const icon = document.getElementById('severity-icon')
-    if (icon) {
-      icon.className = ''
-      if (announcement.severity === 'info') icon.textContent = 'ℹ️'
-      if (announcement.severity === 'success') icon.textContent = '✅'
-      if (announcement.severity === 'warning') icon.textContent = '⚠️'
-      if (announcement.severity === 'error') icon.textContent = '⛔'
-    }
+      await utils.parseEmojis(announcement.message)
   }
-})
+}
+window.fetchAnnouncements = fetchAnnouncements
+document.addEventListener(
+  'DOMContentLoaded',
+  async () => await fetchAnnouncements()
+)

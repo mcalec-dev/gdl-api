@@ -1,6 +1,5 @@
 /* future health endpoint */
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:health')
 const { requireRole } = require('../../utils/authUtils')
 router.get(['', '/'], requireRole('user'), async (req, res) => {

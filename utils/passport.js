@@ -2,7 +2,6 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const DiscordStrategy = require('passport-discord').Strategy
-// const GoogleStrategy = require('passport-google-oauth20').Strategy
 const bcrypt = require('bcrypt')
 const User = require('../models/User')
 const { BASE_PATH } = require('../config')
@@ -56,6 +55,7 @@ passport.use(
     },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
+        const uuid = require('uuid').v4()
         let email = profile.email && profile.emails
         let username = profile.username
         if (profile && profile._json && profile._json.state) {
@@ -71,6 +71,7 @@ passport.use(
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
             user.sessions.push({
+              uuid,
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
@@ -78,6 +79,7 @@ passport.use(
                 req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
+            req.session.uuid = uuid
             debug('Linked GitHub to existing user:', user.username)
             return done(null, user)
           }
@@ -96,6 +98,7 @@ passport.use(
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
             user.sessions.push({
+              uuid,
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
@@ -103,6 +106,7 @@ passport.use(
                 req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
+            req.session.uuid = uuid
             debug('Linked GitHub to existing user by email:', user.username)
           } else {
             user = await User.create({
@@ -111,6 +115,7 @@ passport.use(
               roles: ['user'],
               sessions: [
                 {
+                  uuid,
                   created: new Date(),
                   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                   ip: req?.ip,
@@ -130,6 +135,7 @@ passport.use(
               debug('Error creating user in GitHub strategy:', error)
               return done(error)
             })
+            req.session.uuid = uuid
           }
         }
         if (!user) {
@@ -141,12 +147,15 @@ passport.use(
         if (!user.sessions || user.sessions.length === 0) {
           user.sessions = user.sessions || []
           user.sessions.push({
+            uuid,
             created: new Date(),
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
-            useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+            useragent:
+              req?.headers['user-agent'] || req.get('User-Agent') || '',
           })
           await user.save()
+          req.session.uuid = uuid
         }
         debug('User authenticated successfully:', user.username)
         return done(null, user)
@@ -168,6 +177,7 @@ passport.use(
     },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
+        const uuid = require('uuid').v4()
         let email = profile.email ? profile.email : profile.emails
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
@@ -182,6 +192,7 @@ passport.use(
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
             user.sessions.push({
+              uuid,
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
@@ -189,6 +200,7 @@ passport.use(
                 req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
+            req.session.uuid = uuid
             debug('Linked Discord to existing user:', user.username)
             return done(null, user)
           }
@@ -209,6 +221,7 @@ passport.use(
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
             user.sessions.push({
+              uuid,
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
@@ -216,6 +229,7 @@ passport.use(
                 req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
+            req.session.uuid = uuid
             debug('Linked Discord to existing user', user.username)
           } else {
             user = await User.create({
@@ -224,6 +238,7 @@ passport.use(
               roles: ['user'],
               sessions: [
                 {
+                  uuid,
                   created: new Date(),
                   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                   ip: req?.ip,
@@ -243,6 +258,7 @@ passport.use(
               debug('Error creating user in Discord strategy:', error)
               return done(error)
             })
+            req.session.uuid = uuid
           }
         }
         if (!user) {
@@ -252,16 +268,16 @@ passport.use(
           })
         }
         if (user.sessions && user.sessions.length > 0) {
-          // Already added above
-        } else {
           user.sessions = user.sessions || []
           user.sessions.push({
+            uuid,
             created: new Date(),
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
             useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
           })
           await user.save()
+          req.session.uuid = uuid
         }
         debug('User authenticated successfully:', user.username)
         return done(null, user)

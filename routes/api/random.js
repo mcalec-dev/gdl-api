@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:random')
 const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
@@ -43,10 +42,17 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
     })
   }
   try {
-    const getRandomImage = await File.aggregate([{ $sample: { size: 1 } }])
+    const getRandomImage = await File.aggregate([
+      { $sample: { size: 1 } },
+    ]).catch((error) => {
+      debug('Error getting random file from database:', error)
+      return res.status(500).json({
+        message: 'Internal Server Error',
+        status: 500,
+      })
+    })
     const randomImage = getRandomImage[0]
     const url = req.protocol + '://' + req.hostname + randomImage.paths.remote
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
     return res.json({
       file: randomImage.name,
       path: randomImage.paths.remote,
@@ -59,8 +65,8 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
       type: randomImage.type,
     })
   } catch (error) {
-    debug('Error in /test route:', error)
-    res.status(500).json({
+    debug('Error in random route:', error)
+    return res.status(500).json({
       message: 'Internal Server Error',
       status: 500,
     })

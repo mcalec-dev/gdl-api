@@ -1,136 +1,89 @@
 <!doctype html>
 <html lang="en">
   <%- include('partials/head') %>
-  <body class="bg-black min-h-screen flex items-center justify-center relative">
-    <%- include('partials/announcements') %>
-    <%- include('partials/navbar') %>
-    <%- include('partials/settings') %>
-    <div id="container" class="mt-24 mb-24 md:w-auto md:max-w-[65%] sm:w-full rounded-xl shadow-2xl p-4 sm:p-8 md:p-8 mx-1 sm:mx-0 z-10 backdrop-blur-md border border-white/20">
-      <h1 id="title" class="text-3xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
-        <%= currentPage %>
-      </h1>
-      <div id="loading" class="text-center text-gray-300 mb-4">
-        Loading statistics...
-      </div>
-      <div id="error" class="error-message text-red-500 text-center mb-4" style="display:none"></div>
-      <div id="stats-content" style="display:none">
+  <body class="relative flex min-h-screen items-center justify-center bg-black">
+    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <div id="container" class="z-10 mx-1 mb-[6vh] mt-[12vh] rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:mx-0 sm:w-full sm:p-8 md:w-auto md:max-w-[65%] md:p-8">
+      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
+      <div id="loading" class="mb-4 text-center text-gray-300">Loading statistics...</div>
+      <div id="error" class="error-message mb-4 text-center text-red-500" style="display: none"></div>
+      <div id="stats-content" style="display: none">
         <div class="mb-8">
-          <h2 class="text-lg text-white font-semibold mb-3">
-            Totals & File Sizes
-          </h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Total Directories
-              </span>
+          <h2 class="mb-3 text-lg font-semibold text-white">Totals & File Sizes</h2>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Total Directories</span>
               <span id="total-directories" class="font-mono text-xl text-white"></span>
             </div>
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Total Files
-              </span>
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Total Files</span>
               <span id="total-files" class="font-mono text-xl text-white"></span>
             </div>
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Total Size
-              </span>
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Total Size</span>
               <span id="total-size" class="font-mono text-xl text-white"></span>
             </div>
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Average File Size
-              </span>
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Average File Size</span>
               <span id="average-file-size" class="font-mono text-xl text-white"></span>
             </div>
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Largest File Size
-              </span>
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Largest File Size</span>
               <span id="largest-file-size" class="font-mono text-xl text-white"></span>
             </div>
-            <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col items-center">
-              <span class="text-xs text-gray-300 font-semibold mb-1">
-                Smallest File Size
-              </span>
+            <div class="flex flex-col items-center rounded-lg border border-[#232329] bg-[#18181b] p-4 shadow">
+              <span class="mb-1 text-xs font-semibold text-gray-300">Smallest File Size</span>
               <span id="smallest-file-size" class="font-mono text-xl text-white"></span>
             </div>
           </div>
         </div>
         <div class="mb-8">
-          <div class="bg-[#18181b] rounded-xl p-4 shadow border border-[#232329] overflow-x-auto">
-            <h2 class="text-lg text-white font-semibold mb-3">
-              File Types
-            </h2>
-            <table class="w-full text-sm text-left text-gray-300 border border-[#232329] rounded-xl overflow-hidden bg-[#18181b] shadow-lg">
-              <thead class="bg-[#131316] text-gray-200 border-[#232329]">
+          <div class="overflow-x-auto rounded-xl border border-[#232329] bg-[#18181b] p-4 shadow">
+            <h2 class="mb-3 text-lg font-semibold text-white">File Types</h2>
+            <table class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
+              <thead class="border-[#232329] bg-[#131316] text-gray-200">
                 <tr>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Type
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Count
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Total Size
-                  </th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Type</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Count</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Total Size</th>
                 </tr>
               </thead>
               <tbody id="file-types"></tbody>
             </table>
           </div>
         </div>
-        <div class="bg-[#18181b] rounded-xl p-4 shadow border border-[#232329] mb-8">
-          <h2 class="text-lg text-white font-semibold mb-2">
-            Collection Details
-          </h2>
+        <div class="mb-8 rounded-xl border border-[#232329] bg-[#18181b] p-4 shadow">
+          <h2 class="mb-2 text-lg font-semibold text-white">Collection Details</h2>
           <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left text-gray-300 border border-[#232329] rounded-xl overflow-hidden bg-[#18181b] shadow-lg">
-              <thead class="bg-[#131316] text-gray-200 border-[#232329]">
+            <table class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
+              <thead class="border-[#232329] bg-[#131316] text-gray-200">
                 <tr>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Name
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Files
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Size
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Last Modified
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Largest File
-                  </th>
-                  <th class="px-2 py-2 font-semibold border border-[#232329]">
-                    Smallest File
-                  </th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Name</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Files</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Size</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Last Modified</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Largest File</th>
+                  <th class="border border-[#232329] px-2 py-2 font-semibold">Smallest File</th>
                 </tr>
               </thead>
               <tbody id="collection-details"></tbody>
             </table>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col text-gray-200">
-            <h2 class="text-lg text-white font-semibold mb-2">
-              System
-            </h2>
+        <div class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class="flex flex-col rounded-lg border border-[#232329] bg-[#18181b] p-4 text-gray-200 shadow">
+            <h2 class="mb-2 text-lg font-semibold text-white">System</h2>
             <div id="directory-list" class="flex flex-col gap-2"></div>
           </div>
-          <div class="bg-[#18181b] rounded-lg p-4 shadow border border-[#232329] flex flex-col text-gray-200">
-            <h2 class="text-lg text-white font-semibold mb-2">
-              Memory Usage
-            </h2>
+          <div class="flex flex-col rounded-lg border border-[#232329] bg-[#18181b] p-4 text-gray-200 shadow">
+            <h2 class="mb-2 text-lg font-semibold text-white">Memory Usage</h2>
             <div id="memory-stats" class="flex flex-col gap-1"></div>
           </div>
         </div>
       </div>
-      <div id="refresh-time" class="w-full text-center mt-4 text-xs text-gray-400"></div>
-      </div>
+      <div id="refresh-time" class="mt-4 w-full text-center text-xs text-gray-400"></div>
     </div>
-    <script type="module" src="/js/min/stats.min.js" fetchPriority="high"></script>
+    <script type="module" src="/js/min/stats.min.js" fetchpriority="high"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

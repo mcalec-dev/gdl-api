@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const { connection } = require('mongoose')
 const debug = require('debug')('gdl:utils:auth')
 function requireRole(role) {
   return (req, res, next) => {
@@ -39,7 +39,7 @@ function requireAnyRole(roles) {
   }
 }
 async function countActiveSessions() {
-  return mongoose.connection.collection('sessions').countDocuments({
+  return connection.collection('sessions').countDocuments({
     expires: { $gt: new Date() },
   })
 }

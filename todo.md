@@ -7,9 +7,8 @@
 - add rate limiting to protect the service
 - add github actions (ci pipeline) for auditing dependencies, and linting
 - implement logging for the entire project (via debugs with log files and live ones)
-- add error handler as a util (middleware)
+- add error handler middleware
 - validator for json api data
-- complete the `README.md` file
 - add testing applications (like insomnia or postman)
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
@@ -17,10 +16,11 @@
 - add testing modules (`*.test.js`) that only check for errors
 - create a wiki to reflect the swagger docs
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, sitemap, express-rate-limit, glob
+- npm packages to utilize; moment, pm2, async, sitemap, express-rate-limit, glob, express-useragent, rollup
 - alternate frontend with native frameworks
 - fix issue of trying to logout and login not working
 - autocomplete for search frontend (like google)
 - implement google oauth with passport
 - fix discord bot embed buttons from not working
 - fix files frontend with a gallery grid layout like pinterests home layout
+- compiling tailwindcss within the dist dir

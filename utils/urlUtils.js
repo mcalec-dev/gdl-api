@@ -18,14 +18,10 @@ function decodeUrlPath(path) {
   return decodeURIComponent(path.replace(/\+/g, ' '))
 }
 function getApiUrl(req) {
-  return () => {
-    return `${req.protocol}://${req.hostname}${BASE_PATH}/api`
-  }
+  return `${req.protocol}://${req.hostname}${BASE_PATH}/api`
 }
 function getHostUrl(req) {
-  return () => {
-    return `${req.protocol}://${req.hostname}${BASE_PATH}`
-  }
+  return `${req.protocol}://${req.hostname}${BASE_PATH}`
 }
 module.exports = {
   normalizeUrl,

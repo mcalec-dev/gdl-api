@@ -1,7 +1,6 @@
 const { defineConfig } = require('eslint/config');
 const js = require('@eslint/js');
 const json = require('eslint-plugin-json');
-
 module.exports = defineConfig([
   {
     ...js.configs.recommended,

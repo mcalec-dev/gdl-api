@@ -1,5 +1,4 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:auth:logout')
 const User = require('../../../models/User')
 /**
@@ -9,31 +8,31 @@ const User = require('../../../models/User')
  *     summary: Logout user
  */
 router.post(['/', ''], async (req, res) => {
-  if (!req.isAuthenticated()) {
-    debug('User is not authenticated')
+  if (!req.user || !req.isAuthenticated()) {
+    debug('User is not logged in')
     return res.status(400).json({
       message: 'Bad Request',
       status: 400,
     })
   }
-  try {
-    debug('Logging out user:', req.user.username)
-    if (req.session) {
-      try {
-        await User.updateOne({
-          $pull: { sessions: { uuid: req.user.sessions.uuid } },
-        })
-        await User.bulkSave()
-        debug('Removed session from user.sessions:', req.user.sessions.uuid)
-      } catch (error) {
-        debug('Failed to remove session from user.sessions:', error)
-      }
+  debug('Logging out user:', req.user.username)
+  if (req.session) {
+    debug('req.session:', req.session)
+    const findUserAgent = await User.findOne({
+      username: req.user.username,
+      'sessions.uuid': req.session.uuid,
+    })
+    if (findUserAgent) {
+      await User.updateOne(
+        { username: req.user.username },
+        { $pull: { sessions: { uuid: req.session.uuid } } }
+      )
+      debug('Removed session from user:', req.user.username)
     } else {
-      debug('No session uuid found to remove from user.sessions', {
-        userUuid: req.user.uuid,
-        session: req.session,
-      })
+      debug('User uuid does not match session uuid:', req.user.username)
     }
+  }
+  if (req.session) {
     req.logout((error) => {
       if (error) {
         debug('Failed to logout a user:', error)
@@ -42,35 +41,20 @@ router.post(['/', ''], async (req, res) => {
           status: 500,
         })
       }
-      if (req.session) {
-        req.session.destroy((error) => {
-          if (error) {
-            debug('Failed to destroy session:', error)
-            return res.status(500).json({
-              message: 'Internal Server Error',
-              status: 500,
-            })
-          }
-          res.clearCookie('connect.sid')
-          return res.json({
-            success: true,
-            status: 200,
+      req.session.destroy((error) => {
+        if (error) {
+          debug('Failed to destroy session:', error)
+          return res.status(500).json({
+            message: 'Internal Server Error',
+            status: 500,
           })
-        })
-      } else {
-        debug('No session found to destroy')
+        }
         res.clearCookie('connect.sid')
         return res.json({
           success: true,
           status: 200,
         })
-      }
-    })
-  } catch (error) {
-    debug('Failed to logout a user:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
+      })
     })
   }
 })

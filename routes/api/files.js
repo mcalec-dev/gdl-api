@@ -1,11 +1,11 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const path = require('path')
 const Directory = require('../../models/Directory')
 const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
+const mime = require('mime-types')
 const {
   BASE_DIR,
   DISALLOWED_DIRS,
@@ -18,6 +18,10 @@ const pathUtils = require('../../utils/pathUtils')
 const { resizeImage, getImageMeta } = require('../../utils/imageUtils')
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
+  return ext.some((e) => filename.toLowerCase().endsWith(e))
+}
+const isVideoFile = (filename) => {
+  const ext = ['.mp4', '.mkv', '.webm', '.avi', '.mov']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
 }
 const isDisallowedExtension = (filename) => {
@@ -37,8 +41,6 @@ async function upsertDirectoryEntry(dirObj) {
           relative: dirObj.relativePath,
           remote: dirObj.remotePath,
         },
-        collection: dirObj.collection || null,
-        author: dirObj.author || null,
       },
       { $set: dirObj },
       { upsert: true, new: true }
@@ -58,6 +60,7 @@ async function upsertFileEntry(fileObj) {
         },
         collection: fileObj.collection || null,
         author: fileObj.author || null,
+        mime: fileObj.mime || null,
       },
       { $set: fileObj },
       { upsert: true, new: true }
@@ -66,6 +69,157 @@ async function upsertFileEntry(fileObj) {
     debug('Error upserting file entry:', error)
   }
 }
+async function getDirectorySize(dirPath) {
+  let total = 0
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name)
+      if (entry.isDirectory()) {
+        total += await getDirectorySize(entryPath)
+      } else if (entry.isFile()) {
+        try {
+          const stats = await fs.stat(entryPath)
+          total += stats.size
+        } catch (error) {
+          debug('Error getting file stats:', error)
+        }
+      }
+    }
+  } catch (error) {
+    debug('Error reading directory:', dirPath, error)
+    return 0
+  }
+  return total
+}
+async function syncAllFilesToDatabase() {
+  try {
+    debug('Starting comprehensive database sync...')
+    const stats = await fs.stat(BASE_DIR)
+    if (!stats.isDirectory()) {
+      throw new Error(`${BASE_DIR} is not a directory`)
+    }
+    await scanAndSyncDirectory(BASE_DIR, '')
+    debug('Database sync completed successfully')
+    return {
+      success: true,
+      message: 'All files and directories synced to database',
+    }
+  } catch (error) {
+    debug('Error during database sync:', error)
+    return {
+      success: false,
+      message: `Database sync failed: ${error.message}`,
+    }
+  }
+}
+function getFileMime(file) {
+  const type =
+    mime.lookup(file).replace('application/mp4', 'video/mp4') || 'n/a'
+  debug('MIME for', file, 'is', type)
+  return type
+}
+async function scanAndSyncDirectory(dirPath, relativePath = '') {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name)
+      const entryRelativePath = relativePath
+        ? `${relativePath}/${entry.name}`
+        : entry.name
+      if (
+        (await isExcluded(entry.name)) ||
+        (await isExcluded(entryRelativePath)) ||
+        DISALLOWED_DIRS.includes(entry.name) ||
+        (entry.isFile() &&
+          (DISALLOWED_FILES.includes(entry.name) ||
+            isDisallowedExtension(entry.name)))
+      ) {
+        debug(`Skipping excluded item: ${entryRelativePath}`)
+        continue
+      }
+      let size = 0
+      let mtime = new Date()
+      let ctime = new Date()
+      try {
+        const stats = await fs.stat(entryPath)
+        mtime = stats.mtime
+        ctime = stats.birthtime
+        if (entry.isDirectory()) {
+          size = await getDirectorySize(entryPath)
+        } else {
+          size = stats.size
+        }
+      } catch (statError) {
+        debug(`Error getting stats for ${entryPath}:`, statError)
+        continue
+      }
+      const apiPrefix = `${BASE_PATH}/api/files`
+      const encodedPath = entryRelativePath
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')
+      const remotePath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+      if (entry.isDirectory()) {
+        await upsertDirectoryEntry({
+          name: entry.name,
+          paths: {
+            local: entryPath.replace(/\\/g, '/'),
+            relative: entryRelativePath,
+            remote: remotePath,
+          },
+          size: size,
+          created: ctime,
+          modified: mtime,
+        })
+        await scanAndSyncDirectory(entryPath, entryRelativePath)
+      } else if (entry.isFile()) {
+        if (!hasAllowedExtension(entryPath)) {
+          debug(`Skipping file with disallowed extension: ${entryRelativePath}`)
+          continue
+        }
+        let metadata = {}
+        if (isImageFile(entryPath)) {
+          try {
+            metadata = await getImageMeta(entryPath)
+          } catch (metaError) {
+            debug(`Error getting image metadata for ${entryPath}:`, metaError)
+          }
+        }
+        const pathParts = entryRelativePath.split('/')
+        const collection = pathParts.length > 1 ? pathParts[0] : null
+        const author = pathParts.length > 2 ? pathParts[1] : null
+        await upsertFileEntry({
+          name: entry.name,
+          paths: {
+            local: entryPath.replace(/\\/g, '/'),
+            relative: entryRelativePath,
+            remote: remotePath,
+          },
+          collection: collection,
+          author: author,
+          size: size,
+          type: 'file',
+          created: ctime,
+          modified: mtime,
+          meta: metadata,
+        })
+      }
+    }
+  } catch (error) {
+    debug(`Error scanning directory ${dirPath}:`, error)
+    throw error
+  }
+}
+async function initializeDatabaseSync() {
+  try {
+    debug('Initializing database sync...')
+    await syncAllFilesToDatabase()
+  } catch (error) {
+    debug('Failed to initialize database sync:', error)
+  }
+}
+initializeDatabaseSync()
 async function createDbEntriesForContents(items, parentPath = '') {
   try {
     for (const item of items) {
@@ -112,40 +266,18 @@ async function createDbEntriesForContents(items, parentPath = '') {
     debug('Error creating DB entries for contents:', error)
   }
 }
-async function getDirectorySize(dirPath) {
-  let total = 0
-  try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true })
-    for (const entry of entries) {
-      const entryPath = path.join(dirPath, entry.name)
-      if (entry.isDirectory()) {
-        total += await getDirectorySize(entryPath)
-      } else if (entry.isFile()) {
-        try {
-          const stats = await fs.stat(entryPath)
-          total += stats.size
-        } catch (error) {
-          debug('Error getting file stats:', error)
-        }
-      }
-    }
-  } catch (error) {
-    debug('Error reading directory:', dirPath, error)
-    return 0
-  }
-  return total
-}
 /**
  * @swagger
  * /api/files/:
  *   get:
  *     summary: Get all files
  */
-router.get(['', '/'], requireRole('admin'), async (req, res) => {
+router.get(['', '/'], requireRole('user'), async (req, res) => {
   if (!req.user) {
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
+    debug('User not authenticated')
+    return res.status(403).json({
+      message: 'Forbidden',
+      status: 403,
     })
   }
   try {
@@ -241,23 +373,6 @@ router.get(['', '/'], requireRole('admin'), async (req, res) => {
     })
   }
 })
-/**
- * @swagger
- * /api/files/{collection}:
- *   get:
- *     summary: Get files in a collection
- *     parameters:
- *       - in: path
- *         name: collection
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: A list of files in the collection
- *       404:
- *         description: Collection not found
- */
 router.get(
   [
     '/:collection/',
@@ -265,16 +380,8 @@ router.get(
     '/:collection/:author/',
     '/:collection/:author/*',
   ],
-  requireRole('user'),
   async (req, res) => {
-    if (!req.user) {
-      debug('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
-    }
-    const collection = req.params.collection
+    const collection = req.params.collection || ''
     const author = req.params.author || ''
     const additionalPath = req.params[0] || ''
     const normalizedDir = path.normalize(BASE_DIR)
@@ -384,13 +491,17 @@ router.get(
             .join('/')
           const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
           const url = req.protocol + '://' + req.hostname + fullPath
+          const mime = isDir ? 'n/a' : getFileMime(entry.name)
           return {
             name: entry.name,
             type: isDir ? 'directory' : 'file',
-            size: size,
+            size,
             modified: mtime,
             created: ctime,
             path: fullPath,
+            collection,
+            author,
+            mime,
             url,
           }
         })
@@ -449,24 +560,29 @@ router.get(
           })
         }
       }
-      res.download(realPath, (error) => {
-        if (error) {
-          if (
-            error.code === 'ECONNABORTED' ||
-            error.message === 'Request aborted'
-          ) {
-            debug('Request aborted by the client:', error)
-            return
+      if (isVideoFile(realPath)) {
+        res.set('Content-Type', getFileMime(realPath))
+        res.sendFile(realPath)
+      } else {
+        res.download(realPath, (error) => {
+          if (error) {
+            if (
+              error.code === 'ECONNABORTED' ||
+              error.message === 'Request aborted'
+            ) {
+              debug('Request aborted by the client:')
+              return
+            }
+            debug('Error in file download:', error)
+            if (!res.headersSent) {
+              res.status(500).json({
+                message: 'Internal Server Error',
+                status: 500,
+              })
+            }
           }
-          debug('Error in file download:', error)
-          if (!res.headersSent) {
-            res.status(500).json({
-              message: 'Internal Server Error',
-              status: 500,
-            })
-          }
-        }
-      })
+        })
+      }
     }
   }
 )

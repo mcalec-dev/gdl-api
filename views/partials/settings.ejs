@@ -1,17 +1,17 @@
-<div id="settings" class="fixed p-0 m-0 z-50">
-  <div class="fixed bottom-0 left-0 p-0 m-3 z-50 backdrop-blur-md shadow-lg rounded-xl border border-white/20">
-    <button id="settings-button" class="items-center justify-center p-4 text-2xl text-white">
-      ⓘ
-    </button>
-  </div>
-  <div id="settings-container" class="hidden p-12 items-center justify-center w-auto h-auto max-w-[95vw] max-h-[95vh] backdrop-blur-md shadow-lg rounded-xl border border-white/20 z-75">
-    <h2 id="subtitle" class="text-2xl font-light text-center text-white mb-6 sm:mb-8 capitalize">
-      Settings
-    </h2>
-    <div id="bg-color_container" class="flex flex-column gap-2 mb-4">
-      <span class="text-white">Background Color:</span>
-      <select id="bg_color"></select>
-    </div>
+<div id="settings" class="fixed z-50 m-0 p-0">
+  <div class="fixed bottom-0 left-0 z-50 m-3 rounded-xl border border-white/20 p-0 shadow-lg backdrop-blur-md">
+    <button id="settings-button" class="items-center justify-center p-4 text-2xl text-white">ⓘ</button>
   </div>
 </div>
-<script type="module" src="/js/min/settings.min.js" fetchPriority="high"></script>
+<div id="settings-container" class="bg-black-05 fixed z-50 hidden h-auto w-auto items-center justify-center rounded-xl border border-white/20 p-12 shadow-lg backdrop-blur-md sm:w-full md:max-w-fit">
+  <h2 id="subtitle" class="mb-6 text-center text-2xl font-light capitalize text-white sm:mb-8">Settings</h2>
+  <div id="bg-color_container" class="flex-column mb-4 flex gap-2">
+    <span class="text-white">Background Color:</span>
+    <select id="bg_color" class="bg-black-05 rounded-md border border-white/20 p-2"></select>
+  </div>
+  <div id="button-transitions_container" class="flex-column mb-4 flex gap-2">
+    <span class="text-white">Button Transitions:</span>
+    <input type="radio" id="transitions-button" name="button_transitions" value="true" checked />
+  </div>
+</div>
+<script defer type="module" src="/js/min/settings.min.js" fetchpriority="high"></script>

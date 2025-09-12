@@ -8,7 +8,6 @@ const debug = require('debug')('gdl-api:minify')
 const publicDir = path.join(__dirname, 'public')
 const minifyJS = async (filePath) => {
   try {
-    debug(chalk.blue('Minifying JS:', filePath))
     const code = await fs.readFile(filePath, 'utf8')
     const minified = await minify(code)
     const jsDir = path.join(publicDir, 'js')
@@ -26,7 +25,6 @@ const minifyJS = async (filePath) => {
 }
 const minifyCSS = async (filePath) => {
   try {
-    debug(chalk.blue('Minifying CSS:', filePath))
     const code = await fs.readFile(filePath, 'utf8')
     const minified = new CleanCSS().minify(code)
     const cssDir = path.join(publicDir, 'css')
@@ -66,5 +64,4 @@ async function processFiles() {
     debug(chalk.redBright('Error in file processing:', error))
   }
 }
-processFiles()
-module.exports = processFiles
+module.exports = { processFiles }

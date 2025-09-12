@@ -1,6 +1,5 @@
-const express = require('express')
+const router = require('express').Router()
 const path = require('path')
-const router = express.Router()
 const { walkAndSearchFiles } = require('../../utils/searchUtils')
 const { BASE_DIR, BASE_PATH } = require('../../config')
 const debug = require('debug')('gdl-api:api:search')

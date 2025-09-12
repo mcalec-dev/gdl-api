@@ -1,3 +1,5 @@
+'use strict'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('urlInput')
   const downloadButton = document.getElementById('downloadButton')
@@ -26,9 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.style.display = 'none'
       }, 1200)
     } catch (error) {
-      statusMessage.textContent = 'Failed to start download.'
+      utils.handleError(error)
+      statusMessage.textContent = error.message
       statusMessage.style.display = 'block'
-      console.error('Download error:', error)
     }
   }
   downloadButton.addEventListener('click', () => {
@@ -47,6 +49,7 @@ async function initDownload(url) {
     a.click()
     document.body.removeChild(a)
   } catch (error) {
+    utils.handleError(error)
     console.error('Error initializing download:', error)
   }
 }
