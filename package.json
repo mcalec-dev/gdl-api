@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Gallery-DL API",
   "author": "McAlec",
   "keywords": [
@@ -34,6 +34,7 @@
     "ejs": "^3.1.10",
     "eslint-plugin-jsonc": "^2.20.1",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
     "figlet": "^1.8.2",
     "mime-types": "^3.0.1",

@@ -1,6 +1,6 @@
 # gdl-api
 
-an api thing i made for gallery-dl downloads. (it's poorly made)  
+an express api thing i made mainly for gallery-dl downloads.  
 
 Swagger documentation accessible at `/docs/`
 
@@ -27,8 +27,8 @@ HOST=
 ALT_HOST=
 
 # the base path that comes after the host
-# default is /
-BASE_PATH=/
+# leave blank if you want the default
+BASE_PATH=
 
 # the path where your files are
 BASE_DIR=
@@ -43,11 +43,27 @@ DISALLOWED_FILES=[]
 DISALLOWED_EXTENSIONS=[]
 
 # the url to your mongodb instance
-# example: mongodb://127.0.0.1:27017/{your_db_name}
+# e.g mongodb://127.0.0.1:27017/{your_db_name}
 MONGODB_URL=
 
 # session secret for express-session
+# change this to something else in production
 SESSION_SECRET=
+
+# the max depth for recursive scanning
+MAX_DEPTH=
+
+# session cookie max age
+# in days, hours, minutes, etc
+# ex. 30d, 30m, 12h, 1h
+SESSION_COOKIE_MAX_AGE=
+
+# the rate limit time window in minutes
+# e.g 1m, 10m, 30m, etc
+RATE_LIMIT_WINDOW=
+
+# max amount of requests per window
+RATE_LIMIT_MAX=
 
 # github application credentials
 # create an application at https://github.com/settings/developers
@@ -59,13 +75,10 @@ GITHUB_CLIENT_SECRET=
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 
-# the max depth for recursive scanning
-MAX_DEPTH=100
-
 # keep it on if you like big debugs
 DEBUG=gdl-api:*
 ```
 
-**actual documentation coming soon (maybe)**  
+**actual documentation coming soon**  
 
 McAlec Development © 2025

@@ -13,6 +13,7 @@ const chalk = require('chalk')
 const swaggerUi = require('swagger-ui-express')
 const passport = require('./utils/passport')
 const User = require('./models/User')
+const RateLimit = require('express-rate-limit')
 const morganBody = require('morgan-body')
 const fs = require('fs').promises
 const mongoose = require('mongoose')
@@ -26,6 +27,8 @@ const {
   SESSION_SECRET,
   MONGODB_URL,
   SESSION_COOKIE_MAX_AGE,
+  RATE_LIMIT_WINDOW,
+  RATE_LIMIT_MAX,
 } = require('./config')
 // init swagger docs
 async function initSwagger() {
@@ -241,6 +244,13 @@ async function renderApp() {
 async function initApp() {
   // use cors headers
   app.use(cors())
+  // rate limiting
+  app.use(
+    RateLimit({
+      windowMs: RATE_LIMIT_WINDOW,
+      max: RATE_LIMIT_MAX,
+    })
+  )
   // logging
   morganBody(app, {
     noColors: false,
