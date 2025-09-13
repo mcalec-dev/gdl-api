@@ -4,6 +4,7 @@ const swaggerJsdoc = require('swagger-jsdoc')
 const session = require('express-session')
 const cors = require('cors')
 const { processFiles } = require('./minify')
+const lusca = require('lusca')
 const sessionStore = require('./utils/sessionStore')
 const app = express()
 const server = require('http').createServer(app)
@@ -226,19 +227,6 @@ async function renderApp() {
       res.status(500).send('Error rendering page!')
     }
   })
-  app.get(`${BASE_PATH}/test/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      res.render('test', {
-        title: 'Test',
-        currentPage: 'test',
-        ...vars,
-      })
-    } catch (error) {
-      debug('Error rendering test page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
 }
 // init the express app
 async function initApp() {
@@ -264,7 +252,8 @@ async function initApp() {
     theme: 'dimmed',
     immediateReqLog: true,
   })
-  app.set('trust proxy', true)
+  // dont trust proxies
+  app.set('trust proxy', false)
   // express sessions
   app.use(
     session({
@@ -279,6 +268,16 @@ async function initApp() {
         path: '/',
         httpOnly: true,
       },
+    })
+  )
+  // use crsf
+  app.use(
+    lusca({
+      csrf: true,
+      xframe: 'SAMEORIGIN',
+      xssProtection: true,
+      nosniff: true,
+      referrerPolicy: 'same-origin',
     })
   )
   // init passport

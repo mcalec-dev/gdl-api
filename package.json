@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "description": "Gallery-DL API",
   "author": "McAlec",
   "keywords": [
@@ -37,6 +37,7 @@
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
     "figlet": "^1.8.2",
+    "lusca": "^1.7.0",
     "mime-types": "^3.0.1",
     "mongoose": "^8.16.4",
     "morgan-body": "^2.6.9",
