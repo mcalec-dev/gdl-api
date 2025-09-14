@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
       : ''
     const password = document.getElementById('password').value
     const confirm = document.getElementById('confirm').value
+    const CSRF = await utils.getCSRF()
     if (!username || !password || !confirm) {
       showError('All required fields must be filled')
       return
@@ -23,14 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoading(true)
     hideError()
     try {
-      const payload = { username, password }
-      if (email) payload.email = email
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': CSRF,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+        }),
       }).catch((error) => {
         utils.handleError(error)
         showError(error)
@@ -61,10 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadingDiv.hidden = show ? true : false
     }
   }
-  document.getElementById('confirm').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      handleRegister(e)
-    }
+  registerForm.addEventListener('submit', async (e) => {
+    await handleRegister(e)
   })
-  registerForm.addEventListener('submit', handleRegister)
 })

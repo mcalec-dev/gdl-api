@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch(`/api/user/dashboard`, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
-        content.innerHTML = `<div class="text-center text-red-400">You are not logged in.</div>`
         return
       }
       const data = await res.json()
@@ -129,9 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch((error) => {
       utils.handleError(error)
-      console.error('Failed to load dashboard:', error)
       errorDiv.style.display = 'block'
-      errorDiv.textContent = 'Failed to load dashboard.'
+      errorDiv.textContent = error
     })
   loadingDiv.style.display = 'none'
 })

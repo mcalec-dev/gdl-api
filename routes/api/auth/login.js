@@ -41,9 +41,9 @@ router.post(['/', ''], async (req, res) => {
   }
   let user
   if (email) {
-    user = await User.findOne({ email })
+    user = await User.findOne({ email: { $eq: email } })
   } else {
-    user = await User.findOne({ username })
+    user = await User.findOne({ username: { $eq: username } })
   }
   if (!user) {
     debug('User not found:', username, email)

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault()
     const username = document.getElementById('username').value
     const password = document.getElementById('password').value
+    const CSRF = await utils.getCSRF()
     if (!username || !password) {
       showError('Username and password are required')
       return
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': CSRF,
         },
         body: JSON.stringify({
           username,
@@ -54,10 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadingDiv.hidden = show ? true : false
     }
   }
-  document.getElementById('password').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      handleLogin(e)
-    }
+  loginForm.addEventListener('submit', async (e) => {
+    await handleLogin(e)
   })
-  loginForm.addEventListener('submit', handleLogin)
 })

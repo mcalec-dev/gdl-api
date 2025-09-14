@@ -127,7 +127,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       })
     }
     const updatedAnnouncement = await Announcement.findOneAndUpdate(
-      { uuid: req.params.uuid },
+      { uuid: { $eq: req.params.uuid } },
       {
         title,
         message,

@@ -14,7 +14,12 @@ const {
   BASE_PATH,
 } = require('../../config')
 const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
-const pathUtils = require('../../utils/pathUtils')
+const {
+  safePath,
+  validateRequestParams,
+  safeApiPath,
+  isSubPath,
+} = require('../../utils/pathUtils')
 const { resizeImage, getImageMeta } = require('../../utils/imageUtils')
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
@@ -281,15 +286,18 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
     })
   }
   try {
-    const stats = await fs.stat(BASE_DIR)
+    const normalizedDir = path.resolve(BASE_DIR)
+    const stats = await fs.stat(normalizedDir)
     if (!stats.isDirectory()) {
-      debug(BASE_DIR, 'is not a directory')
+      debug(normalizedDir, 'is not a directory')
+      return res.status(500).json({
+        message: 'Internal Server Error',
+        status: 500,
+      })
     }
     let entries = []
     try {
-      entries = await fs.readdir(BASE_DIR, {
-        withFileTypes: true,
-      })
+      entries = await fs.readdir(normalizedDir, { withFileTypes: true })
       debug(`Found ${entries.length} entries in root directory`)
     } catch (error) {
       debug('Failed to read root directory:', error)
@@ -310,7 +318,11 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
           debug(`Excluded entry: ${entry.name}`)
           return null
         }
-        const entryPath = path.join(BASE_DIR, entry.name)
+        const entryPath = safePath(normalizedDir, entry.name)
+        if (!entryPath || !isSubPath(entryPath, normalizedDir)) {
+          debug(`Skipping unsafe entry: ${entry.name}`)
+          return null
+        }
         let size = 0
         let mtime = new Date()
         let ctime = new Date()
@@ -327,14 +339,9 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
           return null
         }
         const relativePath = path
-          .relative(BASE_DIR, entryPath)
+          .relative(normalizedDir, entryPath)
           .replace(/\\/g, '/')
-        const apiPrefix = `${BASE_PATH}/api/files`
-        const encodedPath = relativePath
-          .split('/')
-          .map(encodeURIComponent)
-          .join('/')
-        const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+        const fullPath = safeApiPath(`${BASE_PATH}/api/files`, relativePath)
         const url = req.protocol + '://' + req.hostname + fullPath
         return {
           name: entry.name,
@@ -348,19 +355,14 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
       })
     )
     const filteredResults = results.filter(Boolean)
-    //const directories = filteredResults.filter((entry) => entry.type === 'directory')
     const files = filteredResults.filter((entry) => entry.type === 'file')
     if (req.user) {
-      res.json({
-        contents: filteredResults,
-      })
+      res.json({ contents: filteredResults })
       if (filteredResults.length) {
         await createDbEntriesForContents(filteredResults, '')
       }
     } else {
-      res.json({
-        contents: files,
-      })
+      res.json({ contents: files })
       if (files.length) {
         await createDbEntriesForContents(files, '')
       }
@@ -381,26 +383,30 @@ router.get(
     '/:collection/:author/*',
   ],
   async (req, res) => {
-    const collection = req.params.collection || ''
-    const author = req.params.author || ''
-    const additionalPath = req.params[0] || ''
-    const normalizedDir = path.normalize(BASE_DIR)
-    let realPath
-    if (path.isAbsolute(collection)) {
-      realPath = path.join(collection, author, additionalPath)
-      if (!realPath.startsWith(normalizedDir)) {
-        debug('Access attempt outside of BASE_DIR:', realPath)
-        return res.status(403).json({
-          message: 'Forbidden',
-          status: 403,
-        })
-      }
-    } else {
-      realPath = path.join(normalizedDir, collection, author, additionalPath)
+    const validatedParams = validateRequestParams(req.params)
+    if (!validatedParams.isValid) {
+      debug('Invalid path parameters provided:', req.params)
+      return res.status(400).json({
+        message: 'Invalid path parameters',
+        status: 400,
+      })
     }
-    realPath = realPath.replace(/\/$/, '').replace(/\\/g, '/')
-    if (!pathUtils.isSubPath(realPath, normalizedDir)) {
-      debug(`Directory traversal attempt: ${realPath}`)
+    const { collection, author, additionalPath } = validatedParams
+    const normalizedDir = path.resolve(BASE_DIR)
+    const pathComponents = [collection, author, additionalPath].filter(Boolean)
+    const realPath = safePath(normalizedDir, ...pathComponents)
+    if (!realPath) {
+      debug(
+        'Path construction resulted in unsafe path for components:',
+        pathComponents
+      )
+      return res.status(403).json({
+        message: 'Forbidden',
+        status: 403,
+      })
+    }
+    if (!isSubPath(realPath, normalizedDir)) {
+      debug(`Path safety check failed: ${realPath} not within ${normalizedDir}`)
       return res.status(403).json({
         message: 'Forbidden',
         status: 403,
@@ -435,9 +441,7 @@ router.get(
       }
       let entries = []
       try {
-        entries = await fs.readdir(realPath, {
-          withFileTypes: true,
-        })
+        entries = await fs.readdir(realPath, { withFileTypes: true })
         debug(`Found ${entries.length} entries in directory`)
       } catch (error) {
         debug('Failed to read directory:', error)
@@ -448,12 +452,14 @@ router.get(
       }
       const formattedContents = await Promise.all(
         entries.map(async (entry) => {
-          const entryRelativePath = path.join(
-            collection,
-            author,
-            additionalPath,
-            entry.name
-          )
+          const entryPath = safePath(realPath, entry.name)
+          if (!entryPath || !isSubPath(entryPath, normalizedDir)) {
+            debug(`Skipping unsafe entry path: ${entry.name}`)
+            return null
+          }
+          const entryRelativePath = path
+            .relative(normalizedDir, entryPath)
+            .replace(/\\/g, '/')
           if (
             (await isExcluded(entryRelativePath)) ||
             DISALLOWED_DIRS.includes(entry.name) ||
@@ -464,10 +470,6 @@ router.get(
             debug(`Excluded entry: ${entryRelativePath}`)
             return null
           }
-          const entryPath = path.join(realPath, entry.name)
-          const relativePath = path
-            .relative(normalizedDir, entryPath)
-            .replace(/\\/g, '/')
           const isDir = entry.isDirectory()
           let size = 0
           let mtime = new Date()
@@ -484,12 +486,10 @@ router.get(
           } catch {
             return null
           }
-          const apiPrefix = `${BASE_PATH}/api/files`
-          const encodedPath = relativePath
-            .split('/')
-            .map(encodeURIComponent)
-            .join('/')
-          const fullPath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+          const fullPath = safeApiPath(
+            `${BASE_PATH}/api/files`,
+            entryRelativePath
+          )
           const url = req.protocol + '://' + req.hostname + fullPath
           const mime = isDir ? 'n/a' : getFileMime(entry.name)
           return {
@@ -506,14 +506,10 @@ router.get(
           }
         })
       )
-      res.json({
-        contents: formattedContents.filter(Boolean),
-      })
-      if (formattedContents && formattedContents.length) {
-        await createDbEntriesForContents(
-          formattedContents.filter(Boolean),
-          relativePath
-        )
+      const validContents = formattedContents.filter(Boolean)
+      res.json({ contents: validContents })
+      if (validContents.length) {
+        await createDbEntriesForContents(validContents, relativePath)
       }
     } else {
       if (

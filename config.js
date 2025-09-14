@@ -67,10 +67,12 @@ const MONGODB_URL = process.env.MONGODB_URL
 debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
+const CSRF_SECRET = process.env.CSRF_SECRET
+debug('CSRF secret token:', CSRF_SECRET)
+const COOKIE_MAX_AGE = ms(process.env.COOKIE_MAX_AGE)
+debug('Max cookie age (ms):', COOKIE_MAX_AGE)
 const MAX_DEPTH = process.env.MAX_DEPTH
 debug('Max depth:', MAX_DEPTH)
-const SESSION_COOKIE_MAX_AGE = ms(process.env.SESSION_COOKIE_MAX_AGE)
-debug('Session cookie max age (ms):', SESSION_COOKIE_MAX_AGE)
 const RATE_LIMIT_WINDOW = ms(process.env.RATE_LIMIT_WINDOW)
 debug('Rate limit window (ms):', RATE_LIMIT_WINDOW)
 const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX
@@ -87,8 +89,9 @@ module.exports = {
   DISALLOWED_EXTENSIONS,
   MONGODB_URL,
   SESSION_SECRET,
+  CSRF_SECRET,
+  COOKIE_MAX_AGE,
   MAX_DEPTH,
-  SESSION_COOKIE_MAX_AGE,
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
   debug,

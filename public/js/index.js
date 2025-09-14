@@ -46,8 +46,8 @@ export async function getName() {
   return name
 }
 export async function getIcons() {
-  const response = await fetch('/icons.json')
-  const data = await response.json()
+  const res = await fetch('/icons.json')
+  const data = await res.json()
   return data
 }
 export async function parseEmojis(text) {
@@ -59,4 +59,9 @@ export async function parseEmojis(text) {
 export function handleError(error) {
   console.error(error)
   window.alert(`${error.message || error}`)
+}
+export async function getCSRF() {
+  const res = await fetch('/api/auth/csrf')
+  const data = await res.json()
+  return data.csrf
 }

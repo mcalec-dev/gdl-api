@@ -182,8 +182,7 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       'grid',
       'lg:grid-cols-4',
       'md:grid-cols-3',
-      'sm:grid-cols-1',
-      'place-items-stretch',
+      'items-center',
       'gap-4'
     )
     renderDirectory(currentDirectoryData.contents, path)

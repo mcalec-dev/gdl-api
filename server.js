@@ -26,8 +26,9 @@ const {
   BASE_PATH,
   BASE_DIR,
   SESSION_SECRET,
+  CSRF_SECRET,
   MONGODB_URL,
-  SESSION_COOKIE_MAX_AGE,
+  COOKIE_MAX_AGE,
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
 } = require('./config')
@@ -253,18 +254,18 @@ async function initApp() {
     immediateReqLog: true,
   })
   // dont trust proxies
-  app.set('trust proxy', false)
+  app.set('trust proxy', true)
   // express sessions
   app.use(
     session({
       secret: SESSION_SECRET,
-      resave: false,
-      saveUninitialized: false,
+      resave: true,
+      saveUninitialized: true,
       rolling: true,
       store: sessionStore(),
       cookie: {
         secure: NODE_ENV === 'production',
-        maxAge: SESSION_COOKIE_MAX_AGE,
+        maxAge: COOKIE_MAX_AGE,
         path: '/',
         httpOnly: true,
       },
@@ -275,6 +276,12 @@ async function initApp() {
     lusca({
       csrf: true,
       xframe: 'SAMEORIGIN',
+      p3p: CSRF_SECRET,
+      hsts: {
+        maxAge: COOKIE_MAX_AGE,
+        includeSubDomains: true,
+        preload: true,
+      },
       xssProtection: true,
       nosniff: true,
       referrerPolicy: 'same-origin',

@@ -10,8 +10,6 @@ module.exports = {
         "node_modules",
         "client",
         "bot",
-        "views",
-        ".env",
       ],
       env: {
         NODE_ENV: "development",
