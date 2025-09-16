@@ -68,16 +68,20 @@ document.addEventListener('DOMContentLoaded', () => {
         error.textContent = error.message
       })
   }
-  announcementForm.addEventListener('submit', (e) => {
+  announcementForm.addEventListener('submit', async (e) => {
     e.preventDefault()
     const title = document.getElementById('announcement-title-input').value
     const message = document.getElementById('announcement-message-input').value
+    const CSRF = await utils.getCSRF()
     const severity = document.getElementById(
       'announcement-severity-input'
     ).value
     fetch('/api/admin/announcements', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': CSRF,
+      },
       body: JSON.stringify({ title, message, severity }),
     })
       .then((res) => res.json())
