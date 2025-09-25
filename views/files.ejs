@@ -1,70 +1,24 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="title" content="<%= title %>" />
-    <meta name="description" content="<%= description %>" />
-    <meta name="author" content="<%= author %>" />
-    <meta name="keywords" content="<%= keywords %>" />
-    <meta name="theme-color" content="#000000" data-react-helmet="true" />
-    <meta property="og:title" content="<%= title %>" />
-    <meta property="og:description" content="<%= description %>" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="<%= url %>" />
-    <meta property="og:image" content="/svg/nodejs.svg" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <title><%= title %></title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser"></script>
-    <style>
-      html,
-      body {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-    </style>
-    <link rel="stylesheet" href="/css/min/files.min.css" />
-    <title>File Browser</title>
-  </head>
+  <%- include('partials/head') %>
   <body class="relative flex min-h-screen items-center justify-center bg-black">
-    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
-    <div id="popup-viewer" class="popup-viewer">
-      <div id="popup-buttons" class="absolute right-0 top-0 mr-4 mt-4 flex flex-row-reverse gap-3">
-        <button id="close-popup" class="z-50 flex cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent p-2 font-bold text-white backdrop-blur-md">
-          <span>×</span>
-        </button>
-        <button id="open-new-tab" class="z-50 flex cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent p-2 font-bold text-white backdrop-blur-md">
-          <span>↗</span>
-        </button>
-        <button id="download-file" class="z-50 flex cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent p-2 font-bold text-white backdrop-blur-md">
-          <span>↧</span>
-        </button>
-      </div>
-      <button id="prev-image" class="nav-button prev-button">
-        <span>‹</span>
-      </button>
-      <button id="next-image" class="nav-button next-button">
-        <span>›</span>
-      </button>
-      <div class="popup-container">
-        <img id="popup-image" class="popup-image" src="" alt="" draggable="false" />
-        <video id="popup-video" class="popup-video" src="" alt="" draggable="false" controls autoplay></video>
-      </div>
-      <div class="image-info">
-        <div id="image-title" class="image-title"></div>
-        <div id="image-counter" class="image-counter"></div>
-      </div>
-    </div>
+    <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
+    <%- include('partials/viewer') %>
     <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:w-full sm:p-8 md:w-full md:p-8 lg:max-w-[65%]">
-      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
+      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
+        <%= currentPage %>
+      </h1>
       <div id="file-browser" class="file-browser w-full">
         <div id="sort-toolbar" class="invisible mb-4 flex flex-wrap gap-3 rounded-xl border border-white/10 p-3"></div>
-        <div id="fileList" class="file-list">
-          <div class="loading">Loading...</div>
+        <div id="file-list">
+          <div class="loading fixed align-middle left-1/2 top-1/2 min-w-[180px] max-w-[320px] py-4 px-6 bg-[#232323] text-white border border-gray-700 text-center z-40 cursor-not-allowed">
+            Loading...
+          </div>
         </div>
       </div>
     </div>
-    <script type="module" src="/js/min/files.min.js" fetchpriority="high"></script>
+    <script type="module" src="/js/min/files.min.js"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

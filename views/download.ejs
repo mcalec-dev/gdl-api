@@ -2,11 +2,16 @@
 <html lang="en">
   <%- include('partials/head') %>
   <body class="relative flex min-h-screen items-center justify-center bg-black">
-    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
     <div id="container" class="z-10 mx-2 mb-[6vh] mt-[12vh] rounded-xl border border-white/20 p-8 shadow-lg backdrop-blur-md sm:w-full md:w-auto md:max-w-[65%]">
-      <h1 id="title" class="mb-8 text-center text-3xl font-light capitalize text-white"><%= currentPage %></h1>
+      <h1 id="title" class="mb-8 text-center text-3xl font-light capitalize text-white">
+        <%= currentPage %>
+      </h1>
       <div id="client-download">
-        <h2 class="mb-2 text-xl font-semibold text-white">Download Client Installers</h2>
+        <h2 class="mb-2 text-xl font-semibold text-white">
+          Download Client Installers
+        </h2>
         <div class="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
           <button id="windows-exe-download" class="flex items-center justify-center gap-2 rounded bg-[#00A4EF] px-4 py-3 font-semibold text-white">
             <img src="/svg/windows.svg" alt="Windows EXE installer Download" class="h-5 w-5 invert" />
@@ -23,7 +28,9 @@
           </button>
           -->
         </div>
-        <h2 class="mb-2 mt-2 text-xl font-semibold text-white">Download Client Archives</h2>
+        <h2 class="mb-2 mt-2 text-xl font-semibold text-white">
+          Download Client Archives
+        </h2>
         <div class="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
           <button id="windows-7z-download" class="flex items-center justify-center gap-2 rounded bg-[#00A4EF] px-4 py-3 font-semibold text-white">
             <img src="/svg/windows.svg" alt="Windows 7-Zip Download" class="h-5 w-5 invert" />
@@ -42,18 +49,24 @@
         </div>
       </div>
       <div class="my-6 flex items-center justify-center">
-        <span class="text-sm text-gray-400">or</span>
+        <span class="text-sm text-gray-400">
+          or
+        </span>
       </div>
       <div id="download-file">
-        <h2 class="mb-2 text-xl font-semibold text-white">Download File</h2>
+        <h2 class="mb-2 text-xl font-semibold text-white">
+          Download File
+        </h2>
         <div class="flex items-center gap-3">
           <input type="text" id="urlInput" placeholder="Paste file URL here" aria-label="Download URL" class="flex-1 rounded border border-white/20 bg-[#1f1f1f] px-3 py-2 text-base text-white backdrop-blur-lg" />
-          <button id="downloadButton" class="w-full select-none rounded bg-blue-600 px-5 py-2 text-center text-white sm:w-auto">Download</button>
+          <button id="downloadButton" class="w-full select-none rounded bg-blue-600 px-5 py-2 text-center text-white sm:w-auto">
+            Download
+          </button>
         </div>
       </div>
       <div id="statusMessage" class="error-message mb-4 text-center text-red-500" style="display: none"></div>
     </div>
-    <script type="module" src="/js/min/download.min.js" fetchpriority="high"></script>
+    <script type="module" src="/js/min/download.min.js"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

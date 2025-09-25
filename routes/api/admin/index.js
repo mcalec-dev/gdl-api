@@ -3,7 +3,7 @@ const debug = require('debug')('gdl-api:api:admin')
 const { requireRole } = require('../../../utils/authUtils')
 const { BASE_PATH } = require('../../../config')
 router.use((req, res, next) => {
-  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.set('Cache-Control', 'no-cache')
   req.utils = {
     ...req.utils,
   }

@@ -4,9 +4,9 @@ let API_URL = ''
 const loadImageBtn = document.getElementById('loadImageBtn')
 const backImageBtn = document.getElementById('backImageBtn')
 const forwardImageBtn = document.getElementById('forwardImageBtn')
-const imageContainer = document.getElementById('imageContainer')
+const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
-const imageInfo = document.getElementById('imageInfo')
+const imageInfo = document.getElementById('item-info')
 const HISTORY_KEY = 'randomMediaHistory'
 const HISTORY_LIMIT = 10
 let history = []
@@ -14,31 +14,31 @@ let historyIndex = 0
 function showMedia(data) {
   if (!data || !data.url) {
     console.error('Invalid media data:', data)
-    imageContainer.classList.remove('has-image')
+    mediaContainer.classList.remove('has-image')
     loading.textContent = ''
-    loading.style.display = 'block'
-    imageInfo.style.display = 'none'
+    loading.hidden = false
+    imageInfo.hidden = true
     return
   }
   if (history.length === 0) {
-    imageContainer.classList.remove('has-image')
+    mediaContainer.classList.remove('has-image')
     loading.textContent = 'Click the button to load media'
-    loading.style.display = 'block'
+    loading.hidden = false
     return
   }
-  imageContainer.classList.remove('has-image')
+  mediaContainer.classList.remove('has-image')
   loading.textContent = 'Loading...'
-  loading.style.display = 'block'
+  loading.hidden = false
   loading.classList.remove('error')
-  imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+  mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
   const mediaUrl = data.url
   const isVideo = data.file.toLowerCase().match(/\.(mp4|webm|mov)$/)
   const mediaElement = isVideo
     ? document.createElement('video')
     : document.createElement('img')
   mediaElement.classList =
-    'object-contain w-auto h-auto max-w-full max-h-[50vh] overflow-hidden border-none rounded transition-transform duration-500'
-  mediaElement.style.display = 'none'
+    'object-contain w-auto h-auto max-w-full max-h-[50vh] overflow-hidden border-none rounded-lg inline-block cursor-pointer'
+  mediaElement.hidden = false
   if (isVideo) {
     mediaElement.controls = true
     mediaElement.muted = false
@@ -52,24 +52,24 @@ function showMedia(data) {
     <span id="image-size" class="text-gray-400">${utils.formatSize(data.size)}</span>
   `
   const loadHandler = () => {
-    loading.style.display = 'none'
-    mediaElement.style.display = 'block'
-    imageInfo.style.display = 'block'
-    imageContainer.classList.add('has-image')
+    loading.hidden = true
+    mediaElement.hidden = false
+    imageInfo.hidden = false
+    mediaContainer.classList.add('has-image')
   }
   mediaElement.addEventListener(isVideo ? 'loadeddata' : 'load', loadHandler)
   mediaElement.addEventListener('error', handleMediaError)
   mediaElement.src = mediaUrl + ''
   mediaElement.onclick = () => window.open(mediaUrl, '_blank')
-  imageContainer.appendChild(mediaElement)
+  mediaContainer.appendChild(mediaElement)
 }
 async function loadRandomMedia() {
   try {
-    imageContainer.classList.remove('has-image')
+    mediaContainer.classList.remove('has-image')
     loading.textContent = 'Loading...'
-    loading.style.display = 'block'
+    loading.hidden = false
     loading.classList.remove('error')
-    imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+    mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
     const response = await fetch(API_URL).catch((error) => {
       utils.handleError(error)
       handleMediaError(error)
@@ -97,33 +97,52 @@ async function loadRandomMedia() {
 function handleMediaError(error) {
   loading.textContent = error.message
   loading.classList.add('error')
-  imageInfo.style.display = 'none'
-  imageContainer.classList.remove('has-image')
+  imageInfo.hidden = true
+  mediaContainer.classList.remove('has-image')
 }
 function showPreviousMedia() {
   if (history.length === 0 || historyIndex <= 0) {
-    historyIndex = 0
-    imageContainer.classList.remove('has-image')
-    loading.textContent = 'Click the button to load media'
-    loading.style.display = 'block'
-    imageInfo.style.display = 'none'
-    imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+    let lastValidIndex = history.length - 1
+    while (
+      lastValidIndex > 0 &&
+      (!history[lastValidIndex] || !history[lastValidIndex].url)
+    ) {
+      lastValidIndex--
+    }
+    if (lastValidIndex > 0) {
+      historyIndex = lastValidIndex
+      const mediaData = history[historyIndex]
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+      showMedia(mediaData, true)
+    } else {
+      historyIndex = 0
+      mediaContainer.classList.remove('has-image')
+      loading.textContent = 'Click the button to load media'
+      loading.hidden = false
+      imageInfo.hidden = true
+      mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+    }
   } else {
     let previousIndex = historyIndex - 1
     while (
-      previousIndex >= 0 &&
+      previousIndex > 0 &&
       (!history[previousIndex] || !history[previousIndex].url)
     ) {
       console.error('Skipping invalid media data at index:', previousIndex)
       previousIndex--
     }
-    if (previousIndex >= 0) {
+    if (previousIndex > 0) {
       historyIndex = previousIndex
       const mediaData = history[historyIndex]
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
       showMedia(mediaData, true)
     } else {
-      console.error('No valid media data found when navigating back.')
+      historyIndex = 0
+      mediaContainer.classList.remove('has-image')
+      loading.textContent = 'Click the button to load media'
+      loading.hidden = false
+      imageInfo.hidden = true
+      mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
     }
   }
 }
@@ -147,11 +166,20 @@ function showNextMedia() {
     }
   } else {
     historyIndex = Math.max(0, historyIndex)
-    imageContainer.classList.remove('has-image')
+    mediaContainer.classList.remove('has-image')
     loading.textContent = 'Click the button to load media'
-    loading.style.display = 'block'
-    imageInfo.style.display = 'none'
-    imageContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+    loading.hidden = false
+    imageInfo.hidden = true
+    mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
+  }
+}
+let icons
+async function loadIcons() {
+  const icon = await utils.getIcons()
+  icons = {
+    back: icon.arrow.left,
+    shuffle: icon.arrow.shuffle,
+    forward: icon.arrow.right,
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
@@ -159,12 +187,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const h = JSON.parse(localStorage.getItem(HISTORY_KEY))
   if (Array.isArray(h) && h.length > 0) {
     history = h
-    historyIndex = history.length + 1
+    let lastValidIndex = h.length - 1
+    while (
+      lastValidIndex > 0 &&
+      (!h[lastValidIndex] || !h[lastValidIndex].url)
+    ) {
+      lastValidIndex--
+    }
+    historyIndex = lastValidIndex > 0 ? lastValidIndex : 0
   } else {
     history = [{}]
+    historyIndex = 0
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
   }
   loadImageBtn.addEventListener('click', loadRandomMedia)
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
+  await loadIcons()
+  backImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.back}</span>`
+  loadImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.shuffle}</span>`
+  forwardImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.forward}</span>`
 })

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loading = document.getElementById('loading')
   const announcementForm = document.getElementById('announcement-form')
   const announcementList = document.getElementById('announcement-list')
-  function loadAnnouncements() {
+  async function loadAnnouncements() {
     fetch('/api/admin/announcements')
       .then((res) => res.json())
       .then((announcements) => {
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'px-2 py-1 bg-green-600 text-white rounded items-center text-center'
     editBtn.onclick = () => saveAnnouncement(uuid)
   }
-  function saveAnnouncement(uuid) {
+  async function saveAnnouncement(uuid) {
     const announcementDiv = document.getElementById(`announcement-${uuid}`)
     const title = announcementDiv.querySelector(
       `#edit-title-input-${uuid}`
@@ -134,9 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const severity = announcementDiv.querySelector(
       `#edit-severity-input-${uuid}`
     ).value
+    const CSRF = await utils.getCSRF()
     fetch(`/api/admin/announcements/${uuid}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': CSRF,
+      },
       body: JSON.stringify({ title, message, severity }),
     })
       .then((res) => res.json())
@@ -175,9 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
         severity: originalSeverity,
       })
   }
-  function deleteAnnouncement(id) {
+  async function deleteAnnouncement(id) {
+    const CSRF = await utils.getCSRF()
     fetch(`/api/admin/announcements/${id}`, {
       method: 'DELETE',
+      headers: {
+        'X-CSRF-Token': CSRF,
+      },
     })
       .then((res) => res.json())
       .then(async () => {

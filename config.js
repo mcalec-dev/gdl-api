@@ -68,7 +68,7 @@ debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
 const CSRF_SECRET = process.env.CSRF_SECRET
-debug('CSRF secret token:', CSRF_SECRET)
+debug('CSRF secret:', CSRF_SECRET)
 const COOKIE_MAX_AGE = ms(process.env.COOKIE_MAX_AGE)
 debug('Max cookie age (ms):', COOKIE_MAX_AGE)
 const MAX_DEPTH = process.env.MAX_DEPTH
@@ -77,6 +77,12 @@ const RATE_LIMIT_WINDOW = ms(process.env.RATE_LIMIT_WINDOW)
 debug('Rate limit window (ms):', RATE_LIMIT_WINDOW)
 const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX
 debug('Rate limit max:', RATE_LIMIT_MAX)
+const TROLLING_CHANCE = parseFloat(process.env.TROLLING_CHANCE)
+debug('Trolling chance:', TROLLING_CHANCE)
+const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
+debug('Trolling terms:', TROLLING_TERMS)
+const BOT_USER_AGENTS = JSON.parse(process.env.BOT_USER_AGENTS)
+debug('Bot user agents:', BOT_USER_AGENTS)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -94,5 +100,8 @@ module.exports = {
   MAX_DEPTH,
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
+  TROLLING_CHANCE,
+  TROLLING_TERMS,
+  BOT_USER_AGENTS,
   debug,
 }

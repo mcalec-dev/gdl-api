@@ -4,7 +4,7 @@ const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api')
 const pathUtils = require('../../utils/pathUtils')
 router.use((req, res, next) => {
-  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.set('Cache-Control', 'no-cache')
   req.utils = {
     ...req.utils,
     pathUtils,

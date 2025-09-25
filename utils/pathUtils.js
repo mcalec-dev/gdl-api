@@ -33,11 +33,9 @@ const sanitizePathComponent = (userInput) => {
     return null
   }
   const sanitized = userInput
-    .replace(/[/\\]/g, '')
     .replace(/\.\./g, '')
-    .replace(/[<>:"|?*]/g, '')
+    .replace(/[<>"|?*]/g, '')
     .replace(/^\.+/, '')
-    //.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
     .trim()
   if (!sanitized || /^[.\s]*$/.test(sanitized)) {
     debug(
@@ -148,7 +146,8 @@ const safeApiPath = (baseApiPath, relativePath) => {
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
     .join('/')
-  return `${baseApiPath}/${encoded}`.replace(/\/+/g, '/')
+  const path = `${baseApiPath}/${encoded}`.replace(/\/+/g, '/')
+  return path.endsWith('/') ? path : path + '/'
 }
 const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
   if (!filename || typeof filename !== 'string') return false

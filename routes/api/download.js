@@ -2,7 +2,6 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:download')
 const { HOST } = require('../../config')
 const { requireRole } = require('../../utils/authUtils')
-const ms = require('ms')
 const BLOCKED_PATTERNS = [
   /^localhost$/i,
   /^127\./,
@@ -14,12 +13,15 @@ const BLOCKED_PATTERNS = [
   /^fc00:/,
   /^fe80:/,
 ]
-function isHostAllowed(hostname) {
-  if (!HOST.has(hostname.toLowerCase())) {
+async function isHostAllowed(hostname) {
+  const cfgHost = await HOST
+  if (!cfgHost || hostname.toLowerCase() !== cfgHost.toLowerCase()) {
+    debug('Host mismatch:', { hostname, cfgHost })
     return false
   }
   for (const pattern of BLOCKED_PATTERNS) {
     if (pattern.test(hostname)) {
+      debug('Blocked hostname pattern match:', hostname)
       return false
     }
   }
@@ -58,7 +60,7 @@ async function handleDownload(req, res) {
       status: 400,
     })
   }
-  if (!isHostAllowed(parsedUrl.hostname)) {
+  if (!(await isHostAllowed(parsedUrl.hostname))) {
     debug('Host not allowed:', parsedUrl.hostname)
     return res.status(403).json({
       message: 'Forbidden',
@@ -81,7 +83,7 @@ async function handleDownload(req, res) {
   const https = require('https')
   const http = require('http')
   const protocol = parsedUrl.protocol === 'https:' ? https : http
-  const request = protocol.get(cleanUrl, { timeout: ms('60s') }, (fileRes) => {
+  const request = protocol.get(cleanUrl, (fileRes) => {
     if (fileRes.statusCode !== 200) {
       debug('HTTP error:', fileRes.statusCode)
       return res.status(502).json({

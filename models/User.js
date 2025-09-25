@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: { type: String },
   roles: [{ type: String }],
-  uuid: { type: String, default: uuid.v4 },
+  uuid: { type: String, required: true, default: uuid.v4 },
   created: { type: Date, default: Date.now },
   status: {
     type: String,
@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   },
   sessions: [
     {
-      uuid: { type: String, default: uuid.v4 },
+      uuid: { type: String, required: true, default: uuid.v4 },
       created: { type: Date, default: Date.now },
       modified: { type: Date, default: Date.now },
       expires: {

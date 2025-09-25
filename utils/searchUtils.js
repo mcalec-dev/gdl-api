@@ -1,139 +1,108 @@
-const fs = require('fs').promises
-const path = require('path')
-const debug = require('debug')('gdl-api:utils:search')
-const {
-  MAX_DEPTH,
-  BASE_DIR,
-  DISALLOWED_DIRS,
-  DISALLOWED_FILES,
-  DISALLOWED_EXTENSIONS,
-} = require('../config')
-const { isExcluded, hasAllowedExtension } = require('./fileUtils')
-const minimatch = require('minimatch')
-const isDisallowedExtension = (filename) => {
-  const ext = path.extname(filename).toLowerCase()
-  return DISALLOWED_EXTENSIONS.some(
-    (disallowedExt) =>
-      ext === disallowedExt.toLowerCase() ||
-      ext === `.${disallowedExt.toLowerCase()}`
-  )
-}
-function calculateRelevancy(name, relativePath, query, type, filters = {}) {
-  if (filters.type && filters.type !== 'all' && type !== filters.type) {
-    return -1
-  }
-  const includeFiles = filters.files !== false
-  const includeDirectories = filters.directories !== false
-  if (
-    (type === 'file' && !includeFiles) ||
-    (type === 'directory' && !includeDirectories)
-  ) {
-    return -1
-  }
+const File = require('../models/File')
+const Directory = require('../models/Directory')
+const { normalizePath } = require('./pathUtils')
+const MAX_SEARCH_RESULTS = 2000
+function scoreResult(result, queryStr, type) {
   let score = 0
-  if (minimatch(name, query, { nocase: true })) {
-    score +=
-      name.toLowerCase() === query.replace(/\*/g, '').toLowerCase() ? 100 : 60
+  const nameLower = (result.name || '').toLowerCase()
+  const pathLower = (result.paths?.relative || '').toLowerCase()
+  if (nameLower === queryStr) score += 60
+  if (nameLower.startsWith(queryStr)) score += 40
+  if (nameLower.includes(queryStr)) score += 25
+  if (pathLower === queryStr) score += 40
+  if (pathLower.startsWith(queryStr)) score += 20
+  if (pathLower.includes(queryStr)) score += 10
+  if (type === 'file') {
+    if (nameLower.length <= 3) score -= 10
   }
-  if (minimatch(relativePath, query, { nocase: true })) {
-    score +=
-      relativePath.toLowerCase() === query.replace(/\*/g, '').toLowerCase()
-        ? 90
-        : 40
+  if (type === 'directory') {
+    if (nameLower.length <= 3) score -= 5
   }
-  if (score === 0) return -1
+  score = Math.max(0, Math.min(100, score))
   return score
 }
-async function* walkAndSearchFiles(
-  dir,
-  query,
-  filters = {},
-  limit = 2000,
-  depth = 0
-) {
-  if (depth === 0) {
-    debug('Starting dir:', dir)
+async function searchDatabase({
+  q,
+  type,
+  files,
+  directories,
+  basePath,
+  protocol,
+  hostname,
+}) {
+  const queryStr = q.toLowerCase()
+  let dbResults = []
+  const fileQuery =
+    files === 'false'
+      ? null
+      : {
+          $or: [
+            { name: { $regex: q, $options: 'i' } },
+            { 'paths.relative': { $regex: q, $options: 'i' } },
+            { collection: { $regex: q, $options: 'i' } },
+            { author: { $regex: q, $options: 'i' } },
+            { tags: { $regex: q, $options: 'i' } },
+          ],
+        }
+  const dirQuery =
+    directories === 'false'
+      ? null
+      : {
+          $or: [
+            { name: { $regex: q, $options: 'i' } },
+            { 'paths.relative': { $regex: q, $options: 'i' } },
+            { tags: { $regex: q, $options: 'i' } },
+          ],
+        }
+  if (type === 'file') {
+    dbResults = fileQuery
+      ? await File.find(fileQuery).limit(MAX_SEARCH_RESULTS).lean()
+      : []
+  } else if (type === 'directory') {
+    dbResults = dirQuery
+      ? await Directory.find(dirQuery).limit(MAX_SEARCH_RESULTS).lean()
+      : []
+  } else {
+    const filesRes = fileQuery
+      ? await File.find(fileQuery).limit(MAX_SEARCH_RESULTS).lean()
+      : []
+    const dirsRes = dirQuery
+      ? await Directory.find(dirQuery).limit(MAX_SEARCH_RESULTS).lean()
+      : []
+    dbResults = [...filesRes, ...dirsRes]
   }
-  if (depth >= (typeof MAX_DEPTH !== 'undefined' ? MAX_DEPTH : 10)) return
-  let count = 0
-  try {
-    const entries = await fs.readdir(dir, {
-      withFileTypes: true,
-    })
-    for (const entry of entries) {
-      if (count >= limit) return
-      const fullPath = path.join(dir, entry.name)
-      const relativePath = path.relative(BASE_DIR, fullPath)
-      if (await isExcluded(relativePath)) {
-        debug('Excluded entry:', relativePath)
-        continue
-      }
-      if (DISALLOWED_DIRS.includes(entry.name)) {
-        continue
-      }
-      if (entry.isFile() && DISALLOWED_FILES.includes(entry.name)) {
-        continue
-      }
-      if (entry.isFile() && isDisallowedExtension(entry.name)) {
-        continue
-      }
-      if (entry.isFile() && !hasAllowedExtension(fullPath)) {
-        continue
-      }
-      const type = entry.isDirectory() ? 'directory' : 'file'
-      const relevancy = calculateRelevancy(
-        entry.name,
-        relativePath,
-        query,
-        type,
-        filters
+  const simplifiedResults = dbResults
+    .map((result) => {
+      const type = result.collection ? 'file' : 'directory'
+      const relativePath = result.paths?.relative || ''
+      const pathParts = relativePath.split('/')
+      const collection = result.collection || pathParts[0] || ''
+      const author = result.author || pathParts[1] || ''
+      const normalizedPath = normalizePath(relativePath)
+      const encodedPath = relativePath
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')
+      const fullPath = `${basePath}/api/files/${encodedPath}`.replace(
+        /\/+/g,
+        '/'
       )
-      if (type === 'file') {
-        if (relevancy <= 0) {
-          continue
-        }
-        const stats = await fs.stat(fullPath)
-        yield {
-          path: fullPath,
-          name: entry.name,
-          size: stats.size,
-          modified: stats.mtime,
-          type: type,
-          relevancy: relevancy,
-        }
-        count++
-        if (count >= limit) return
-      } else if (type === 'directory') {
-        if (relevancy > 0) {
-          const stats = await fs.stat(fullPath)
-          yield {
-            path: fullPath,
-            name: entry.name,
-            size: 0,
-            modified: stats.mtime,
-            type: type,
-            relevancy: relevancy,
-          }
-          count++
-          if (count >= limit) return
-        }
-        for await (const result of walkAndSearchFiles(
-          fullPath,
-          query,
-          filters,
-          limit - count,
-          depth + 1
-        )) {
-          yield result
-          count++
-          if (count >= limit) return
-        }
+      const url = protocol + '://' + hostname + fullPath
+      return {
+        name: result.name,
+        type,
+        collection,
+        author,
+        path: normalizedPath,
+        url,
+        relevancy: scoreResult(result, queryStr, type),
       }
-    }
-  } catch (error) {
-    debug('Error during search:', error)
-  }
+    })
+    .filter((r) => r.relevancy > 0)
+    .sort((a, b) => b.relevancy - a.relevancy)
+    .slice(0, MAX_SEARCH_RESULTS)
+  return simplifiedResults
 }
 module.exports = {
-  walkAndSearchFiles,
+  searchDatabase,
 }

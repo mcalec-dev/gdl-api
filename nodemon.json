@@ -1,4 +1,7 @@
 {
+  "verbose": true,
+  "ext": "js",
+  "exec": "node server.js",
   "watch": [
     "server.js",
     "config.js",
@@ -13,7 +16,5 @@
     "client",
     "bot",
     "views"
-  ],
-  "ext": "js",
-  "exec": "node server.js"
+  ]
 }

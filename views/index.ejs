@@ -2,7 +2,8 @@
 <html lang="en">
   <%- include('partials/head') %>
   <body class="relative flex min-h-screen items-center justify-center bg-black">
-    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
     <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] w-full rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:p-8 md:w-auto md:min-w-[25%] md:max-w-[65%]">
       <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
       <p class="mb-6 text-center text-base text-gray-300 sm:mb-8">
@@ -19,7 +20,7 @@
         <span class="text-gray-400">hello[at]mcalec[dot]dev</span>
       </p>
       <div class="scrollbar-none -mx-2 overflow-x-auto sm:mx-0">
-        <table class="w-full overflow-hidden rounded-xl border border-white/10 bg-[#171717]/90 text-left text-sm text-gray-400 shadow-lg">
+        <table class="w-full overflow-hidden border border-white/10 bg-[#171717]/90 text-left text-sm text-gray-400 shadow-lg">
           <thead class="border-white/10 bg-[#131316] text-gray-300">
             <tr>
               <th class="border border-[#404040] px-2 py-2 font-semibold">Endpoint/Page</th>

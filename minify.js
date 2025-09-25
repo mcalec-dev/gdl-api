@@ -64,4 +64,5 @@ async function processFiles() {
     debug(chalk.redBright('Error in file processing:', error))
   }
 }
+processFiles()
 module.exports = { processFiles }

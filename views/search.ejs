@@ -2,38 +2,53 @@
 <html lang="en">
   <%- include('partials/head') %>
   <body class="relative flex min-h-screen items-center justify-center bg-black">
-    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
     <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:w-full sm:p-8 md:w-auto md:max-w-[65%] md:p-8">
-      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
+      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
+        <%= currentPage %>
+      </h1>
       <div class="mx-auto max-w-xl">
         <div class="flex flex-col gap-3 sm:flex-row">
           <input type="text" id="searchInput" placeholder="Enter your search query" aria-label="Search query" class="flex-1 rounded border border-white/20 bg-[#1f1f1f] px-3 py-2 text-base text-white backdrop-blur-lg" />
-          <button id="searchButton" class="w-full select-none rounded bg-blue-600 px-5 py-1 text-center text-white sm:w-auto">Search</button>
+          <button id="searchButton" class="w-full select-none rounded bg-blue-600 px-5 py-1 text-center text-white sm:w-auto">
+            Search
+          </button>
         </div>
         <div class="mt-4 flex justify-center gap-4">
           <label class="inline-flex cursor-pointer items-center">
             <input type="radio" name="searchType" value="all" class="peer sr-only" checked />
             <div class="h-4 w-4 rounded-full border-2 border-gray-400 peer-checked:border-4 peer-checked:border-blue-500"></div>
-            <span class="ml-2 text-gray-300">All</span>
+            <span class="ml-2 text-gray-300">
+              All
+            </span>
           </label>
           <label class="inline-flex cursor-pointer items-center">
             <input type="radio" name="searchType" value="files" class="peer sr-only" />
             <div class="h-4 w-4 rounded-full border-2 border-gray-400 peer-checked:border-4 peer-checked:border-blue-500"></div>
-            <span class="ml-2 text-gray-300">Files</span>
+            <span class="ml-2 text-gray-300">
+              Files
+            </span>
           </label>
           <label class="inline-flex cursor-pointer items-center">
             <input type="radio" name="searchType" value="directories" class="peer sr-only" />
             <div class="h-4 w-4 rounded-full border-2 border-gray-400 peer-checked:border-4 peer-checked:border-blue-500"></div>
-            <span class="ml-2 text-gray-300">Directories</span>
+            <span class="ml-2 text-gray-300">
+              Directories
+            </span>
           </label>
         </div>
       </div>
-      <div id="loading" class="mt-4 hidden py-4 text-center text-xl text-white">Searching...</div>
-      <div id="noResults" class="hidden py-10 text-center text-lg text-gray-400">No results found</div>
+      <div id="loading" class="mt-4 hidden py-4 text-center text-xl text-white">
+        Searching...
+      </div>
+      <div id="noResults" class="hidden py-10 text-center text-lg text-gray-400">
+        No results found.
+      </div>
       <div id="searchInfo" class="mx-auto hidden max-w-max rounded border border-white/20 px-4 py-2 text-center text-white backdrop-blur-lg"></div>
       <div id="results" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
     </div>
-    <script type="module" src="/js/min/search.min.js" fetchpriority="high"></script>
+    <script type="module" src="/js/min/search.min.js"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

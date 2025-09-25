@@ -2,14 +2,19 @@
 <html lang="en">
   <%- include('partials/head') %>
   <body class="relative flex min-h-screen items-center justify-center bg-black">
-    <%- include('partials/announcements') %> <%- include('partials/navbar') %> <%- include('partials/settings') %>
+    <%- include('partials/navbar') %>
+    <%- include('partials/settings') %>
     <div id="container" class="z-10 mx-1 mb-[6vh] mt-[12vh] w-full rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:mx-0 sm:w-full sm:p-8 md:w-auto md:max-w-[65%] md:p-8">
-      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
-      <div id="loading" class="text-center text-gray-300">Loading...</div>
+      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
+        <%= currentPage %>
+      </h1>
+      <div id="loading" class="text-center text-gray-300">
+        Loading...
+      </div>
       <div id="error" class="error-message mb-4 text-center text-red-500" style="display: none"></div>
       <div id="dashboard-content" class="space-y-4 text-white"></div>
     </div>
-    <script type="module" src="/js/min/dashboard.min.js" fetchpriority="high"></script>
+    <script type="module" src="/js/min/dashboard.min.js"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

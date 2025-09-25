@@ -6,11 +6,22 @@ Swagger documentation accessible at `/docs/`
 
 make sure to download [MongoDB](https://www.mongodb.com/try/download/community)
 
+your local directory sturcture should be look similar this:
+
+```text
+base-dir/
+├─ collection-1/
+│  ├─ author-1/
+│  │  ├─ files.png
+│  │  ├─ files.mp4
+│  │  ├─ etc...
+```
+
 sample `.env` file:
 
 ```env
-# all values here are imported with config.js
-# values with brackets '[]' are converted to json attributes (used for lists)
+# imported with config.js
+# values with brackets are json values
 
 # set to development to see debugging info
 NODE_ENV=production
@@ -46,17 +57,18 @@ DISALLOWED_EXTENSIONS=[]
 # e.g mongodb://127.0.0.1:27017/{your_db_name}
 MONGODB_URL=
 
-# session secret for express-session
+# secrets for sessions and csrf
 # change this to something else in production
 SESSION_SECRET=
+CSRF_SECRET=
+
+# session & csrf max cookie age
+# in days, hours, minutes, etc
+# ex. 30d, 30m, 12h, 1h
+COOKIE_MAX_AGE=
 
 # the max depth for recursive scanning
 MAX_DEPTH=
-
-# session cookie max age
-# in days, hours, minutes, etc
-# ex. 30d, 30m, 12h, 1h
-SESSION_COOKIE_MAX_AGE=
 
 # the rate limit time window in minutes
 # e.g 1m, 10m, 30m, etc
@@ -64,6 +76,13 @@ RATE_LIMIT_WINDOW=
 
 # max amount of requests per window
 RATE_LIMIT_MAX=
+
+# trolling middleware values
+TROLLING_CHANCE=
+TROLLING_TERMS=
+
+# bot/crawler user agents
+BOT_USER_AGENTS=
 
 # github application credentials
 # create an application at https://github.com/settings/developers
@@ -75,8 +94,8 @@ GITHUB_CLIENT_SECRET=
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 
-# keep it on if you like big debugs
-DEBUG=gdl-api:*
+# turns on debugging features (boolean)
+DEBUG=
 ```
 
 **actual documentation coming soon**  

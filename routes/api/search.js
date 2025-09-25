@@ -1,11 +1,8 @@
 const router = require('express').Router()
-const path = require('path')
-const { walkAndSearchFiles } = require('../../utils/searchUtils')
-const { BASE_DIR, BASE_PATH } = require('../../config')
+const { BASE_PATH } = require('../../config')
+const { searchDatabase } = require('../../utils/searchUtils')
 const debug = require('debug')('gdl-api:api:search')
-const { normalizePath } = require('../../utils/pathUtils')
 const { requireRole } = require('../../utils/authUtils')
-const MAX_SEARCH_RESULTS = 2000
 /**
  * @swagger
  * /api/search/:
@@ -41,73 +38,33 @@ const MAX_SEARCH_RESULTS = 2000
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {
     debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    return res.status(401).json({ message: 'Unauthorized', status: 401 })
   }
   const { q, type, files, directories } = req.query
-  debug('Starting search for: "%s" with filter(s): %o', q, { type })
+  debug('Starting DB search for: "%s" with filter(s): %o', q, { type })
   if (!q || q.length === 0) {
     debug('Search query is empty')
-    return res.status(400).json({
-      message: 'Bad Request',
-      status: 400,
-    })
+    return res.status(400).json({ message: 'Bad Request', status: 400 })
   }
-  const searchPattern = `*${q}*`
   try {
-    const filters = {
-      type: type || 'all',
-      files: files ? files === 'true' : undefined,
-      directories: directories ? directories === 'true' : undefined,
-    }
-    const results = []
-    for await (const result of walkAndSearchFiles(
-      BASE_DIR,
-      searchPattern,
-      filters,
-      MAX_SEARCH_RESULTS
-    )) {
-      results.push(result)
-      if (results.length >= MAX_SEARCH_RESULTS) break
-    }
-    results.sort((a, b) => b.relevancy - a.relevancy)
-    const simplifiedResults = results.map((result) => {
-      const realPath = result.path.replace(/\\/g, '/')
-      const relativePath = path.relative(BASE_DIR, realPath).replace(/\\/g, '/')
-      const pathParts = relativePath.split('/')
-      const collection = pathParts[0] || ''
-      const author = pathParts[1] || ''
-      const normalizedPath = normalizePath(relativePath)
-      const encodedPath = relativePath
-        .split('/')
-        .map(encodeURIComponent)
-        .join('/')
-      const fullPath = `${BASE_PATH}/api/files/${encodedPath}`.replace(
-        /\/+/g,
-        '/'
-      )
-      const url = req.protocol + '://' + req.hostname + fullPath
-      return {
-        name: result.name,
-        type: result.type,
-        collection,
-        author,
-        path: normalizedPath,
-        url,
-        relevancy: result.relevancy,
-      }
+    const simplifiedResults = await searchDatabase({
+      q,
+      type,
+      files,
+      directories,
+      basePath: BASE_PATH,
+      protocol: req.protocol,
+      hostname: req.hostname,
     })
-    debug('Found %s entries', results.length)
-    res.json({
+    debug('Found %s entries (DB)', simplifiedResults.length)
+    return res.json({
       query: q,
-      count: results.length,
+      count: simplifiedResults.length,
       results: simplifiedResults,
     })
   } catch (error) {
     debug('Search error:', error.stack)
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Internal Server Error',
       status: 500,
     })

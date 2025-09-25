@@ -1,24 +1,21 @@
 # todo
 
-- add file checkers in `fileUtil.js` (ex. duplicate files, no extensions, etc.)
-- integration with gallery-dl (powershell script or exe)
+- add file checkers (ex. duplicate files, no extensions, etc.)
+- integration with gallery-dl (via pwsh script or exe)
 - pagination for better optimization of large lists
-- add filters to `files` and `search` endpoints and frontend
-- add rate limiting to protect the service
+- add filters and pagination to `files` and `search` endpoints and frontend
 - add github actions (ci pipeline) for auditing dependencies, and linting
-- implement logging for the entire project (via debugs with log files and live ones)
-- add error handler middleware
+- implement logging for the entire project (via debug with log files and live ones)
+- proper error handler middleware
 - validator for json api data
 - add testing applications (like insomnia or postman)
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
-- fix relevancy in `search.js` to find more relevant directories (score them and show in response)
-- add testing modules (`*.test.js`) that only check for errors
-- create a wiki to reflect the swagger docs
+- add testing modules (`*.test.js` or `test/`) that only check for errors
+- create a wiki to reflect the api endpoints
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, sitemap, express-rate-limit, glob, express-useragent, rollup
+- npm packages to utilize; moment, pm2, async, sitemap, glob, express-useragent, rollup
 - alternate frontend with native frameworks
-- fix issue of trying to logout and login not working
 - autocomplete for search frontend (like google)
 - implement google oauth with passport
 - fix discord bot embed buttons from not working

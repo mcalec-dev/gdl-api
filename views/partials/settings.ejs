@@ -1,17 +1,30 @@
 <div id="settings" class="fixed z-50 m-0 p-0">
-  <div class="fixed bottom-0 left-0 z-50 m-3 rounded-xl border border-white/20 p-0 shadow-lg backdrop-blur-md">
-    <button id="settings-button" class="items-center justify-center p-4 text-2xl text-white">ⓘ</button>
+  <div class="fixed bottom-4 left-4 z-50 rounded-xl border border-white/20 p-0 shadow-lg backdrop-blur-md items-center justify-center align-middle">
+    <button id="settings-button" class="px-4 py-3 text-2xl w-full h-auto text-center text-white">
+      ⓘ
+    </button>
   </div>
 </div>
-<div id="settings-container" class="bg-black-05 fixed z-50 hidden h-auto w-auto items-center justify-center rounded-xl border border-white/20 p-12 shadow-lg backdrop-blur-md sm:w-full md:max-w-fit">
-  <h2 id="subtitle" class="mb-6 text-center text-2xl font-light capitalize text-white sm:mb-8">Settings</h2>
+<div id="settings-container" class="bg-transparent m-0 fixed left-4 bottom-4 z-50 h-auto w-auto items-center justify-center rounded-xl border border-white/20 p-6 shadow-lg backdrop-blur-md max-w-fit" hidden>
+  <h2 id="subtitle" class="mb-6 text-center text-2xl font-light capitalize text-white sm:mb-8">
+    Settings
+  </h2>
   <div id="bg-color_container" class="flex-column mb-4 flex gap-2">
-    <span class="text-white">Background Color:</span>
-    <select id="bg_color" class="bg-black-05 rounded-md border border-white/20 p-2"></select>
+    <span class="text-white">
+      Background Color:
+    </span>
+    <select id="bg_color" class="bg-gray-800 rounded border border-white/20 p-1 text-white items-center justify-center"></select>
   </div>
-  <div id="button-transitions_container" class="flex-column mb-4 flex gap-2">
-    <span class="text-white">Button Transitions:</span>
-    <input type="radio" id="transitions-button" name="button_transitions" value="true" checked />
+  <div id="oneko-toggle_container" class="flex-column mb-8 flex gap-2">
+    <span class="text-white">
+      Show Oneko:
+    </span>
+    <input class="bg-gray-800 rounded border border-white/20 p-0 items-center justify-center" type="checkbox" id="oneko-toggle" />
+  </div>
+  <div id="close-settings" class="bottom-4 left-4 fixed bg-transparent border-none">
+    <button class="select-none w-full h-full text-3xl rounded-full m-0 p-0 text-center text-white">
+      ×
+    </button>
   </div>
 </div>
-<script defer type="module" src="/js/min/settings.min.js" fetchpriority="high"></script>
+<script defer type="module" src="/js/min/settings.min.js"></script>

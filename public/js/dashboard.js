@@ -1,9 +1,11 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const content = document.getElementById('dashboard-content')
   const loadingDiv = document.getElementById('loading')
   const errorDiv = document.getElementById('error')
+  const CSRF = await utils.getCSRF()
+  // why is this so much easier to do here but so much harder in the other fetch calls
   fetch(`/api/user/dashboard`, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
@@ -15,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const discordLinked =
         data.oauth && data.oauth.discord && data.oauth.discord.id
       content.innerHTML = `
-        <div class="flex flex-col items-center gap-2">
+        <div class="flex flex-col items-center gap-2 text-clip">
           <div class="text-lg font-semibold">${data.message}</div>
           <div class="text-gray-300 text-sm">Username: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.username}</code></div>
           <div class="text-gray-300 text-sm">Email: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.email}</code></div>
@@ -26,18 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="mt-6">
           <div class="flex flex-col sm:flex-row gap-3 mt-4">
-            <button id="link-github" class="px-4 py-3 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2">
+            <button id="link-github" class="px-3 py-2 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2">
               <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
             </button>
-            <button id="link-discord" class="px-4 py-3 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2">
+            <button id="link-discord" class="px-3 py-2 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2">
               <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
           </div>
-          <div class="mt-4 w-full md:max-w-full sm:max-w-full">
+          <div class="mt-4 w-full md:max-w-full sm:max-w-full overflow-auto">
             <span class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</span>
-            <pre class="bg-gray-900/60 rounded p-3 mb-3 text-xs text-gray-200 whitespace-pre select-all">${JSON.stringify(data.oauth, null, 2)}</pre>
+            <pre class="bg-gray-900/60 rounded-lg border border-gray-700 p-3 mb-3 text-xs text-gray-200 whitespace-pre select-all overflow-auto text-clip">${JSON.stringify(data.oauth, null, 2)}</pre>
             <span class="mt-4 text-gray-400 text-xs mb-1">Current Sessions:</span>
-            <div class="flex flex-col gap-4 mt-2">
+            <div class="flex flex-col gap-4 overflow-auto text-clip">
               ${(() => {
                 let html = ''
                 if (Array.isArray(data.sessions) && data.sessions.length > 0) {
@@ -90,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (githubLinked) {
             await fetch(document.location.origin + '/api/auth/unlink/github', {
               method: 'POST',
+              headers: {
+                'X-CSRF-Token': CSRF,
+              },
               credentials: 'include',
             })
             window.location.reload()
@@ -103,6 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (discordLinked) {
             await fetch(document.location.origin + '/api/auth/unlink/discord', {
               method: 'POST',
+              headers: {
+                'X-CSRF-Token': CSRF,
+              },
               credentials: 'include',
             })
             window.location.reload()
@@ -116,6 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             await fetch(document.location.origin + '/api/auth/logout', {
               method: 'POST',
+              headers: {
+                'X-CSRF-Token': CSRF,
+              },
               credentials: 'include',
             })
           } catch (error) {

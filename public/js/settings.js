@@ -1,11 +1,14 @@
 'use strict'
 const settingsButton = document.getElementById('settings-button')
 const settingsContainer = document.getElementById('settings-container')
+const closeSettings = document.getElementById('close-settings')
+const onekoToggle = document.getElementById('oneko-toggle')
 const backgroundColors = ['auto', 'dark', 'light', 'true-dark', 'true-light']
 const settings = {
   theme: {
     bg_color: getCookie('bg_color') || 'dark',
   },
+  oneko: getCookie('oneko') === 'true' || 'false',
   language: 'en',
 }
 function setCookie(name, value, days = 365) {
@@ -71,6 +74,26 @@ function applyBackground(bgColor) {
       break
   }
 }
+function toggleOneko(toggle) {
+  const onekoEl = document.getElementById('oneko')
+  const onekoScript = document.getElementById('oneko-script')
+  if (toggle) {
+    if (onekoScript) return
+    if (!onekoScript) {
+      const script = document.createElement('script')
+      script.id = 'oneko-script'
+      script.src = 'https://sleepie.uk/oneko.js'
+      script.async = true
+      document.body.appendChild(script)
+    }
+  }
+  if (!toggle) {
+    if (onekoScript) {
+      document.body.removeChild(onekoScript)
+      document.body.removeChild(onekoEl)
+    }
+  }
+}
 function updateSettings() {
   const bgColorSelect = document.getElementById('bg_color')
   bgColorSelect.innerHTML = ''
@@ -82,11 +105,44 @@ function updateSettings() {
   bgColorSelect.addEventListener('change', (e) => {
     applyBackground(e.target.value)
   })
+  if (onekoToggle.checked) {
+    settings.oneko = true
+    setCookie('oneko', 'true')
+    toggleOneko(true)
+  } else {
+    settings.oneko = false
+    setCookie('oneko', 'false')
+    toggleOneko(false)
+  }
+  if (settings.oneko) {
+    onekoToggle.checked = true
+    toggleOneko(true)
+  } else {
+    onekoToggle.checked = false
+    toggleOneko(false)
+  }
 }
 document.addEventListener('DOMContentLoaded', async () => {
   updateSettings()
   applyBackground(settings.theme.bg_color)
   settingsButton.addEventListener('click', async () => {
-    settingsContainer.classList.toggle('hidden')
+    settingsContainer.hidden = !settingsContainer.hidden
+    settingsButton.hidden = !settingsButton.hidden
+  })
+  closeSettings.addEventListener('click', async () => {
+    settingsContainer.hidden = !settingsContainer.hidden
+    settingsButton.hidden = !settingsButton.hidden
+  })
+  onekoToggle.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      settings.oneko = true
+      setCookie('oneko', 'true')
+      toggleOneko(true)
+    }
+    if (!e.target.checked) {
+      settings.oneko = false
+      setCookie('oneko', 'false')
+      toggleOneko(false)
+    }
   })
 })

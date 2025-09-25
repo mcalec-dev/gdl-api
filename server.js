@@ -31,7 +31,11 @@ const {
   COOKIE_MAX_AGE,
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
+  TROLLING_CHANCE,
+  TROLLING_TERMS,
+  BOT_USER_AGENTS,
 } = require('./config')
+
 // init swagger docs
 async function initSwagger() {
   const swaggerOptions = {
@@ -73,18 +77,19 @@ async function initDB() {
     debug('Failed to clear sessions on server start:', error)
   }
 }
+// common template variables
+async function webVars() {
+  return {
+    title: NAME,
+    description: `${process.env.npm_package_description}` || 'description',
+    author: process.env.npm_package_author || 'author',
+    keywords: process.env.npm_package_keywords || 'keywords',
+    url: await HOST,
+    image: '/svg/nodejs.svg',
+  }
+}
 // render the app with ejs
 async function renderApp() {
-  async function webVars() {
-    return {
-      title: NAME,
-      description: `${process.env.npm_package_description}` || 'description',
-      author: process.env.npm_package_author || 'author',
-      keywords: process.env.npm_package_keywords || 'keywords',
-      url: await HOST,
-      image: '/svg/nodejs.svg',
-    }
-  }
   app.get(`${BASE_PATH}/`, async (req, res) => {
     try {
       var vars = await webVars()
@@ -228,6 +233,19 @@ async function renderApp() {
       res.status(500).send('Error rendering page!')
     }
   })
+  app.get(`${BASE_PATH}/404/`, async (req, res) => {
+    try {
+      var vars = await webVars()
+      res.render('404', {
+        title: 'Not Found',
+        currentPage: 'Not Found',
+        ...vars,
+      })
+    } catch (error) {
+      debug('Error rendering 404 page:', error)
+      res.status(500).send('Error rendering page!')
+    }
+  })
 }
 // init the express app
 async function initApp() {
@@ -282,7 +300,6 @@ async function initApp() {
         includeSubDomains: true,
         preload: true,
       },
-      xssProtection: true,
       nosniff: true,
       referrerPolicy: 'same-origin',
     })
@@ -313,6 +330,9 @@ async function initApp() {
       lastModified: true,
       maxAge: '1d',
       redirect: true,
+      headers: {
+        'Cache-Control': 'public, max-age=180',
+      },
     })
   )
   // special static files
@@ -326,24 +346,18 @@ async function initApp() {
   })
   // trolling middleware
   app.use((req, res, next) => {
-    const botUserAgents = [
-      'Discordbot',
-      'Twitterbot',
-      'Slackbot',
-      'WhatsApp',
-      'Googlebot',
-      'bingbot',
-    ]
     const UserAgent = req.headers['user-agent'] || req.get('User-Agent') || ''
-    const isBot = botUserAgents.some((botAgent) => UserAgent.includes(botAgent))
-    const chance = 0.005
-    const terms = ['e621', 'porn', 'xxx']
+    const isBot = BOT_USER_AGENTS.some((botAgent) =>
+      UserAgent.includes(botAgent)
+    )
+    const chance = TROLLING_CHANCE
+    const terms = TROLLING_TERMS
     if (Math.random() < chance) {
       if (isBot) {
         debug('Bot detected:', UserAgent)
         return res.send('Bot detected!')
       }
-      debug('Sending rickroll to:', req.ip, UserAgent)
+      debug('Sending troll to:', req.ip, UserAgent)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
@@ -363,15 +377,15 @@ async function initApp() {
   // bot detection middleware
   app.use((req, res, next) => {
     const UserAgent = req.headers['user-agent'] || req.get('User-Agent') || ''
-    const botUserAgents = [
-      'Discordbot',
-      'Twitterbot',
-      'Slackbot',
-      'WhatsApp',
-      'Googlebot',
-      'bingbot',
-    ]
-    const isBot = botUserAgents.some((botAgent) => UserAgent.includes(botAgent))
+    const isBot = BOT_USER_AGENTS.some((botAgent) =>
+      UserAgent.includes(botAgent)
+    )
+    if (isBot) {
+      debug('Bot detected:', UserAgent)
+      if (res.headersSent) {
+        return next()
+      }
+    }
     if (isBot) {
       debug('Bot detected:', UserAgent)
       if (res.headersSent) {
@@ -391,13 +405,19 @@ async function setupRoutes() {
   }
   await renderApp()
   console.log(chalk.green('✓ Frontend routes mounted'))
-  app.use((req, res) => {
+  app.use(async (req, res) => {
     debug('Not found:', req.path)
-    res.status(404).json({
-      message: 'Not Found',
-      status: 404,
-      path: req.path,
-    })
+    try {
+      var vars = await webVars()
+      res.status(404).render('404', {
+        title: 'Not Found',
+        currentPage: 'Not Found',
+        ...vars,
+      })
+    } catch (error) {
+      debug('Error rendering 404 page:', error)
+      res.status(500).send('Error rendering page!')
+    }
   })
   app.use((error, req, res, next) => {
     debug('An error occured:', error.message)

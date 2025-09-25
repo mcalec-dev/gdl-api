@@ -1,3 +1,5 @@
+// there is so much filler code in the endpoints that is not needed at all
+// so beware :sob:
 const router = require('express').Router()
 const path = require('path')
 const Directory = require('../../models/Directory')
@@ -6,6 +8,7 @@ const { requireRole } = require('../../utils/authUtils')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
 const mime = require('mime-types')
+const uuid = require('uuid')
 const {
   BASE_DIR,
   DISALLOWED_DIRS,
@@ -29,6 +32,10 @@ const isVideoFile = (filename) => {
   const ext = ['.mp4', '.mkv', '.webm', '.avi', '.mov']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
 }
+const isAudioFile = (filename) => {
+  const ext = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
+  return ext.some((e) => filename.toLowerCase().endsWith(e))
+}
 const isDisallowedExtension = (filename) => {
   const ext = path.extname(filename).toLowerCase()
   return DISALLOWED_EXTENSIONS.some(
@@ -39,14 +46,15 @@ const isDisallowedExtension = (filename) => {
 }
 async function upsertDirectoryEntry(dirObj) {
   try {
+    const filter = { 'paths.relative': dirObj.paths.relative }
+    let existing = await Directory.findOne(filter)
+    if (!existing) {
+      dirObj.uuid = uuid.v4()
+    } else {
+      dirObj.uuid = existing.uuid
+    }
     await Directory.findOneAndUpdate(
-      {
-        paths: {
-          local: dirObj.path,
-          relative: dirObj.relativePath,
-          remote: dirObj.remotePath,
-        },
-      },
+      filter,
       { $set: dirObj },
       { upsert: true, new: true }
     )
@@ -56,17 +64,15 @@ async function upsertDirectoryEntry(dirObj) {
 }
 async function upsertFileEntry(fileObj) {
   try {
+    const filter = { 'paths.relative': fileObj.paths.relative }
+    let existing = await File.findOne(filter)
+    if (!existing) {
+      fileObj.uuid = uuid.v4()
+    } else {
+      fileObj.uuid = existing.uuid
+    }
     await File.findOneAndUpdate(
-      {
-        paths: {
-          local: fileObj.path,
-          relative: fileObj.relativePath,
-          remote: fileObj.remotePath,
-        },
-        collection: fileObj.collection || null,
-        author: fileObj.author || null,
-        mime: fileObj.mime || null,
-      },
+      filter,
       { $set: fileObj },
       { upsert: true, new: true }
     )
@@ -159,12 +165,14 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         debug(`Error getting stats for ${entryPath}:`, statError)
         continue
       }
-      const apiPrefix = `${BASE_PATH}/api/files`
       const encodedPath = entryRelativePath
         .split('/')
         .map(encodeURIComponent)
         .join('/')
-      const remotePath = `${apiPrefix}/${encodedPath}`.replace(/\/+/g, '/')
+      const remotePath = `${BASE_PATH}/api/files/${encodedPath}`.replace(
+        /\/+/g,
+        '/'
+      )
       if (entry.isDirectory()) {
         await upsertDirectoryEntry({
           name: entry.name,
@@ -231,7 +239,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
       const apiPrefix = `${BASE_PATH}/api/files`
       const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
       const dbPath = `${apiPrefix}/${relPath}`.replace(/\/+/g, '/')
-      const localPath = `${BASE_DIR}/${relPath}`.replace(/\\/g, '/')
+      const localPath = path.join(BASE_DIR, relPath)
       const getMetadata = await getImageMeta(localPath)
       if (item.type === 'directory') {
         await upsertDirectoryEntry({
@@ -286,6 +294,8 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
     })
   }
   try {
+    // stop using so many consts in this endpoint
+    // use let instead
     const normalizedDir = path.resolve(BASE_DIR)
     const stats = await fs.stat(normalizedDir)
     if (!stats.isDirectory()) {
@@ -341,7 +351,14 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
         const relativePath = path
           .relative(normalizedDir, entryPath)
           .replace(/\\/g, '/')
-        const fullPath = safeApiPath(`${BASE_PATH}/api/files`, relativePath)
+        const pathParts = relativePath.split('/')
+        const collection = pathParts.length > 0 ? pathParts[0] : null
+        const author = pathParts.length > 1 ? pathParts[1] : null
+        let fullPath = safeApiPath(`${BASE_PATH}/api/files`, relativePath)
+        fullPath = fullPath.replace(/([^:])\/\//g, '$1/')
+        if (/\.[a-zA-Z0-9]+\/$/.test(fullPath)) {
+          fullPath = fullPath.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+        }
         const url = req.protocol + '://' + req.hostname + fullPath
         return {
           name: entry.name,
@@ -351,6 +368,8 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
           created: ctime,
           path: fullPath,
           url,
+          collection,
+          author,
         }
       })
     )
@@ -383,6 +402,9 @@ router.get(
     '/:collection/:author/*',
   ],
   async (req, res) => {
+    // same here with having so many consts
+    // const chaining i think its called
+    // a normal person would use let
     const validatedParams = validateRequestParams(req.params)
     if (!validatedParams.isValid) {
       debug('Invalid path parameters provided:', req.params)
@@ -393,8 +415,17 @@ router.get(
     }
     const { collection, author, additionalPath } = validatedParams
     const normalizedDir = path.resolve(BASE_DIR)
-    const pathComponents = [collection, author, additionalPath].filter(Boolean)
-    const realPath = safePath(normalizedDir, ...pathComponents)
+    const pathComponents = [collection, author, additionalPath]
+      .filter(Boolean)
+      .map((component) => {
+        try {
+          return decodeURIComponent(component)
+        } catch (error) {
+          debug('Failed to decode URI component:', component, error)
+          return component
+        }
+      })
+    let realPath = safePath(normalizedDir, ...pathComponents)
     if (!realPath) {
       debug(
         'Path construction resulted in unsafe path for components:',
@@ -486,10 +517,19 @@ router.get(
           } catch {
             return null
           }
-          const fullPath = safeApiPath(
+          // Extract collection and author from entryRelativePath
+          const pathParts = entryRelativePath.split('/')
+          const collectionVal = pathParts.length > 0 ? pathParts[0] : null
+          const authorVal = pathParts.length > 1 ? pathParts[1] : null
+          // Fix double slash in fullPath
+          let fullPath = safeApiPath(
             `${BASE_PATH}/api/files`,
             entryRelativePath
           )
+          fullPath = fullPath.replace(/([^:])\/\//g, '$1/')
+          if (/\.[a-zA-Z0-9]+\/$/.test(fullPath)) {
+            fullPath = fullPath.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+          }
           const url = req.protocol + '://' + req.hostname + fullPath
           const mime = isDir ? 'n/a' : getFileMime(entry.name)
           return {
@@ -499,8 +539,8 @@ router.get(
             modified: mtime,
             created: ctime,
             path: fullPath,
-            collection,
-            author,
+            collection: collectionVal,
+            author: authorVal,
             mime,
             url,
           }
@@ -557,6 +597,9 @@ router.get(
         }
       }
       if (isVideoFile(realPath)) {
+        res.set('Content-Type', getFileMime(realPath))
+        res.sendFile(realPath)
+      } else if (isAudioFile(realPath)) {
         res.set('Content-Type', getFileMime(realPath))
         res.sendFile(realPath)
       } else {

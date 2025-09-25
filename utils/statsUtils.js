@@ -15,7 +15,6 @@ async function aggregateStats(dirPath, stats = null) {
     }
   }
   try {
-    debug('Started aggregating stats for', dirPath)
     const entries = await fs.readdir(dirPath, {
       withFileTypes: true,
     })
@@ -84,7 +83,6 @@ async function aggregateStats(dirPath, stats = null) {
         }
       }
     }
-    debug('Finished aggregating stats for', dirPath)
   } catch (error) {
     debug('Error aggregating stats for', dirPath, error)
   }

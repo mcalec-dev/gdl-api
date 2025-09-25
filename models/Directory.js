@@ -12,6 +12,6 @@ const directorySchema = new mongoose.Schema({
   modified: { type: Date },
   tags: [{ type: String, index: true }],
   meta: {},
-  uuid: { type: String, default: uuid.v4 },
+  uuid: { type: String, required: true, default: uuid.v4 },
 })
 module.exports = mongoose.model('Directory', directorySchema)

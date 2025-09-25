@@ -1,5 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import { setupViewerEvents, setupFileClickHandlers } from '../min/viewer.min.js'
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
 function constructApiPath(path) {
@@ -7,20 +8,28 @@ function constructApiPath(path) {
   return cleanPath ? `${apiBasePath}/${cleanPath}` : apiBasePath
 }
 const previewSize = '?x=50'
-const zoomedSize = '?x=400'
-const fileList = document.getElementById('fileList')
+const fileList = document.getElementById('file-list')
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 function getFileType(mime) {
   if (!mime || mime === 'n/a') return 'other'
-  if (mime.includes('application')) return 'other'
-  if (mime.includes('audio')) return 'audio'
-  if (mime.includes('image')) return 'image'
-  if (mime.includes('text')) return 'text'
-  if (mime.includes('video')) return 'video'
-  if (mime === 'application/mp4') return 'video'
-  return 'other'
+  switch (true) {
+    case mime === 'application/mp4':
+      return 'video'
+    case mime.includes('audio'):
+      return 'audio'
+    case mime.includes('image'):
+      return 'image'
+    case mime.includes('text'):
+      return 'text'
+    case mime.includes('video'):
+      return 'video'
+    case mime.includes('application'):
+      return 'other'
+    default:
+      return 'other'
+  }
 }
 let icons
 async function loadIcons() {
@@ -35,12 +44,9 @@ async function loadIcons() {
   }
 }
 let currentDirectoryData = null
-let currentImageIndex = 0
-let currentImageList = []
 let currentSort = 'name'
 let currentSortDir = 'none'
 let currentFetchController = null
-let imageLoadControllers = new Map()
 let isInitialized = false
 const SORT_STATES = {
   name: 'none',
@@ -139,7 +145,6 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
     if (currentFetchController) {
       currentFetchController.abort()
     }
-    cancelImageLoads()
     currentFetchController = new AbortController()
     const { signal } = currentFetchController
     path = path ? decodeURIComponent(path) : ''
@@ -151,47 +156,55 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
         .replace(/^\/|\/$/g, '')
         .replace(/^files\/?/, '')
     }
+    fileList.innerHTML = ''
     const loadingIndicator = document.createElement('div')
-    loadingIndicator.className = 'loading'
+    loadingIndicator.className =
+      'loading fixed left-1/2 top-1/2 min-w-[180px] max-w-[320px] p-4 bg-[#232323] text-[#bbbbbb] border border-[#404040] text-center transform -translate-x-1/2 -translate-y-1/2 z-[1000] cursor-not-allowed'
     loadingIndicator.innerHTML = '<span>Loading...</span>'
     fileList.appendChild(loadingIndicator)
     const apiPath = constructApiPath(path)
-    if (
+    let needsFetch =
       !currentDirectoryData ||
       currentDirectoryData.path !== path ||
       forceRefresh
-    ) {
-      const response = await fetch(apiPath, { signal }).catch((error) => {
-        utils.handleError(error)
+    if (needsFetch) {
+      try {
+        const response = await fetch(apiPath, { signal })
+        if (!response.ok) {
+          fileList.innerHTML = `
+            <div class="error">
+              Error loading directory contents<br>
+              <small>${response.statusText}</small>
+            </div>`
+          if (fileList.contains(loadingIndicator))
+            fileList.removeChild(loadingIndicator)
+          return
+        }
+        const data = await response.json()
+        currentDirectoryData = { path, contents: data.contents }
+      } catch (error) {
         if (error.name !== 'AbortError') {
+          utils.handleError(error)
           fileList.innerHTML = `
             <div class="error">
               Error loading directory contents<br>
               <small>${error.message}</small>
             </div>`
         }
-      })
-      const data = await response.json()
-      currentDirectoryData = { path, contents: data.contents }
+        if (fileList.contains(loadingIndicator))
+          fileList.removeChild(loadingIndicator)
+        return
+      }
     }
-    fileList.removeChild(loadingIndicator)
-    //const isRoot = !path
-    //const shouldUseGridView =!isRoot && currentDirectoryData.contents.some((item) => item.type === 'file')
-    fileList.classList.add('grid-view')
-    fileList.classList.add(
-      'grid',
-      'lg:grid-cols-4',
-      'md:grid-cols-3',
-      'items-center',
-      'gap-4'
-    )
+    if (fileList.contains(loadingIndicator))
+      fileList.removeChild(loadingIndicator)
     renderDirectory(currentDirectoryData.contents, path)
     if (callback) {
       callback()
     }
   } catch (error) {
-    utils.handleError(error)
     if (error.name !== 'AbortError') {
+      utils.handleError(error)
       fileList.innerHTML = `
         <div class="error">
           Error loading directory contents<br>
@@ -199,41 +212,6 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
         </div>`
     }
   }
-}
-function setupFileClickHandlers() {
-  const fileList = document.getElementById('fileList')
-  fileList.addEventListener('click', (event) => {
-    const media = event.target.closest(
-      '.file-item[data-file-type="image"], .file-item[data-file-type="video"]'
-    )
-    if (media) {
-      event.preventDefault()
-      currentImageList = Array.from(
-        fileList.querySelectorAll(
-          '.file-item[data-file-type="image"], .file-item[data-file-type="video"]'
-        )
-      ).map((media) => {
-        const preview = media.querySelector('img, video')
-        const mediaPath = media.dataset.path
-        const fileType = media.dataset.fileType
-        const encodedPath = mediaPath
-          .split('/')
-          .map((part) => encodeURIComponent(part))
-          .join('/')
-        return {
-          name: mediaPath.split('/').pop(),
-          path: mediaPath,
-          type: fileType,
-          encodedPath,
-          previewSrc: preview?.dataset.src?.split('?')[0] || null,
-        }
-      })
-      currentImageIndex = currentImageList.findIndex(
-        (item) => item.path === media.dataset.path
-      )
-      showImagePopup(currentImageIndex)
-    }
-  })
 }
 window.addEventListener('popstate', (event) => {
   const state = event.state || {}
@@ -266,31 +244,31 @@ function setupLazyLoading() {
             element.dataset.src &&
             !element.src
           ) {
-            const controller = new AbortController()
-            imageLoadControllers.set(element, controller)
-            if (element.tagName.toLowerCase() === 'video') {
+            if (
+              element.tagName.toLowerCase() === 'video' ||
+              element.tagName.toLowerCase() === 'audio'
+            ) {
               element.preload = 'metadata'
               element.src = element.dataset.src
-              element.muted = true
+              element.muted = element.tagName.toLowerCase() === 'video'
               element.classList.remove('loading')
-              imageLoadControllers.delete(element)
             } else {
               element.src = element.dataset.src
               element.onload = () => {
                 element.classList.remove('loading')
-                imageLoadControllers.delete(element)
               }
               element.onerror = () => {
-                console.error('Failed to load:', element.dataset.src)
                 element.classList.remove('loading')
                 element.classList.add('error')
-                imageLoadControllers.delete(element)
               }
             }
           }
         } else {
           if (!element.classList.contains('zoomed')) {
-            if (element.tagName.toLowerCase() === 'video') {
+            if (
+              element.tagName.toLowerCase() === 'video' ||
+              element.tagName.toLowerCase() === 'audio'
+            ) {
               element.pause()
               element.currentTime = 0
               element.removeAttribute('src')
@@ -305,24 +283,13 @@ function setupLazyLoading() {
       })
     },
     {
-      rootMargin: '50px 0px',
+      rootMargin: '100px 0px',
       threshold: 0.1,
     }
   )
   document.querySelectorAll('.file-preview').forEach((element) => {
     window.lazyLoadObserver.observe(element)
   })
-}
-function cancelImageLoads() {
-  imageLoadControllers.forEach((controller, element) => {
-    controller.abort()
-    element.src = ''
-    if (element.tagName.toLowerCase() === 'video') {
-      element.load()
-    }
-    element.classList.add('loading')
-  })
-  imageLoadControllers.clear()
 }
 function handleDirectoryClick(event) {
   const target = event.target.closest('.file-item.directory')
@@ -341,197 +308,6 @@ function handleDirectoryClick(event) {
   history.pushState({ path: cleanPath }, '', newPath + params)
   loadDirectory(cleanPath, null, true)
   window.scrollTo(0, 0)
-}
-function getMediaUrl(item) {
-  return item.previewSrc || `${apiBasePath}/${item.encodedPath}`
-}
-function preloadMedia(item) {
-  if (!item || item.type === 'video') return
-  const preloadImg = document.createElement('img')
-  preloadImg.src = getMediaUrl(item)
-}
-function showImagePopup(index) {
-  if (index < 0 || index >= currentImageList.length) return
-  const item = currentImageList[index]
-  const popupViewer = document.getElementById('popup-viewer')
-  const popupImage = document.getElementById('popup-image')
-  const popupVideo = document.getElementById('popup-video')
-  const imageTitle = document.getElementById('image-title')
-  const imageCounter = document.getElementById('image-counter')
-  const prevButton = document.getElementById('prev-image')
-  const nextButton = document.getElementById('next-image')
-  popupImage.style.display = 'none'
-  popupVideo.style.display = 'none'
-  popupVideo.pause()
-  const url = getMediaUrl(item)
-  if (item.type === 'video') {
-    popupVideo.src = url
-    popupVideo.style.display = 'block'
-    popupVideo.controls = true
-    popupVideo.style.maxHeight = '85vh'
-    popupVideo.style.maxWidth = '85vw'
-    popupVideo.style.height = 'auto'
-    popupVideo.style.width = 'auto'
-  } else {
-    popupImage.src = url
-    popupImage.style.display = 'block'
-    popupImage.style.cursor = 'zoom-in'
-    popupImage.style.maxHeight = '85vh'
-    popupImage.style.maxWidth = '85vw'
-  }
-  imageTitle.textContent = item.name
-  imageCounter.textContent = `${index + 1} / ${currentImageList.length}`
-  prevButton.disabled = index === 0
-  nextButton.disabled = index === currentImageList.length - 1
-  popupViewer.style.display = 'flex'
-  currentImageIndex = index
-  if (index > 0) {
-    preloadMedia(currentImageList[index - 1])
-  }
-  if (index < currentImageList.length - 1) {
-    preloadMedia(currentImageList[index + 1])
-  }
-}
-function setupImagePopupEvents() {
-  const popupViewer = document.getElementById('popup-viewer')
-  const closeButton = document.getElementById('close-popup')
-  const newTabButton = document.getElementById('open-new-tab')
-  const downloadButton = document.getElementById('download-file')
-  const prevButton = document.getElementById('prev-image')
-  const nextButton = document.getElementById('next-image')
-  const popupImage = document.getElementById('popup-image')
-  const popupVideo = document.getElementById('popup-video')
-  let isZoomed = false
-  function closePopup() {
-    if (!popupVideo.paused) {
-      popupVideo.pause()
-    }
-    if (isZoomed) {
-      handleZoom(0, 0)
-    }
-    popupImage.src = ''
-    popupVideo.src = ''
-    popupViewer.style.display = 'none'
-  }
-  newTabButton.addEventListener('click', () => {
-    const item = currentImageList[currentImageIndex]
-    const fullUrl = getMediaUrl(item)
-    window.open(fullUrl, '_blank')
-  })
-  downloadButton.addEventListener('click', () => {
-    const item = currentImageIndex[currentImageIndex]
-    const fullUrl = getMediaUrl(item)
-    const dlUrl =
-      document.location.protocol +
-      '//' +
-      document.location.hostname +
-      '/api/download/'
-    const a = document.createElement('a')
-    a.href = `${dlUrl}?url="${encodeURIComponent(fullUrl)}"`
-    a.download = ''
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  })
-  closeButton.addEventListener('click', closePopup)
-  popupViewer.addEventListener('click', (e) => {
-    if (e.target === popupViewer) {
-      closePopup()
-    }
-  })
-  prevButton.addEventListener('click', () => {
-    if (currentImageIndex > 0) {
-      if (isZoomed) {
-        handleZoom(0, 0)
-      }
-      showImagePopup(currentImageIndex - 1)
-    }
-  })
-  nextButton.addEventListener('click', () => {
-    if (currentImageIndex < currentImageList.length - 1) {
-      if (isZoomed) {
-        handleZoom(0, 0)
-      }
-      showImagePopup(currentImageIndex + 1)
-    }
-  })
-  document.addEventListener('keydown', (e) => {
-    if (popupViewer.style.display === 'flex') {
-      switch (e.key) {
-        case 'Escape':
-          closePopup()
-          break
-        case 'ArrowLeft':
-          if (currentImageIndex > 0) {
-            if (isZoomed) {
-              handleZoom(0, 0)
-            }
-            showImagePopup(currentImageIndex - 1)
-          }
-          break
-        case 'ArrowRight':
-          if (currentImageIndex < currentImageList.length - 1) {
-            if (isZoomed) {
-              handleZoom(0, 0)
-            }
-            showImagePopup(currentImageIndex + 1)
-          }
-          break
-        default:
-          break
-      }
-    }
-  })
-  function handleZoom(x, y) {
-    if (isZoomed) {
-      const item = currentImageList[currentImageIndex]
-      const originalUrl = getMediaUrl(item)
-      popupImage.src = originalUrl
-      popupImage.classList.remove('zoomed')
-      popupImage.style.transform = 'none'
-      popupImage.style.cursor = 'zoom-in'
-      popupImage.style.maxHeight = ''
-      popupImage.style.maxWidth = ''
-      popupImage.style.height = ''
-      popupImage.style.width = ''
-      popupImage.style.objectFit = ''
-      isZoomed = false
-      popupImage.removeEventListener('mousemove', handleMouseMove)
-    } else {
-      const item = currentImageList[currentImageIndex]
-      const highResUrl = getMediaUrl(item) + zoomedSize
-      popupImage.src = highResUrl
-      popupImage.style.maxHeight = '95vh'
-      popupImage.style.maxWidth = '95vw'
-      popupImage.style.height = '95vh'
-      popupImage.style.width = '95vw'
-      popupImage.style.objectFit = 'contain'
-      const rect = popupImage.getBoundingClientRect()
-      const relativeX = (x - rect.left) / rect.width
-      const relativeY = (y - rect.top) / rect.height
-      popupImage.classList.add('zoomed')
-      updateZoomPosition(relativeX, relativeY)
-      popupImage.style.cursor = 'zoom-out'
-      isZoomed = true
-      popupImage.addEventListener('mousemove', handleMouseMove)
-    }
-  }
-  function handleMouseMove(e) {
-    if (!isZoomed) return
-    const rect = popupImage.getBoundingClientRect()
-    const relativeX = (e.clientX - rect.left) / rect.width
-    const relativeY = (e.clientY - rect.top) / rect.height
-    updateZoomPosition(relativeX, relativeY)
-  }
-  function updateZoomPosition(relativeX, relativeY) {
-    const boundedX = Math.max(0, Math.min(1, relativeX))
-    const boundedY = Math.max(0, Math.min(1, relativeY))
-    popupImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
-    popupImage.style.transform = 'scale(2)'
-  }
-  popupImage.addEventListener('click', (e) => {
-    handleZoom(e.clientX, e.clientY)
-  })
 }
 function setupSortButtons() {
   const sortButtons = [
@@ -571,12 +347,47 @@ function setupSortButtons() {
   })
 }
 async function renderDirectory(contents, path) {
-  const isRoot = !path
-  const shouldUseGridView =
-    !isRoot && contents.some((item) => item.type === 'file')
-  fileList.classList.toggle('grid-view', shouldUseGridView)
+  const hasFiles = contents.some((item) => item.type === 'file')
+  const hasDirectories = contents.some((item) => item.type === 'directory')
+  fileList.className = ''
+  fileList.style.gridAutoFlow = ''
+  // all this styling is pissing me off
+  // im the original mcalec
+  if (hasFiles) {
+    fileList.classList.remove(
+      'columns-1',
+      'columns-2',
+      'columns-3',
+      'columns-4',
+      'columns-5',
+      'columns-6'
+    )
+    fileList.classList.add(
+      'grid-view',
+      'grid',
+      'sm:grid-cols-2',
+      'md:grid-cols-4',
+      'lg:grid-cols-6',
+      'items-start',
+      'gap-4'
+    )
+    fileList.style.gridAutoFlow = 'row dense'
+    fileList.style.gridAutoRows = 'min-content'
+  } else if (hasDirectories) {
+    fileList.classList.remove(
+      'grid-view',
+      'grid',
+      'sm:grid-cols-2',
+      'md:grid-cols-4',
+      'lg:grid-cols-6'
+    )
+    fileList.style.gridAutoFlow = ''
+    fileList.style.gridAutoRows = ''
+    fileList.classList.add('flex', 'flex-col', 'items-start', 'gap-4')
+  }
   const sortedContents = sortContents(contents, currentSort, currentSortDir)
   renderSortToolbar()
+  setupFileClickHandlers('#file-list')
   let html = ''
   for (const item of sortedContents) {
     const itemPath = path ? `${path}/${item.name}` : item.name
@@ -598,52 +409,98 @@ async function renderDirectory(contents, path) {
         previewUrl += previewSize
       }
     }
-    const fileItemStyle =
-      'flex items-center w-full h-auto max-w-full p-6 border border-white/10 rounded-xl pointer text-white pointer-events-auto box-border overflow-hidden'
-    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemStyle}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">`
+    let cursorClass = ''
+    if (itemType === 'directory') {
+      cursorClass = 'cursor-pointer'
+    } else if (
+      (itemType === 'image' || itemType === 'video' || itemType === 'audio') &&
+      previewUrl
+    ) {
+      cursorClass = 'cursor-default'
+    } else {
+      cursorClass = 'cursor-help'
+    }
+    // same here with the styling
+    const fileItemClasses = `group block h-full p-0 m-0 border border-white/10 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none`
+    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemClasses} ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">`
     if (itemType === 'directory') {
       html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
-    } else if (itemType === 'image' && previewUrl) {
-      html += `
-        <div class="preview-container">
-          <img class="file-preview loading" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+      html += `<div class="file-details block bottom-0 left-0 right-0 bg-gray-800/85 p-2 border-t border-white/10">
+        <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+        <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+          <span>${utils.formatDate(item.modified)}</span>
+          <br />
+          <span>${utils.formatSize(item.size)}</span>
         </div>
-      `
-    } else if (itemType === 'video' && previewUrl) {
+      </div>`
+    } else if (
+      (itemType === 'image' || itemType === 'video' || itemType === 'audio') &&
+      previewUrl
+    ) {
+      if (itemType === 'audio') {
+        html += `
+          <div id="audio-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+            <audio class="file-preview audio loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
+          </div>`
+      }
+      if (itemType === 'image') {
+        html += `
+          <div id="image-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+            <img class="file-preview loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" draggable="false">
+          </div>`
+      }
+      if (itemType === 'video') {
+        html += `
+          <div id="video-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+            <video class="file-preview video loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></video>
+          </div>`
+      }
       html += `
-        <div class="video-preview-container">
-          <video 
-            class="file-preview video loading" 
-            data-src="${previewUrl}"
-            preload="none"
-            onmouseover="if(this.src) { this.play(); this.muted=false; }" 
-            onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }"
-            draggable="false"
-          ></video>
-        </div>
-      `
+        <div class="file-details absolute left-4 right-4 bottom-4 bg-gray-800/85 p-2 hidden group-hover:block">
+          <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+          <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+            <span>${utils.formatDate(item.modified)}</span><br>
+            <span>${utils.formatSize(item.size)}</span>
+          </div>
+        </div>`
     } else {
       html += `<div class="file-icon ${itemType}">${icons[itemType] || icons.other}</div>`
-    }
-    html += `
-      <div class="file-details">
+      html += `<div class="file-details block">
         <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
         <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
           <span>${utils.formatDate(item.modified)}</span><br>
           <span>${utils.formatSize(item.size)}</span>
         </div>
-      </div>
-    </div>
-    `
+      </div>`
+    }
+    html += `</div>`
   }
-  fileList.innerHTML = html
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = html
+  fileList.innerHTML = ''
+  while (tempDiv.firstChild) {
+    fileList.appendChild(tempDiv.firstChild)
+  }
   setupSortButtons()
-  setupFileClickHandlers()
-  if (shouldUseGridView) {
+  fileList
+    .querySelectorAll('.file-item[data-file-type="audio"]')
+    .forEach((item) => {
+      const audio = item.querySelector('.file-preview.audio')
+      if (!audio) return
+      item.addEventListener('mouseenter', function () {
+        if (audio.src) {
+          audio.play()
+        }
+      })
+      item.addEventListener('mouseleave', function () {
+        audio.pause()
+        audio.currentTime = 0
+      })
+    })
+  if (hasFiles) {
     setupLazyLoading()
   }
 }
-setupImagePopupEvents()
 function getSortFromQuery() {
   const params = new URLSearchParams(window.location.search)
   let found = false
@@ -663,11 +520,12 @@ function getSortFromQuery() {
     Object.keys(SORT_STATES).forEach((key) => (SORT_STATES[key] = 'none'))
   }
 }
-async function initializeApp() {
+async function init() {
   if (isInitialized) return
   isInitialized = true
   await loadIcons()
   getSortFromQuery()
+  setupViewerEvents()
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
   const initialPath = window.location.pathname
     .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
@@ -677,4 +535,4 @@ async function initializeApp() {
   document.addEventListener('click', handleDirectoryClick)
   await loadDirectory(initialPath)
 }
-document.addEventListener('DOMContentLoaded', initializeApp)
+document.addEventListener('DOMContentLoaded', init)
