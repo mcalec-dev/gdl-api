@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.23",
+  "version": "0.2.24",
   "description": "Gallery-DL API",
   "author": "McAlec",
   "keywords": [
@@ -38,6 +38,7 @@
     "express-session": "^1.18.2",
     "figlet": "^1.8.2",
     "lusca": "^1.7.0",
+    "mammoth": "^1.11.0",
     "mime-types": "^3.0.1",
     "mongoose": "^8.16.4",
     "morgan-body": "^2.6.9",
@@ -66,6 +67,6 @@
   },
   "engines": {
     "node": ">=24.0.0",
-    "npm": ">=10.0.0"
+    "npm": ">=11.0.0"
   }
 }

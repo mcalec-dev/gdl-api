@@ -425,8 +425,8 @@ async function renderDirectory(contents, path) {
     html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemClasses} ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">`
     if (itemType === 'directory') {
       html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
-      html += `<div class="file-details block bottom-0 left-0 right-0 bg-gray-800/85 p-2 border-t border-white/10">
-        <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+      html += `<div class="group block bottom-0 left-0 right-0 bg-gray-800/85 p-2 border-t border-white/10">
+      <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
         <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
           <span>${utils.formatDate(item.modified)}</span>
           <br />

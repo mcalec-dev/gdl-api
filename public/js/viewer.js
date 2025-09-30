@@ -72,6 +72,7 @@ function setupViewerEvents() {
   const closeButton = document.getElementById('close-popup')
   const newTabButton = document.getElementById('open-new-tab')
   const downloadButton = document.getElementById('download-file')
+  const copyLinkButton = document.getElementById('copy-link')
   const prevButton = document.getElementById('prev-image')
   const nextButton = document.getElementById('next-image')
   const popupImage = document.getElementById('popup-image')
@@ -125,6 +126,11 @@ function setupViewerEvents() {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+  })
+  copyLinkButton.addEventListener('click', async () => {
+    const item = currentItemList[currentItemIndex]
+    const fileUrl = await getMediaUrl(item)
+    navigator.clipboard.writeText(fileUrl)
   })
   closeButton.addEventListener('click', closeViewer)
   popupViewer.addEventListener('click', (e) => {

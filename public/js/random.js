@@ -1,9 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-let API_URL = ''
-const loadImageBtn = document.getElementById('loadImageBtn')
-const backImageBtn = document.getElementById('backImageBtn')
-const forwardImageBtn = document.getElementById('forwardImageBtn')
+const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
 const imageInfo = document.getElementById('item-info')
@@ -183,7 +180,9 @@ async function loadIcons() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  API_URL = `/api/random/`
+  const loadImageBtn = document.getElementById('loadImageBtn')
+  const backImageBtn = document.getElementById('backImageBtn')
+  const forwardImageBtn = document.getElementById('forwardImageBtn')
   const h = JSON.parse(localStorage.getItem(HISTORY_KEY))
   if (Array.isArray(h) && h.length > 0) {
     history = h
@@ -207,4 +206,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.back}</span>`
   loadImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.shuffle}</span>`
   forwardImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.forward}</span>`
+  window.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault()
+        showPreviousMedia()
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        showNextMedia()
+        break
+      case ' ':
+        e.preventDefault()
+        loadRandomMedia()
+        break
+    }
+  })
 })

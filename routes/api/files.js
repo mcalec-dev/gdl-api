@@ -9,6 +9,7 @@ const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
 const mime = require('mime-types')
 const uuid = require('uuid')
+const mammoth = require('mammoth')
 const {
   BASE_DIR,
   DISALLOWED_DIRS,
@@ -24,6 +25,10 @@ const {
   isSubPath,
 } = require('../../utils/pathUtils')
 const { resizeImage, getImageMeta } = require('../../utils/imageUtils')
+const isDocFile = (filename) => {
+  const ext = ['.doc', '.docx']
+  return ext.some((e) => filename.toLowerCase().endsWith(e))
+}
 const isImageFile = (filename) => {
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
@@ -517,11 +522,9 @@ router.get(
           } catch {
             return null
           }
-          // Extract collection and author from entryRelativePath
           const pathParts = entryRelativePath.split('/')
           const collectionVal = pathParts.length > 0 ? pathParts[0] : null
           const authorVal = pathParts.length > 1 ? pathParts[1] : null
-          // Fix double slash in fullPath
           let fullPath = safeApiPath(
             `${BASE_PATH}/api/files`,
             entryRelativePath
@@ -599,9 +602,28 @@ router.get(
       if (isVideoFile(realPath)) {
         res.set('Content-Type', getFileMime(realPath))
         res.sendFile(realPath)
-      } else if (isAudioFile(realPath)) {
+      }
+      if (isAudioFile(realPath)) {
         res.set('Content-Type', getFileMime(realPath))
         res.sendFile(realPath)
+      }
+      if (isDocFile(realPath)) {
+        mammoth
+          .convertToHtml({
+            path: realPath,
+          })
+          .then((result) => {
+            const html = result.value
+            res.set('Content-Type', 'text/html; charset=utf-8')
+            res.send(html)
+          })
+          .catch((error) => {
+            debug('Error converting docx to html', error)
+            return res.status(500).json({
+              message: 'Internal Server Error',
+              status: 500,
+            })
+          })
       } else {
         res.download(realPath, (error) => {
           if (error) {

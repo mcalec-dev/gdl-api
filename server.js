@@ -40,7 +40,12 @@ const {
 async function initSwagger() {
   const swaggerOptions = {
     definition: {
-      openapi: '3.0.0',
+      openapi: '3.0.3',
+      servers: [
+        {
+          url: (await HOST) + BASE_PATH,
+        },
+      ],
       info: {
         title: NAME,
         version: process.env.npm_package_version,

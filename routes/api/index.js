@@ -30,6 +30,8 @@ try {
   router.use('/search', require('./search'))
   debug('Mounting stats route')
   router.use('/stats', require('./stats'))
+  debug('Mounting uuid route')
+  router.use('/uuid', require('./uuid'))
 } catch (error) {
   debug('Error mounting routes:', error)
 }

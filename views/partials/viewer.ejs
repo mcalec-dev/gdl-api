@@ -1,13 +1,14 @@
 <div id="popup-viewer" class="fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-md" hidden>
-  <div id="popup-buttons" class="absolute right-4 top-4 flex flex-row-reverse gap-3">
-    <button id="close-popup" class="z-50 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-800 bg-transparent p-2 font-bold text-white backdrop-blur-md">×</button>
-    <button id="open-new-tab" class="z-50 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-800 bg-transparent p-2 font-black text-white backdrop-blur-md">↗</button>
-    <button id="download-file" class="z-50 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-800 bg-transparent p-2 text-white backdrop-blur-md">↧</button>
+  <div id="popup-buttons" class="z-50 absolute right-4 top-4 flex flex-row-reverse gap-3 justify-center items-center">
+    <button id="close-popup" class="flex h-12 w-12 rounded-full border border-neutral-800/80 bg-black/20 p-2 text-white backdrop-blur-md align-middle text-center justify-center">×</button>
+    <button id="open-new-tab" class="flex h-12 w-12 rounded-full border border-neutral-800/80 bg-black/20 p-2 text-white backdrop-blur-md align-middle text-center justify-center">↗</button>
+    <button id="download-file" class="flex h-12 w-12 rounded-full border border-neutral-800/80 bg-black/20 p-2 text-white backdrop-blur-md align-middle text-center justify-center">↧</button>
+    <button id="copy-link" class="flex h-12 w-12 rounded-full border border-neutral-800/80 bg-black/20 p-2 text-white backdrop-blur-md align-middle text-center justify-center">⧉</button>
   </div>
-  <button id="prev-image" class="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[#404040] bg-[#2d2d2d]/90 text-white">
+  <button id="prev-image" class="z-50 absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 align-middle items-center justify-center rounded-full border border-neutral-800/80 bg-black/20 text-white backdrop-blur-md">
     <span>‹</span>
   </button>
-  <button id="next-image" class="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[#404040] bg-[#2d2d2d]/90 text-white">
+  <button id="next-image" class="z-50 absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 align-middle items-center justify-center rounded-full border border-neutral-800/80 bg-black/20 text-white backdrop-blur-md">
     <span>›</span>
   </button>
   <div class="popup-container relative flex h-auto max-h-[95vh] w-auto max-w-[95vw] items-center justify-center overflow-hidden bg-transparent">
@@ -15,8 +16,8 @@
     <video id="popup-video" class="popup-video pointer-events-auto mx-auto block h-auto max-h-[95vh] w-auto max-w-[95vw] cursor-zoom-in select-none border-0 object-contain" src="" alt="" draggable="false" controls autoplay></video>
     <audio id="popup-audio" class="popup-audio w-full" src="" alt="" draggable="false" controls autoplay></audio>
   </div>
-  <div class="image-info absolute bottom-5 left-1/2 -translate-x-1/2 border border-[#404040] bg-[#2d2d2d]/95 p-3 text-center">
-    <div id="image-title" class="image-title max-w-[300px] truncate text-sm text-white"></div>
-    <div id="image-counter" class="image-counter text-xs text-gray-300"></div>
+  <div class="image-info z-50 absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-slate-800/80 bg-black/20 p-4 text-center backdrop-blur-md">
+    <div id="image-title" class="truncate text-sm text-white"></div>
+    <div id="image-counter" class="text-xs text-gray-300"></div>
   </div>
 </div>

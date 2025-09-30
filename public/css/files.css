@@ -14,12 +14,6 @@
 .file-item.file {
   cursor: help;
 }
-.file-item.file .file-details {
-  display: none;
-}
-.file-item.file:hover .file-details {
-  display: block;
-}
 
 /* Grid View Specific Styles */
 .file-item img {
@@ -139,10 +133,6 @@
   touch-action: none;
   will-change: transform;
 }
-.popup-viewer span {
-  width: 30px;
-  height: 30px;
-}
 .image-info {
   position: absolute;
   bottom: 20px;
@@ -152,17 +142,4 @@
   padding: 12px 20px;
   border: 1px solid #404040;
   text-align: center;
-}
-.image-title {
-  color: white;
-  font-size: 14px;
-  margin-bottom: 4px;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.image-counter {
-  color: #bbbbbb;
-  font-size: 12px;
 }

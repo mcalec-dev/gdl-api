@@ -10,11 +10,11 @@ your local directory sturcture should be look similar this:
 
 ```text
 base-dir/
-├─ collection-1/
-│  ├─ author-1/
-│  │  ├─ files.png
-│  │  ├─ files.mp4
-│  │  ├─ etc...
+└─ collection-1/
+  └─ author-1/
+    ├─ files.png
+    ├─ files.mp4
+    └─ etc...
 ```
 
 sample `.env` file:
@@ -79,10 +79,10 @@ RATE_LIMIT_MAX=
 
 # trolling middleware values
 TROLLING_CHANCE=
-TROLLING_TERMS=
+TROLLING_TERMS=[]
 
 # bot/crawler user agents
-BOT_USER_AGENTS=
+BOT_USER_AGENTS=[]
 
 # github application credentials
 # create an application at https://github.com/settings/developers
