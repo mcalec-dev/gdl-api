@@ -49,111 +49,152 @@ router.get(['/', ''], async (req, res) => {
 /* to be moved */
 const { requireRole } = require('../../../utils/authUtils')
 const passport = require('../../../utils/passport')
-router.get('/link/:provider', requireRole(['user']), (req, res, next) => {
+const PROVIDERS = ['github', 'discord']
+router.get('/link/:provider', requireRole('user'), async (req, res, next) => {
   const provider = req.params.provider
-  if (provider === 'github') {
-    passport.authenticate('github', {
-      scope: ['user:email'],
-      state: req.user.id,
-    })(req, res, next)
-  } else if (provider === 'discord') {
-    passport.authenticate('discord', {
-      state: req.user.id,
-    })(req, res, next)
-  } else {
-    res.status(400).json({ message: 'Invalid provider' })
+  if (!PROVIDERS.includes(provider)) {
+    debug('Provider mismatch:', provider)
+    return res.status(400).json({
+      message: 'Bad Request',
+      status: 400,
+    })
   }
-})
-router.get('/unlink/:provider', requireRole(['user']), async (req, res) => {
-  const provider = req.params.provider
-  if (!['github', 'discord'].includes(provider)) {
-    debug('Invaild provider')
+  if (req.user.oauth?.[provider]?.id) {
+    debug('No provider found')
     return res.status(400).json({
       message: 'Bad Request',
       status: 400,
     })
   }
   try {
-    if (!req.user) {
-      debug('Not authenticated')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
+    if (provider === 'github') {
+      const options = {
+        scope: ['user:email'],
+      }
+      passport.authenticate(provider, options)(req, res, next)
     }
-    if (!req.user.oauth || !req.user.oauth[provider]) {
-      return res.status(400).json({
-        message: 'Bad Request',
-        status: 400,
-      })
+    if (provider === 'discord') {
+      const options = {
+        scope: ['identify', 'email'],
+      }
+      passport.authenticate(provider, options)(req, res, next)
     }
-    req.user.oauth[provider] = undefined
-    if (Object.values(req.user.oauth).every((v) => !v)) {
-      req.user.oauth = {}
-    }
-    await req.user.save()
-    res.json({
-      success: true,
-      status: 200,
-    })
-  } catch (err) {
-    debug('Error unlinking provider:', err)
-    res.status(500).json({
+  } catch (error) {
+    debug('Failed to authenticate OAuth:', error)
+    return res.status(500).json({
       message: 'Internal Server Error',
       status: 500,
     })
   }
 })
-router.get('/link/:provider/callback', (req, res, next) => {
+router.get('/unlink/:provider', requireRole('user'), async (req, res) => {
   const provider = req.params.provider
+  if (!PROVIDERS.includes(provider)) {
+    debug('Provider mismatch:', provider)
+    return res.status(400).json({
+      message: 'Bad Request',
+      status: 400,
+    })
+  }
+  try {
+    if (!req.user.oauth?.[provider]?.id) {
+      debug('No provider found')
+      return res.status(400).json({
+        message: 'Bad Request',
+        status: 400,
+      })
+    }
+    const hasPassword = !!req.user.password
+    const otherOAuthProviders = Object.keys(req.user.oauth || {}).filter(
+      (p) => p !== provider && req.user.oauth[p]?.id
+    )
+    if (!hasPassword && otherOAuthProviders.length === 0) {
+      return res.status(400).json({
+        message: 'Bad Request',
+        status: 400,
+      })
+    }
+    if (!req.user.oauth) req.user.oauth = {}
+    delete req.user.oauth[provider]
+    if (Object.keys(req.user.oauth).length === 0) {
+      req.user.oauth = undefined
+    }
+    await req.user.save()
+    return res.json({
+      success: true,
+      message: 'Provider unlinked successfully',
+      status: 200,
+    })
+  } catch (error) {
+    debug('Error unlinking provider:', error)
+    return res.status(500).json({
+      message: 'Internal Server Error',
+      status: 500,
+    })
+  }
+})
+router.get('/:provider', async (req, res, next) => {
+  const provider = req.params.provider
+  if (!PROVIDERS.includes(provider)) {
+    debug('Provider mismatch:', provider)
+    return res.status(400).json({
+      message: 'Bad Request',
+      status: 400,
+    })
+  }
+  try {
+    if (provider === 'github') {
+      const options = {
+        scope: ['user:email'],
+      }
+      passport.authenticate(provider, options)(req, res, next)
+    }
+    if (provider === 'discord') {
+      const options = {
+        scope: ['identify', 'email'],
+      }
+      passport.authenticate(provider, options)(req, res, next)
+    }
+  } catch (error) {
+    debug('Failed to authenticate OAuth:', error)
+    return res.status(500).json({
+      message: 'Internal Server Error',
+      status: 500,
+    })
+  }
+})
+router.get(['/callback/:provider', '/:provider/callback'], (req, res, next) => {
+  const provider = req.params.provider
+  if (!PROVIDERS.includes(provider)) {
+    debug('Provider mismatch:', provider)
+    return res.status(400).json({
+      message: 'Invalid Request',
+      status: 400,
+    })
+  }
   passport.authenticate(provider, async (err, oauthUser) => {
-    if (err || !oauthUser) {
-      return res.redirect('/?link=fail')
+    if (err) {
+      console.error('OAuth error:', err)
+      return res.redirect('/')
     }
-    if (
-      req.user &&
-      oauthUser &&
-      oauthUser.oauth &&
-      req.user.id !== oauthUser.id
-    ) {
-      req.user.oauth = { ...req.user.oauth, ...oauthUser.oauth }
+    if (!oauthUser) {
+      return res.redirect('/')
+    }
+    try {
+      if (!req.user) {
+        return res.redirect('/')
+      }
+      if (oauthUser.id && oauthUser.id !== req.user.id) {
+        return res.redirect('/dashboard')
+      }
+      if (!req.user.oauth) req.user.oauth = {}
+      req.user.oauth[provider] = oauthUser.oauth[provider]
       await req.user.save()
-      return res.redirect('/dashboard/?link=success')
+      return res.redirect('/dashboard')
+    } catch (error) {
+      console.error('Callback processing error:', error)
+      return res.redirect('/')
     }
-    res.redirect('/dashboard/')
   })(req, res, next)
 })
-router.get(
-  '/github',
-  passport.authenticate('github', {
-    scope: ['user:email'],
-    passReqToCallback: true,
-  })
-)
-router.get(
-  '/github/callback',
-  passport.authenticate('github', {
-    failureRedirect: '/?link=fail',
-  }),
-  (req, res) => {
-    res.redirect('/dashboard/')
-  }
-)
-router.get(
-  '/discord',
-  passport.authenticate('discord', {
-    scope: ['identify', 'email'],
-    passReqToCallback: true,
-  })
-)
-router.get(
-  '/discord/callback',
-  passport.authenticate('discord', {
-    failureRedirect: '/?link=fail',
-    passReqToCallback: true,
-  }),
-  (req, res) => {
-    res.redirect('/dashboard/')
-  }
-)
 module.exports = router

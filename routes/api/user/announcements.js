@@ -5,7 +5,9 @@ const Announcement = require('../../../models/Announcement')
  * @swagger
  * /api/user/announcements:
  *   get:
- *     summary: Get all announcements
+ *    summary: Retrieve announcements
+ *    description: Retrieve a list of announcements for users.
+ *
  */
 router.get(['/', ''], async (req, res) => {
   try {

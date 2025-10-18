@@ -179,6 +179,7 @@ passport.use(
       try {
         const uuid = require('uuid').v4()
         let email = profile.email ? profile.email : profile.emails
+        let avatar = `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}`
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
           if (user) {
@@ -187,7 +188,7 @@ passport.use(
               id: profile.id,
               username: profile.username,
               email,
-              avatar: profile.avatar,
+              avatar,
             }
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
@@ -216,7 +217,7 @@ passport.use(
               id: profile.id,
               username: profile.username,
               email,
-              avatar: profile.avatar,
+              avatar,
             }
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
@@ -251,7 +252,7 @@ passport.use(
                   id: profile.id,
                   username: profile.username,
                   email,
-                  avatar: profile.avatar,
+                  avatar,
                 },
               },
             }).catch((error) => {

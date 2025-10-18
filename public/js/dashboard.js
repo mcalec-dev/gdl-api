@@ -22,30 +22,65 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="text-gray-300 text-sm">Username: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.username}</code></div>
           <div class="text-gray-300 text-sm">Email: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.email}</code></div>
           <div class="text-gray-300 text-sm">Roles: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.roles.join(', ')}</code></div>
-          <div class="text-gray-300 text-sm">ID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.id}</code></div>
+          <div class="text-gray-300 text-sm">Created: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${new Date(data.created).toLocaleString()}</code></div>
+          <div class="text-gray-300 text-sm">Modified: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${new Date(data.modified).toLocaleString()}</code></div>
           <div class="text-gray-300 text-sm">UUID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.uuid}</code></div>
-          <div class="text-gray-300 text-sm">Created: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.created ? new Date(data.created).toLocaleString() : ''}</code></div>
         </div>
         <div class="mt-6">
-          <div class="flex flex-col sm:flex-row gap-3 mt-4">
-            <button id="link-github" class="px-3 py-2 rounded bg-[#24292f] text-white font-semibold flex-1 flex items-center justify-center gap-2">
-              <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
+          <div class="flex flex-row w-full items-center justify-center gap-3 mt-4">
+            <button id="link-discord" class="flex px-4 py-2 w-fit rounded bg-[#5865F2] text-white font-semibold items-center align-middle gap-2">
+              <img src="/svg/discord.svg" alt="Discord" class="invert h-4 w-4">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
-            <button id="link-discord" class="px-3 py-2 rounded bg-[#5865F2] text-white font-semibold flex-1 flex items-center justify-center gap-2">
-              <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
+            <button id="link-github" class="flex px-4 py-2 w-fit rounded bg-[#24292f] text-white font-semibold items-center align-middle gap-2">
+              <img src="/svg/github.svg" alt="GitHub" class="h-4 w-4">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
             </button>
           </div>
           <div class="mt-4 w-full md:max-w-full sm:max-w-full overflow-auto">
-            <span class="mt-4 text-gray-400 text-xs mb-1">OAuth Info:</span>
-            <pre class="bg-gray-900/60 rounded-lg border border-gray-700 p-3 mb-3 text-xs text-gray-200 whitespace-pre select-all overflow-auto text-clip">${JSON.stringify(data.oauth, null, 2)}</pre>
+            <span class="mt-4 text-gray-400 text-xs mb-1">OAuth Providers:</span>
+            <div class="flex md:flex-row flex-col w-full gap-4 overflow-auto text-clip">
+              ${(() => {
+                let html = ''
+                if (!discordLinked && !githubLinked) {
+                  html = `<div class="text-gray-400">No oauth providers found.</div>`
+                } else {
+                  Object.entries(data.oauth).forEach(([name, provider]) => {
+                    html += `
+                        <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-auto text-clip">
+                          <div class="flex flex-wrap gap-2 mb-1">
+                            <span class="font-semibold text-gray-300">Provider:</span>
+                            <span>${name}</span>
+                          </div>
+                          <div class="flex flex-wrap gap-2 mb-1">
+                            <span class="font-semibold text-gray-300">Username:</span>
+                            <span>${provider.username}</span>
+                          </div>
+                          <div class="flex flex-wrap gap-2 mb-1">
+                            <span class="font-semibold text-gray-300">Email:</span>
+                            <span>${provider.email}</span>
+                          </div>
+                          <div class="flex flex-wrap gap-2 mb-1">
+                            <span class="font-semibold text-gray-300">Avatar:</span>
+                            <span>${provider.avatar}</span>
+                          </div>
+                          <div class="flex flex-wrap gap-2 mb-1">
+                            <span class="font-semibold text-gray-300">ID:</span>
+                            <span>${provider.id}</span>
+                          </div>
+                        </div>
+                      `
+                  })
+                }
+                return html
+              })()}
+            </div>
             <span class="mt-4 text-gray-400 text-xs mb-1">Current Sessions:</span>
-            <div class="flex flex-col gap-4 overflow-auto text-clip">
+            <div class="flex lg:flex-row flex-col w-full gap-4 overflow-auto text-clip">
               ${(() => {
                 let html = ''
                 if (Array.isArray(data.sessions) && data.sessions.length > 0) {
                   data.sessions.forEach((session) => {
                     html += `
-                      <div class="rounded-lg border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200">
+                      <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-auto text-clip">
                         <div class="flex flex-wrap gap-2 mb-1">
                           <span class="font-semibold text-gray-300">First Seen:</span>
                           <span>${session.created ? new Date(session.created).toLocaleString() : 'N/A'}</span>
@@ -64,11 +99,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="flex flex-wrap gap-2 mb-1">
                           <span class="font-semibold text-gray-300">User Agent:</span>
-                          <span class="break-all">${session.useragent}</span>
+                          <span>${session.useragent}</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                           <span class="font-semibold text-gray-300">UUID:</span>
-                          <span class="break-all">${session.uuid}</span>
+                          <span>${session.uuid}</span>
                         </div>
                       </div>
                     `
@@ -91,10 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .addEventListener('click', async () => {
           if (githubLinked) {
             await fetch(document.location.origin + '/api/auth/unlink/github', {
-              method: 'POST',
-              headers: {
-                'X-CSRF-Token': CSRF,
-              },
+              method: 'GET',
               credentials: 'include',
             })
             window.location.reload()
@@ -107,10 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .addEventListener('click', async () => {
           if (discordLinked) {
             await fetch(document.location.origin + '/api/auth/unlink/discord', {
-              method: 'POST',
-              headers: {
-                'X-CSRF-Token': CSRF,
-              },
+              method: 'GET',
               credentials: 'include',
             })
             window.location.reload()

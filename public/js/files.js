@@ -1,6 +1,10 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import { setupViewerEvents, setupFileClickHandlers } from '../min/viewer.min.js'
+import {
+  setupViewerEvents,
+  setupFileClickHandlers,
+  loadViewerIcons,
+} from '../min/viewer.min.js'
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
 function constructApiPath(path) {
@@ -13,7 +17,7 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 function getFileType(mime) {
-  if (!mime || mime === 'n/a') return 'other'
+  if (!mime || mime === 'n/a' || typeof mime !== 'string') return 'other'
   switch (true) {
     case mime === 'application/mp4':
       return 'video'
@@ -41,6 +45,12 @@ async function loadIcons() {
     audio: icon.file.audio,
     text: icon.file.text,
     other: icon.file.default,
+    back: icon.nav.back,
+    sort: {
+      asc: icon.arrow.asc,
+      desc: icon.arrow.desc,
+      default: icon.arrow.default,
+    },
   }
 }
 let currentDirectoryData = null
@@ -48,7 +58,7 @@ let currentSort = 'name'
 let currentSortDir = 'none'
 let currentFetchController = null
 let isInitialized = false
-const SORT_STATES = {
+let SORT_STATES = {
   name: 'none',
   modified: 'none',
   type: 'none',
@@ -58,20 +68,24 @@ const SORT_STATES = {
 function getSortIcon(state) {
   switch (state) {
     case 'asc':
-      return '↑'
+      return icons.sort.asc
     case 'desc':
-      return '↓'
+      return icons.sort.desc
     default:
-      return '↕'
+      return icons.sort.default
   }
 }
 function renderSortToolbar() {
   const sortToolbar = document.getElementById('sort-toolbar')
   sortToolbar.classList.remove('invisible')
   const sortButtonStyle =
-    'flex justify-between min-w-[8vw] px-3 py-2 transparent backdrop-blur-md border border-white/10 rounded-xl pointer text-white'
-  const sortStateStyle = 'font-black'
+    'flex items-center text-center justify-between min-w-[8vw] px-3 py-2 transparent backdrop-blur-md border border-white/20 rounded-xl pointer text-white fill-white stroke-white transition'
+  const sortStateStyle = 'w-4 h-4 align-middle font-white'
   const sortToolbarHtml = `
+    <button id="goBack" class="${sortButtonStyle}">
+      <span>Back</span>
+      <span class="${sortStateStyle}">${icons.back}</span>
+    </button>
     <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
       <span>Name</span>
       <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
@@ -175,21 +189,34 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
             <div class="error">
               Error loading directory contents<br>
               <small>${response.statusText}</small>
-            </div>`
+            </div>
+          `
           if (fileList.contains(loadingIndicator))
             fileList.removeChild(loadingIndicator)
           return
         }
         const data = await response.json()
-        currentDirectoryData = { path, contents: data.contents }
+        let contents = []
+        if (Array.isArray(data)) {
+          contents = data
+        } else if (Array.isArray(data.contents)) {
+          contents = data.contents
+        } else if (Array.isArray(data.files)) {
+          contents = data.files
+        } else if (data.data && Array.isArray(data.data)) {
+          contents = data.data
+        }
+        currentDirectoryData = { path, contents }
       } catch (error) {
         if (error.name !== 'AbortError') {
           utils.handleError(error)
+          console.error('Fetch error:', error)
           fileList.innerHTML = `
             <div class="error">
               Error loading directory contents<br>
               <small>${error.message}</small>
-            </div>`
+            </div>
+          `
         }
         if (fileList.contains(loadingIndicator))
           fileList.removeChild(loadingIndicator)
@@ -205,11 +232,13 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
   } catch (error) {
     if (error.name !== 'AbortError') {
       utils.handleError(error)
+      console.error('Load directory error:', error)
       fileList.innerHTML = `
         <div class="error">
           Error loading directory contents<br>
           <small>${error.message}</small>
-        </div>`
+        </div>
+      `
     }
   }
 }
@@ -244,6 +273,19 @@ function setupLazyLoading() {
             element.dataset.src &&
             !element.src
           ) {
+            const loadImage = () => {
+              const tempImage = new window.Image()
+              tempImage.onload = () => {
+                element.src = element.dataset.src
+                element.classList.remove('loading')
+                element.classList.add('loaded')
+              }
+              tempImage.onerror = () => {
+                element.classList.remove('loading')
+                element.classList.add('error')
+              }
+              tempImage.src = element.dataset.src
+            }
             if (
               element.tagName.toLowerCase() === 'video' ||
               element.tagName.toLowerCase() === 'audio'
@@ -252,15 +294,9 @@ function setupLazyLoading() {
               element.src = element.dataset.src
               element.muted = element.tagName.toLowerCase() === 'video'
               element.classList.remove('loading')
+              element.classList.add('loaded')
             } else {
-              element.src = element.dataset.src
-              element.onload = () => {
-                element.classList.remove('loading')
-              }
-              element.onerror = () => {
-                element.classList.remove('loading')
-                element.classList.add('error')
-              }
+              loadImage()
             }
           }
         } else {
@@ -274,7 +310,7 @@ function setupLazyLoading() {
               element.removeAttribute('src')
               element.preload = 'none'
               element.load()
-            } else {
+            } else if (!element.classList.contains('loaded')) {
               element.removeAttribute('src')
             }
             element.classList.add('loading')
@@ -307,7 +343,6 @@ function handleDirectoryClick(event) {
   const params = url.search
   history.pushState({ path: cleanPath }, '', newPath + params)
   loadDirectory(cleanPath, null, true)
-  window.scrollTo(0, 0)
 }
 function setupSortButtons() {
   const sortButtons = [
@@ -354,25 +389,16 @@ async function renderDirectory(contents, path) {
   // all this styling is pissing me off
   // im the original mcalec
   if (hasFiles) {
-    fileList.classList.remove(
-      'columns-1',
-      'columns-2',
-      'columns-3',
-      'columns-4',
-      'columns-5',
-      'columns-6'
-    )
     fileList.classList.add(
       'grid-view',
       'grid',
-      'sm:grid-cols-2',
-      'md:grid-cols-4',
-      'lg:grid-cols-6',
+      '[grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]',
+      'auto-rows-[200px]',
       'items-start',
-      'gap-4'
+      'justify-items-stretch',
+      'gap-3'
     )
-    fileList.style.gridAutoFlow = 'row dense'
-    fileList.style.gridAutoRows = 'min-content'
+    fileList.style.gridAutoFlow = 'dense'
   } else if (hasDirectories) {
     fileList.classList.remove(
       'grid-view',
@@ -387,6 +413,15 @@ async function renderDirectory(contents, path) {
   }
   const sortedContents = sortContents(contents, currentSort, currentSortDir)
   renderSortToolbar()
+  const goBack = document.getElementById('goBack')
+  goBack.addEventListener('click', () => {
+    const parentPath = currentDirectoryData.path
+      .split('/')
+      .slice(0, -1)
+      .join('/')
+    loadDirectory(parentPath)
+    window.history.pushState({}, '', `${frontendBasePath}/${parentPath}`)
+  })
   setupFileClickHandlers('#file-list')
   let html = ''
   for (const item of sortedContents) {
@@ -410,70 +445,81 @@ async function renderDirectory(contents, path) {
       }
     }
     let cursorClass = ''
-    if (itemType === 'directory') {
+    if (item.type === 'directory') {
       cursorClass = 'cursor-pointer'
-    } else if (
-      (itemType === 'image' || itemType === 'video' || itemType === 'audio') &&
-      previewUrl
-    ) {
-      cursorClass = 'cursor-default'
     } else {
       cursorClass = 'cursor-help'
     }
-    // same here with the styling
-    const fileItemClasses = `group block h-full p-0 m-0 border border-white/10 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none`
-    html += `<div id="file-item ${item.type}" class="file-item ${item.type} ${fileItemClasses} ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">`
     if (itemType === 'directory') {
-      html += `<div class="file-icon ${itemType}">${icons[itemType]}</div>`
-      html += `<div class="group block bottom-0 left-0 right-0 bg-gray-800/85 p-2 border-t border-white/10">
-      <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
-        <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-          <span>${utils.formatDate(item.modified)}</span>
-          <br />
-          <span>${utils.formatSize(item.size)}</span>
+      html += `
+        <div class="file-item directory group place-items-start flex-row h-auto w-full p-0 m-0 border border-white/10 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+          <div class="group w-full min-w-0 bg-transparent p-2 mr-2 overflow-hidden">
+            <div class="file-icon ${itemType} flex w-6 h-6">${icons[itemType]}</div>
+            <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+            <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+              <span>${utils.formatDate(item.modified)}</span>
+              <br />
+              <span>${utils.formatSize(item.size)}</span>
+            </div>
+          </div>
         </div>
-      </div>`
+      `
     } else if (
       (itemType === 'image' || itemType === 'video' || itemType === 'audio') &&
       previewUrl
     ) {
-      if (itemType === 'audio') {
-        html += `
-          <div id="audio-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-            <audio class="file-preview audio loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
-          </div>`
-      }
-      if (itemType === 'image') {
-        html += `
-          <div id="image-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-            <img class="file-preview loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" draggable="false">
-          </div>`
-      }
-      if (itemType === 'video') {
-        html += `
-          <div id="video-preview-container" class="w-full h-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-            <video class="file-preview video loading w-full h-auto object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></video>
-          </div>`
-      }
       html += `
-        <div class="file-details absolute left-4 right-4 bottom-4 bg-gray-800/85 p-2 hidden group-hover:block">
-          <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
-          <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-            <span>${utils.formatDate(item.modified)}</span><br>
-            <span>${utils.formatSize(item.size)}</span>
+        <div class="file-item ${item.type} group relative block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/10 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+          <div class="w-full h-full">
+            ${(() => {
+              if (itemType === 'audio') {
+                return `
+                  <div class="audio-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
+                  </div>
+                `
+              }
+              if (itemType === 'image') {
+                return `
+                  <div class="image-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+                  </div>
+                `
+              }
+              if (itemType === 'video') {
+                return `
+                  <div class="video-preview-container aspect-video h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
+                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></video>
+                  </div>
+                `
+              }
+            })()}
           </div>
-        </div>`
-    } else {
-      html += `<div class="file-icon ${itemType}">${icons[itemType] || icons.other}</div>`
-      html += `<div class="file-details block">
-        <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
-        <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-          <span>${utils.formatDate(item.modified)}</span><br>
-          <span>${utils.formatSize(item.size)}</span>
+          <div class="file-details absolute inset-x-0 bottom-0 duration-300 z-20 bg-black/85 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+            <div class="flex-col text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+              <span>${utils.formatDate(item.modified)}</span><br>
+              <span>${utils.formatSize(item.size)}</span>
+            </div>
+          </div>
         </div>
-      </div>`
+      `
+    } else {
+      html += `
+        <div class="file-item other group relative flex w-full h-auto p-3 border border-white/10 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+          <div class="flex items-center w-full gap-3">
+            <div class="file-icon ${itemType} flex w-6 h-6 flex-shrink-0">${icons[itemType] || icons.other}</div>
+            <div class="file-details flex-1 min-w-0">
+              <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+              <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
+                <span>${utils.formatDate(item.modified)}</span><br>
+                <span>${utils.formatSize(item.size)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
     }
-    html += `</div>`
   }
   const tempDiv = document.createElement('div')
   tempDiv.innerHTML = html
@@ -497,9 +543,7 @@ async function renderDirectory(contents, path) {
         audio.currentTime = 0
       })
     })
-  if (hasFiles) {
-    setupLazyLoading()
-  }
+  setupLazyLoading()
 }
 function getSortFromQuery() {
   const params = new URLSearchParams(window.location.search)
@@ -524,6 +568,7 @@ async function init() {
   if (isInitialized) return
   isInitialized = true
   await loadIcons()
+  await loadViewerIcons()
   getSortFromQuery()
   setupViewerEvents()
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)

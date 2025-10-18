@@ -1,32 +1,5 @@
-/* File Item Styles */
-.file-item .file-details.directory {
-  display: block;
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  padding: 8px;
-  margin-right: 8px;
-  overflow: hidden;
-}
-.file-item.directory {
-  cursor: pointer;
-}
-.file-item.file {
-  cursor: help;
-}
-
-/* Grid View Specific Styles */
 .file-item img {
   image-rendering: auto;
-}
-.grid-view .file-details {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  background: rgba(45, 45, 45, 0.95);
-  border-top: 1px solid #404040;
 }
 
 /* File Icon Styles */
@@ -40,7 +13,6 @@
   color: #66b3ff;
 }
 .grid-view .file-icon svg {
-  position: absolute;
   left: 50%;
   top: 50%;
   width: 100px;
@@ -53,7 +25,6 @@
   height: 24px;
   fill: currentColor;
 }
-
 .file-icon.directory {
   color: #66b3ff;
 }
@@ -64,82 +35,11 @@
   color: #757575;
 }
 
-/* Video Preview Styles */
-.video-preview-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.file-preview.video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: transparent;
-  cursor: pointer;
-}
-
 /* Image Preview Styles */
-.popup-viewer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-}
-.popup-container {
-  max-width: 95vw;
-  max-height: 95vh;
-  width: auto;
-  height: auto;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-.popup-image,
-.popup-video {
-  max-width: 95vw;
-  max-height: 95vh;
-  width: auto;
-  height: auto;
-  cursor: zoom-in;
-  border: none;
-  display: block;
-  margin: 0 auto;
-  -webkit-user-select: none;
-  user-select: none;
-  pointer-events: visible;
-  cursor: default;
-  object-fit: contain;
-}
 .popup-image.zoomed {
   width: 100%;
   height: 100%;
   object-fit: contain;
   touch-action: none;
   will-change: transform;
-}
-.image-info {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(45, 45, 45, 0.95);
-  padding: 12px 20px;
-  border: 1px solid #404040;
-  text-align: center;
 }

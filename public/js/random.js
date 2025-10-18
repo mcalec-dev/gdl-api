@@ -41,6 +41,7 @@ function showMedia(data) {
     mediaElement.muted = false
     mediaElement.loop = false
     mediaElement.autoplay = false
+    mediaElement.playsInline = true
   }
   imageInfo.innerHTML = `
     <span id="image-author" class="font-semibold text-gray-300">${data.author}</span>
@@ -203,9 +204,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
   await loadIcons()
-  backImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.back}</span>`
-  loadImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.shuffle}</span>`
-  forwardImageBtn.innerHTML = `<span class="w-4 h-4 m-0 items-center">${icons.forward}</span>`
+  backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
+  loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`
+  forwardImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.forward}</span>`
   window.addEventListener('keydown', (e) => {
     switch (e.key) {
       case 'ArrowLeft':

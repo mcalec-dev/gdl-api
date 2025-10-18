@@ -7,9 +7,7 @@ const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:api:files')
-const mime = require('mime-types')
 const uuid = require('uuid')
-const mammoth = require('mammoth')
 const {
   BASE_DIR,
   DISALLOWED_DIRS,
@@ -129,9 +127,10 @@ async function syncAllFilesToDatabase() {
     }
   }
 }
-function getFileMime(file) {
-  const type =
-    mime.lookup(file).replace('application/mp4', 'video/mp4') || 'n/a'
+async function getFileMime(file) {
+  const ext = path.extname(file)
+  let type = require('mime-types').lookup(ext) || 'n/a'
+  type = type.replace('application/mp4', 'video/mp4')
   debug('MIME for', file, 'is', type)
   return type
 }
@@ -381,12 +380,12 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
     const filteredResults = results.filter(Boolean)
     const files = filteredResults.filter((entry) => entry.type === 'file')
     if (req.user) {
-      res.json({ contents: filteredResults })
+      res.json(filteredResults)
       if (filteredResults.length) {
         await createDbEntriesForContents(filteredResults, '')
       }
     } else {
-      res.json({ contents: files })
+      res.json(files)
       if (files.length) {
         await createDbEntriesForContents(files, '')
       }
@@ -534,7 +533,7 @@ router.get(
             fullPath = fullPath.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
           }
           const url = req.protocol + '://' + req.hostname + fullPath
-          const mime = isDir ? 'n/a' : getFileMime(entry.name)
+          const mime = isDir ? 'n/a' : await getFileMime(entry.name)
           return {
             name: entry.name,
             type: isDir ? 'directory' : 'file',
@@ -550,7 +549,7 @@ router.get(
         })
       )
       const validContents = formattedContents.filter(Boolean)
-      res.json({ contents: validContents })
+      res.json(validContents)
       if (validContents.length) {
         await createDbEntriesForContents(validContents, relativePath)
       }
@@ -599,49 +598,78 @@ router.get(
           })
         }
       }
-      if (isVideoFile(realPath)) {
-        res.set('Content-Type', getFileMime(realPath))
-        res.sendFile(realPath)
-      }
-      if (isAudioFile(realPath)) {
-        res.set('Content-Type', getFileMime(realPath))
-        res.sendFile(realPath)
+      if (isVideoFile(realPath) || isAudioFile(realPath)) {
+        if (!req.headers.range) {
+          debug(
+            'Request does not have any range headers - sending file instead'
+          )
+          return res.sendFile(realPath)
+        }
+        // stream file
+        try {
+          const stat = await fs.stat(realPath)
+          const fileSize = stat.size
+          const range = req.headers.range
+          const mimeType = await getFileMime(realPath)
+          if (range) {
+            const parts = range.replace(/bytes=/, '').split('-')
+            const start = parseInt(parts[0], 10)
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+            const chunksize = end - start + 1
+            const fileStream = require('fs').createReadStream(realPath, {
+              start,
+              end,
+            })
+            res.writeHead(206, {
+              'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+              'Accept-Ranges': 'bytes',
+              'Content-Length': chunksize,
+              'Content-Type': mimeType,
+            })
+            fileStream.pipe(res)
+          } else {
+            res.writeHead(200, {
+              'Content-Length': fileSize,
+              'Content-Type': mimeType,
+              'Accept-Ranges': 'bytes',
+            })
+            require('fs').createReadStream(realPath).pipe(res)
+          }
+          return
+        } catch (error) {
+          debug('Error streaming media file:', error)
+          return res.status(500).json({
+            message: 'Internal Server Error',
+            status: 500,
+          })
+        }
       }
       if (isDocFile(realPath)) {
-        mammoth
-          .convertToHtml({
-            path: realPath,
-          })
-          .then((result) => {
-            const html = result.value
-            res.set('Content-Type', 'text/html; charset=utf-8')
-            res.send(html)
-          })
-          .catch((error) => {
-            debug('Error converting docx to html', error)
-            return res.status(500).json({
-              message: 'Internal Server Error',
-              status: 500,
+        try {
+          require('mammoth')
+            .convertToHtml({
+              path: realPath,
             })
+            .then((result) => {
+              const html = result.value
+              res.set('Content-Type', 'text/html; charset=utf-8')
+              res.send(html)
+            })
+        } catch (error) {
+          debug('Error in mammoth doc conversion:', error)
+          return res.status(500).json({
+            message: 'Internal Server Error',
+            status: 500,
           })
-      } else {
-        res.download(realPath, (error) => {
-          if (error) {
-            if (
-              error.code === 'ECONNABORTED' ||
-              error.message === 'Request aborted'
-            ) {
-              debug('Request aborted by the client:')
-              return
-            }
-            debug('Error in file download:', error)
-            if (!res.headersSent) {
-              res.status(500).json({
-                message: 'Internal Server Error',
-                status: 500,
-              })
-            }
-          }
+        }
+      }
+      try {
+        res.download(realPath)
+      } catch (error) {
+        debug('Error in sending file:', error)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
         })
       }
     }

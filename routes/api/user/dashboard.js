@@ -5,7 +5,8 @@ const debug = require('debug')('gdl-api:api:user:dashboard')
  * @swagger
  * /api/user/dashboard/:
  *   get:
- *     summary: User dashboard
+ *     summary: Retrieve user dashboard information
+ *     description: Retrieve dashboard information for the authenticated user.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {

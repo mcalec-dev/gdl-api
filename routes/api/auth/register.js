@@ -6,20 +6,25 @@ const debug = require('debug')('gdl-api:api:auth:register')
  * @swagger
  * /api/auth/register/:
  *   post:
- *     summary: Register a new user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               email:
- *                 type: string
- *               password:
- *                 type: string
+ *    summary: User registration
+ *    description: Register a new user with username, email, and password.
+ *   parameters:
+ *   - in: body
+ *     name: user
+ *     description: User information for registration.
+ *    schema:
+ *     type: object
+ *     properties:
+ *      username:
+ *        type: string
+ *      email:
+ *        type: string
+ *      password:
+ *        type: string
+ *   required:
+ *     - username
+ *     - email
+ *     - password
  */
 router.post(['', '/'], async (req, res) => {
   const { username, email, password } = req.body

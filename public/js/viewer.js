@@ -1,8 +1,21 @@
 'use strict'
+import * as utils from '../min/index.min.js'
 let currentItemIndex = 0
 let currentItemList = []
 let itemLoadControllers = new Map()
 const zoomedImageSize = '?x=200'
+let icons
+async function loadViewerIcons() {
+  const icon = await utils.getIcons()
+  return (icons = {
+    exit: icon.nav.exit,
+    next: icon.nav.next,
+    prev: icon.nav.prev,
+    link: icon.nav.link,
+    copy: icon.nav.copy,
+    download: icon.nav.download,
+  })
+}
 function getMediaUrl(item) {
   return item.previewSrc
 }
@@ -24,6 +37,17 @@ function showViewer(index) {
   const imageCounter = document.getElementById('image-counter')
   const prevButton = document.getElementById('prev-image')
   const nextButton = document.getElementById('next-image')
+  const closePopup = document.getElementById('close-popup')
+  const openNewTab = document.getElementById('open-new-tab')
+  const downloadFile = document.getElementById('download-file')
+  const copyLink = document.getElementById('copy-link')
+  const btnStyle = 'w-5 h-5 m-0 items-center'
+  closePopup.innerHTML = `<span class="${btnStyle}">${icons.exit}</span>`
+  openNewTab.innerHTML = `<span class="${btnStyle}">${icons.link}</span>`
+  downloadFile.innerHTML = `<span class="${btnStyle}">${icons.download}</span>`
+  copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
+  nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
+  prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
   popupImage.style.display = 'none'
   popupVideo.style.display = 'none'
   popupAudio.style.display = 'none'
@@ -306,4 +330,5 @@ export {
   getCurrentItemIndex,
   preloadMedia,
   getMediaUrl,
+  loadViewerIcons,
 }

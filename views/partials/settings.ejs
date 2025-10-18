@@ -1,7 +1,9 @@
-<div id="settings" class="fixed z-50 m-0 p-0">
+<div id="settings" class="fixed z-50">
   <div class="fixed bottom-4 left-4 z-50 rounded-xl border border-white/20 p-0 shadow-lg backdrop-blur-md items-center justify-center align-middle">
-    <button id="settings-button" class="px-4 py-3 text-2xl w-full h-auto text-center text-white">
-      ⓘ
+    <button id="settings-button" class="flex items-center justify-center rounded border-white/20 p-4 font-semibold text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition">
+      <span class="w-6 h-6 items-center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9h.01" /><path d="M11 12h1v4h1" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+      </span>
     </button>
   </div>
 </div>
@@ -9,12 +11,6 @@
   <h2 id="subtitle" class="mb-6 text-center text-2xl font-light capitalize text-white sm:mb-8">
     Settings
   </h2>
-  <div id="bg-color_container" class="flex-column mb-4 flex gap-2">
-    <span class="text-white">
-      Background Color:
-    </span>
-    <select id="bg_color" class="bg-gray-800 rounded border border-white/20 p-1 text-white items-center justify-center"></select>
-  </div>
   <div id="oneko-toggle_container" class="flex-column mb-8 flex gap-2">
     <span class="text-white">
       Show Oneko:
@@ -27,4 +23,4 @@
     </button>
   </div>
 </div>
-<script defer type="module" src="/js/min/settings.min.js"></script>
+<script type="module" src="/js/min/settings.min.js"></script>

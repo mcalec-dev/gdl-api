@@ -2,9 +2,10 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:auth:csrf')
 /**
  * @swagger
- * /api/auth/check/:
+ * /api/auth/csrf:
  *   get:
- *     summary: Check user authentication status
+ *     summary: Retrieve CSRF token
+ *     description: Retrieve a CSRF token for the current session.
  */
 router.get(['/', ''], (req, res) => {
   try {

@@ -1,6 +1,6 @@
 'use strict'
 import * as utils from '/js/min/index.min.js'
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', async () => {
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
   let name
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', async function () {
   const loginRegisterButtons = document.querySelectorAll('#login-register')
   let checkAuthStatus = null
   try {
-    const res = await fetch('/api/auth/check')
-    checkAuthStatus = await res.json()
+    const req = await fetch('/api/auth/check')
+    checkAuthStatus = await req.json()
   } catch (error) {
     utils.handleError(error)
     console.error('Failed to fetch auth status:', error)

@@ -41,7 +41,11 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
     return res.status(401).json({ message: 'Unauthorized', status: 401 })
   }
   const { q, type, files, directories } = req.query
-  debug('Starting DB search for: "%s" with filter(s): %o', q, { type })
+  debug('Starting DB search for: "%s" with filter(s): %o', q, {
+    type,
+    files,
+    directories,
+  })
   if (!q || q.length === 0) {
     debug('Search query is empty')
     return res.status(400).json({ message: 'Bad Request', status: 400 })

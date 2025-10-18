@@ -4,23 +4,23 @@
   <body class="relative flex min-h-screen items-center justify-center bg-black">
     <%- include('partials/navbar') %>
     <%- include('partials/settings') %>
-    <div id="container" class="z-10 min-w-[25vw] min-h-[20vh] mx-1 mb-[6vh] mt-[12vh] flex h-auto flex-col items-center rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:mx-0 sm:w-full sm:p-8 md:w-auto md:max-w-[65%] md:p-8">
-      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
+    <div id="container" class="z-10 min-w-[25vw] min-h-[20vh] mx-1 mb-[6vh] mt-[6vh] flex h-auto flex-col items-center rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:mx-0 sm:w-full sm:p-8 md:w-auto md:max-w-[65%] md:p-8">
+      <h1 id="title" class="mb-4 text-center text-3xl font-light capitalize text-white sm:mb-8">
         <%= currentPage %>
       </h1>
-      <div class="flex max-h-[80vh] items-center justify-center">
-        <div id="loading" class="loading items-center align-middle z-20 fixed mt-12 w-fit h-auto rounded-lg bg-transparent backdrop-blur-md border border-white/20 px-4 py-3 text-lg text-center text-white">
-          Click the shuffle button to load media.
-        </div>
+      <div id="loading" class="loadingfixed align-middle left-1/2 top-1/2 z-20 mt-12 w-fit h-auto rounded-lg bg-transparent backdrop-blur-md border border-white/20 p-4 text-lg text-center text-white">
+        Click the shuffle button to load media.
+      </div>
+      <div class="flex max-h-[90vh] items-center justify-center">
         <div id="media-container" class="group relative mx-auto inline-flex h-auto w-full items-center justify-center overflow-hidden border-none bg-transparent">
           <div id="item-info" class="duration-400 absolute bottom-0 z-20 w-full h-auto bg-black bg-opacity-95 px-3 py-2 items-stretch text-center text-sm text-white opacity-0 transition-opacity group-hover:opacity-95 rounded-lg-b" hidden></div>
         </div>
       </div>
     </div>
     <div id="controls" class="fixed bottom-4 z-20 flex h-auto w-auto items-center justify-center gap-3 rounded-xl border border-white/20 px-5 py-4 shadow-2xl backdrop-blur-md sm:w-full md:max-w-fit">
-      <button id="backImageBtn" class="button flex items-center justify-center rounded border border-white/20 p-4 font-semibold text-white shadow-2xl backdrop-blur-md transition"></button>
-      <button id="loadImageBtn" class="button flex items-center justify-center rounded border border-white/20 px-6 py-4 font-thin text-white shadow-2xl backdrop-blur-md transition"></button>
-      <button id="forwardImageBtn" class="button flex items-center justify-center rounded border border-white/20 p-4 font-semibold text-white shadow-2xl backdrop-blur-md transition"></button>
+      <button id="backImageBtn" class="button flex items-center justify-center rounded border border-white/20 p-3 font-semibold text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition"></button>
+      <button id="loadImageBtn" class="button flex items-center justify-center rounded border border-white/20 px-4 py-3 font-thin text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition"></button>
+      <button id="forwardImageBtn" class="button flex items-center justify-center rounded border border-white/20 p-3 font-semibold text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition"></button>
     </div>
     <script type="module" src="/js/min/random.min.js"></script>
     <%- include('partials/bg') %>

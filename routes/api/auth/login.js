@@ -6,20 +6,23 @@ const debug = require('debug')('gdl-api:api:auth:login')
  * @swagger
  * /api/auth/login/:
  *   post:
- *     summary: Login user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               email:
- *                 type: string
- *               password:
- *                 type: string
+ *     summary: User login
+ *     description: Authenticate a user with username/email and password.
+ *    parameters:
+ *    - in: body
+ *      name: credentials
+ *      description: User credentials for login.
+ *      schema:
+ *        type: object
+ *        properties:
+ *          username:
+ *            type: string
+ *          email:
+ *            type: string
+ *          password:
+ *            type: string
+ *     required:
+ *       - password
  */
 router.post(['/', ''], async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {

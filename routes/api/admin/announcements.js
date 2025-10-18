@@ -2,6 +2,7 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin:announcements')
 const { requireRole } = require('../../../utils/authUtils')
 const Announcement = require('../../../models/Announcement')
+const { Types } = require('mongoose')
 /**
  * @swagger
  * /api/admin/announcements:
@@ -9,7 +10,7 @@ const Announcement = require('../../../models/Announcement')
  *     summary: Get all announcements
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  if (!req.user || !req.user.roles.includes('admin')) {
+  if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
@@ -48,7 +49,7 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
  *                 enum: [info, warning, error]
  */
 router.post(['', '/'], requireRole('admin'), async (req, res) => {
-  if (!req.user || !req.user.roles.includes('admin')) {
+  if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
@@ -88,30 +89,37 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
  * @swagger
  * /api/admin/announcements/{id}:
  *   put:
- *     summary: Update an announcement
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
+ *    summary: Update an announcement
+ *   parameters:
+ *    - in: path
+ *     name: id
+ *    required: true
+ *    schema:
+ *      type: string
+ *    requestBody:
+ *     required: true
+ *    content:
+ *     application/json:
+ *      schema:
+ *       type: object
+ *       properties:
+ *         title:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message:
- *                 type: string
- *               severity:
- *                 type: string
- *                 enum: [info, warning, error]
+ *         message:
+ *           type: string
+ *         severity:
+ *           type: string
+ *           enum: [info, warning, error]
  */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
-  if (!req.user || !req.user.roles.includes('admin')) {
+  const { title, message, severity } = req.body
+  if (!title || title !== Types.string) {
+    return res.status(400).json({
+      error: 'Bad Request',
+      status: 400,
+    })
+  }
+  if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
       message: 'Unauthorized',
@@ -119,13 +127,6 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
     })
   }
   try {
-    const { title, message, severity } = req.body
-    if (!title) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        status: 400,
-      })
-    }
     const updatedAnnouncement = await Announcement.findOneAndUpdate(
       { uuid: { $eq: req.params.uuid } },
       {

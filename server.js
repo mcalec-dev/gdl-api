@@ -43,7 +43,7 @@ async function initSwagger() {
       openapi: '3.0.3',
       servers: [
         {
-          url: (await HOST) + BASE_PATH,
+          url: `https://${await HOST}${BASE_PATH}`,
         },
       ],
       info: {

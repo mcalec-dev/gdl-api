@@ -15,7 +15,7 @@ const BLOCKED_PATTERNS = [
 ]
 async function isHostAllowed(hostname) {
   const cfgHost = await HOST
-  if (!cfgHost || hostname.toLowerCase() !== cfgHost.toLowerCase()) {
+  if (!cfgHost || hostname !== cfgHost) {
     debug('Host mismatch:', { hostname, cfgHost })
     return false
   }
@@ -121,13 +121,15 @@ async function handleDownload(req, res) {
  * @swagger
  * /api/download/:
  *   get:
- *     summary: Download file from allowed hosts only
+ *     summary: Download a file from a specified URL.
+ *     description: Downloads a file from the provided URL and serves it to the client.
  *     parameters:
  *       - in: query
  *         name: url
  *         required: true
  *         schema:
  *           type: string
+ *           description: The URL of the file to download.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {

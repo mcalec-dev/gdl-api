@@ -6,32 +6,8 @@ const { requireRole } = require('../../utils/authUtils')
  * @swagger
  * /api/random:
  *   get:
- *     summary: Get a random file
- *     responses:
- *       200:
- *         description: Show a random file
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 file:
- *                   type: string
- *                 path:
- *                   type: string
- *                 collection:
- *                   type: string
- *                 author:
- *                   type: string
- *                 size:
- *                   type: integer
- *                 url:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                 type:
- *                   type: string
+ *    summary: Retrieve a random file
+ *    description: Retrieve a random file from the database.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {

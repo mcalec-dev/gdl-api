@@ -5,7 +5,8 @@ const User = require('../../../models/User')
  * @swagger
  * /api/auth/logout/:
  *   post:
- *     summary: Logout user
+ *    summary: User logout
+ *    description: Log out the authenticated user and destroy their session.
  */
 router.post(['/', ''], async (req, res) => {
   if (!req.user || !req.isAuthenticated()) {
