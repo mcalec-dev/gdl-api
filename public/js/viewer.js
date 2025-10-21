@@ -1,38 +1,73 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import { IMAGE_SCALE, MAX_IMAGE_SCALE } from '../min/settings.min.js'
 let currentItemIndex = 0
 let currentItemList = []
 let itemLoadControllers = new Map()
-const zoomedImageSize = '?x=200'
+const zoomedImageSize = `?x=${MAX_IMAGE_SCALE}`
+const defaultImageSize = `?x=${IMAGE_SCALE}`
 let icons
 async function loadViewerIcons() {
   const icon = await utils.getIcons()
-  return (icons = {
+  icons = {
     exit: icon.nav.exit,
     next: icon.nav.next,
     prev: icon.nav.prev,
     link: icon.nav.link,
     copy: icon.nav.copy,
     download: icon.nav.download,
-  })
+  }
+}
+let _prevBodyOverflow = null
+async function lockScroll() {
+  try {
+    _prevBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  } catch {
+    try {
+      document.body.style.removeProperty('overflow')
+    } catch {
+      utils.handleError('Unable to lock scroll')
+    }
+  }
+}
+async function unlockScroll() {
+  try {
+    if (_prevBodyOverflow === null || _prevBodyOverflow === undefined) {
+      document.body.style.removeProperty('overflow')
+    } else {
+      document.body.style.overflow = _prevBodyOverflow
+    }
+    _prevBodyOverflow = null
+  } catch {
+    try {
+      document.body.style.removeProperty('overflow')
+    } catch {
+      utils.handleError('Unable to unlock scroll')
+    }
+  }
 }
 function getMediaUrl(item) {
-  return item.previewSrc
+  return item.previewSrc || `/api/files/${item.encodedPath}`
 }
 function preloadMedia(item) {
   if (!item || item.type === 'video') return
   const preloadImg = document.createElement('img')
-  preloadImg.src = getMediaUrl(item)
+  preloadImg.src =
+    item.type === 'image'
+      ? getMediaUrl(item) + defaultImageSize
+      : getMediaUrl(item)
 }
 // let me just find a way to make this work in other files
 // like random.js for previewing those damn images
-function showViewer(index) {
+async function showViewer(index) {
   if (index < 0 || index >= currentItemList.length) return
   const item = currentItemList[index]
   const popupViewer = document.getElementById('popup-viewer')
   const popupImage = document.getElementById('popup-image')
   const popupVideo = document.getElementById('popup-video')
   const popupAudio = document.getElementById('popup-audio')
+  const popupEmbed = document.getElementById('popup-embed')
   const imageTitle = document.getElementById('image-title')
   const imageCounter = document.getElementById('image-counter')
   const prevButton = document.getElementById('prev-image')
@@ -51,6 +86,7 @@ function showViewer(index) {
   popupImage.style.display = 'none'
   popupVideo.style.display = 'none'
   popupAudio.style.display = 'none'
+  popupEmbed.style.display = 'none'
   popupVideo.pause()
   popupAudio.pause()
   const url = getMediaUrl(item)
@@ -62,7 +98,7 @@ function showViewer(index) {
     popupAudio.style.maxWidth = '600px'
   }
   if (item.type === 'image') {
-    popupImage.src = url
+    popupImage.src = url + defaultImageSize
     popupImage.style.display = 'block'
     popupImage.style.cursor = 'zoom-in'
     popupImage.style.maxHeight = '85vh'
@@ -77,12 +113,22 @@ function showViewer(index) {
     popupVideo.style.height = 'auto'
     popupVideo.style.width = 'auto'
   }
+  if (item.type === 'text') {
+    popupEmbed.src = url
+    popupEmbed.style.display = 'block'
+    popupEmbed.style.maxHeight = '85vh'
+    popupEmbed.style.maxWidth = '85vw'
+    popupEmbed.style.width = '85vw'
+    popupEmbed.style.height = '85vh'
+    popupEmbed.style.border = 'none'
+  }
   imageTitle.textContent = item.name
   imageCounter.textContent = `${index + 1} / ${currentItemList.length}`
   prevButton.disabled = index === 0
   nextButton.disabled = index === currentItemList.length - 1
   popupViewer.style.display = 'flex'
   popupViewer.classList.remove('hidden')
+  await lockScroll()
   currentItemIndex = index
   if (index > 0) {
     preloadMedia(currentItemList[index - 1])
@@ -91,7 +137,7 @@ function showViewer(index) {
     preloadMedia(currentItemList[index + 1])
   }
 }
-function setupViewerEvents() {
+async function setupViewerEvents() {
   const popupViewer = document.getElementById('popup-viewer')
   const closeButton = document.getElementById('close-popup')
   const newTabButton = document.getElementById('open-new-tab')
@@ -102,8 +148,9 @@ function setupViewerEvents() {
   const popupImage = document.getElementById('popup-image')
   const popupVideo = document.getElementById('popup-video')
   const popupAudio = document.getElementById('popup-audio')
+  const popupEmbed = document.getElementById('popup-embed')
   let isZoomed = false
-  function closeViewer() {
+  async function closeViewer() {
     if (!popupVideo.paused) {
       popupVideo.pause()
     }
@@ -114,26 +161,28 @@ function setupViewerEvents() {
       handleZoom(0, 0)
     }
     isZoomed = false
+    await unlockScroll()
     popupImage.src = ''
     popupVideo.src = ''
     popupAudio.src = ''
+    popupEmbed.src = ''
     popupViewer.hidden = true
     popupViewer.style.display = 'none'
   }
-  function next() {
+  async function next() {
     if (currentItemIndex < currentItemList.length - 1) {
       if (isZoomed) {
         handleZoom(0, 0)
       }
-      showViewer(currentItemIndex + 1)
+      await showViewer(currentItemIndex + 1)
     }
   }
-  function prev() {
+  async function prev() {
     if (currentItemIndex > 0) {
       if (isZoomed) {
         handleZoom(0, 0)
       }
-      showViewer(currentItemIndex - 1)
+      await showViewer(currentItemIndex - 1)
     }
   }
   newTabButton.addEventListener('click', async () => {
@@ -156,31 +205,38 @@ function setupViewerEvents() {
     const fileUrl = await getMediaUrl(item)
     navigator.clipboard.writeText(fileUrl)
   })
-  closeButton.addEventListener('click', closeViewer)
-  popupViewer.addEventListener('click', (e) => {
+  closeButton.addEventListener('click', async () => {
+    await closeViewer()
+  })
+  popupViewer.addEventListener('click', async (e) => {
     if (e.target === popupViewer) {
-      closeViewer()
+      await closeViewer()
     }
   })
   nextButton.addEventListener('click', next)
   prevButton.addEventListener('click', prev)
-  document.addEventListener('keydown', (e) => {
+  window.addEventListener('beforeunload', async () => {
+    if (!popupViewer.hidden || popupViewer.style.display !== 'none') {
+      await unlockScroll()
+    }
+  })
+  document.addEventListener('keydown', async (e) => {
     if (!popupViewer.hidden || popupViewer.style.display !== 'none') {
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
-          closeViewer()
+          await closeViewer()
           break
         case 'ArrowUp':
           e.preventDefault()
           break
         case 'ArrowLeft':
           e.preventDefault()
-          prev()
+          await prev()
           break
         case 'ArrowRight':
           e.preventDefault()
-          next()
+          await next()
           break
         case 'ArrowDown':
           e.preventDefault()
@@ -196,7 +252,7 @@ function setupViewerEvents() {
   async function handleZoom(x, y) {
     if (isZoomed) {
       const item = currentItemList[currentItemIndex]
-      popupImage.src = await getMediaUrl(item)
+      popupImage.src = getMediaUrl(item) + defaultImageSize
       popupImage.classList.remove('zoomed')
       popupImage.style.transform = 'none'
       popupImage.style.cursor = 'zoom-in'
@@ -242,8 +298,8 @@ function setupViewerEvents() {
     popupImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
     popupImage.style.transform = 'scale(2)'
   }
-  popupImage.addEventListener('click', (e) => {
-    handleZoom(e.clientX, e.clientY)
+  popupImage.addEventListener('click', async (e) => {
+    await handleZoom(e.clientX, e.clientY)
   })
   return {
     closeViewer,
@@ -252,7 +308,7 @@ function setupViewerEvents() {
     isZoomed: () => isZoomed,
   }
 }
-function setupFileClickHandlers(fileListSelector = '#fileList') {
+async function setupFileClickHandlers(fileListSelector = '#fileList') {
   const fileList = document.querySelector(fileListSelector)
   if (!fileList) return
   fileList.addEventListener('click', (e) => {
@@ -271,18 +327,19 @@ function setupFileClickHandlers(fileListSelector = '#fileList') {
           .map((part) => encodeURIComponent(part))
           .join('/')
         let previewSrc = null
-        if (preview) {
+        if (fileType === 'text' || preview) {
           if (fileType === 'audio') {
-            previewSrc = preview.dataset?.src || preview.src || null
-            if (!previewSrc) {
-              previewSrc = `/api/files/${encodedPath}`
-            }
+            previewSrc =
+              preview?.dataset?.src ||
+              preview?.src ||
+              `/api/files/${encodedPath}`
+          } else if (fileType === 'text') {
+            previewSrc = `/api/files/${encodedPath}`
           } else {
             previewSrc =
-              preview.dataset?.src?.split('?')[0] || preview.src || null
-            if (!previewSrc) {
-              previewSrc = `/api/files/${encodedPath}`
-            }
+              preview?.dataset?.src?.split('?')[0] ||
+              preview?.src ||
+              `/api/files/${encodedPath}`
           }
         }
         return {

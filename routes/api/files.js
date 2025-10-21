@@ -12,10 +12,20 @@ const {
   BASE_DIR,
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
-  DISALLOWED_EXTENSIONS,
   BASE_PATH,
+  AUTO_SCAN,
 } = require('../../config')
-const { isExcluded, hasAllowedExtension } = require('../../utils/fileUtils')
+const {
+  isExcluded,
+  hasAllowedExtension,
+  isDocFile,
+  isImageFile,
+  isVideoFile,
+  isAudioFile,
+  isDisallowedExtension,
+  getFileMime,
+  upsertAccessedItem,
+} = require('../../utils/fileUtils')
 const {
   safePath,
   validateRequestParams,
@@ -23,30 +33,6 @@ const {
   isSubPath,
 } = require('../../utils/pathUtils')
 const { resizeImage, getImageMeta } = require('../../utils/imageUtils')
-const isDocFile = (filename) => {
-  const ext = ['.doc', '.docx']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
-}
-const isImageFile = (filename) => {
-  const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
-}
-const isVideoFile = (filename) => {
-  const ext = ['.mp4', '.mkv', '.webm', '.avi', '.mov']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
-}
-const isAudioFile = (filename) => {
-  const ext = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
-}
-const isDisallowedExtension = (filename) => {
-  const ext = path.extname(filename).toLowerCase()
-  return DISALLOWED_EXTENSIONS.some(
-    (disallowedExt) =>
-      ext === disallowedExt.toLowerCase() ||
-      ext === `.${disallowedExt.toLowerCase()}`
-  )
-}
 async function upsertDirectoryEntry(dirObj) {
   try {
     const filter = { 'paths.relative': dirObj.paths.relative }
@@ -126,13 +112,6 @@ async function syncAllFilesToDatabase() {
       message: `Database sync failed: ${error.message}`,
     }
   }
-}
-async function getFileMime(file) {
-  const ext = path.extname(file)
-  let type = require('mime-types').lookup(ext) || 'n/a'
-  type = type.replace('application/mp4', 'video/mp4')
-  debug('MIME for', file, 'is', type)
-  return type
 }
 async function scanAndSyncDirectory(dirPath, relativePath = '') {
   try {
@@ -236,7 +215,13 @@ async function initializeDatabaseSync() {
     debug('Failed to initialize database sync:', error)
   }
 }
-initializeDatabaseSync()
+if (AUTO_SCAN === true) {
+  debug('Starting full database sync')
+  initializeDatabaseSync()
+}
+if (AUTO_SCAN === false) {
+  debug('Skipping full database sync')
+}
 async function createDbEntriesForContents(items, parentPath = '') {
   try {
     for (const item of items) {
@@ -313,6 +298,10 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
     try {
       entries = await fs.readdir(normalizedDir, { withFileTypes: true })
       debug(`Found ${entries.length} entries in root directory`)
+      if (AUTO_SCAN === false) {
+        debug('Upserting accessed root directory')
+        await upsertAccessedItem(normalizedDir)
+      }
     } catch (error) {
       debug('Failed to read root directory:', error)
       return res.status(500).json({
@@ -478,6 +467,10 @@ router.get(
       try {
         entries = await fs.readdir(realPath, { withFileTypes: true })
         debug(`Found ${entries.length} entries in directory`)
+        if (AUTO_SCAN === false) {
+          debug('Upserting accessed directory:', realPath)
+          await upsertAccessedItem(realPath)
+        }
       } catch (error) {
         debug('Failed to read directory:', error)
         return res.status(500).json({
@@ -580,6 +573,10 @@ router.get(
           )
           if (transformer) {
             res.type(path.extname(realPath).slice(1))
+            if (AUTO_SCAN === false) {
+              debug('Upserting accessed file:', realPath)
+              await upsertAccessedItem(realPath)
+            }
             transformer.pipe(res)
             return
           }
@@ -603,9 +600,12 @@ router.get(
           debug(
             'Request does not have any range headers - sending file instead'
           )
+          if (AUTO_SCAN === false) {
+            debug('Upserting accessed file:', realPath)
+            await upsertAccessedItem(realPath)
+          }
           return res.sendFile(realPath)
         }
-        // stream file
         try {
           const stat = await fs.stat(realPath)
           const fileSize = stat.size
@@ -620,6 +620,10 @@ router.get(
               start,
               end,
             })
+            if (AUTO_SCAN === false) {
+              debug('Upserting accessed file:', realPath)
+              await upsertAccessedItem(realPath)
+            }
             res.writeHead(206, {
               'Content-Range': `bytes ${start}-${end}/${fileSize}`,
               'Accept-Ranges': 'bytes',
@@ -650,10 +654,14 @@ router.get(
             .convertToHtml({
               path: realPath,
             })
-            .then((result) => {
+            .then(async (result) => {
               const html = result.value
               res.set('Content-Type', 'text/html; charset=utf-8')
               res.send(html)
+              if (AUTO_SCAN === false) {
+                debug('Upserting accessed file:', realPath)
+                await upsertAccessedItem(realPath)
+              }
             })
         } catch (error) {
           debug('Error in mammoth doc conversion:', error)
@@ -664,7 +672,11 @@ router.get(
         }
       }
       try {
-        res.download(realPath)
+        if (AUTO_SCAN === false) {
+          debug('Upserting accessed file:', realPath)
+          await upsertAccessedItem(realPath)
+        }
+        res.sendFile(realPath)
       } catch (error) {
         debug('Error in sending file:', error)
         return res.status(500).json({

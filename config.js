@@ -45,6 +45,13 @@ async function getHost() {
     return null
   }
 }
+function parseBooleanEnv(value) {
+  if (value === undefined || value === null) return false
+  const v = String(value).trim().toLowerCase()
+  if (v === '1' || v === 'true' || v === 'yes' || v === 'y' || v === 'on')
+    return true
+  else return false
+}
 const NODE_ENV = process.env.NODE_ENV
 debug('Node environment:', NODE_ENV)
 const PORT = process.env.PORT
@@ -83,6 +90,8 @@ const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
 debug('Trolling terms:', TROLLING_TERMS)
 const BOT_USER_AGENTS = JSON.parse(process.env.BOT_USER_AGENTS)
 debug('Bot user agents:', BOT_USER_AGENTS)
+const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
+debug('Auto scan enabled:', AUTO_SCAN)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -103,5 +112,6 @@ module.exports = {
   TROLLING_CHANCE,
   TROLLING_TERMS,
   BOT_USER_AGENTS,
+  AUTO_SCAN,
   debug,
 }

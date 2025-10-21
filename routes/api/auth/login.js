@@ -55,7 +55,7 @@ router.post(['/', ''], async (req, res) => {
       status: 401,
     })
   }
-  const match = bcrypt.compare(password, user.password)
+  const match = await bcrypt.compare(password, user.password)
   if (!match) {
     debug('Password mismatch:', username, email)
     return res.status(401).json({
@@ -65,23 +65,47 @@ router.post(['/', ''], async (req, res) => {
   }
   try {
     const uuid = require('uuid').v4()
-    req.login(user, async () => {
-      user.sessions = user.sessions || []
-      user.sessions.push({
-        uuid,
-        modified: new Date(),
-        ip: req.ip || '',
-        useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
-      })
-      await user.save()
-      req.session.uuid = uuid
-      debug('User logged in:', user.username)
-      return res.status(200).json({
-        success: true,
-        status: 200,
-        user,
-        session: user.sessions[user.sessions.length - 1],
-      })
+    req.login(user, async (err) => {
+      if (err) {
+        debug('Error during req.login:', err)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
+        })
+      }
+      try {
+        user.sessions = user.sessions || []
+        user.sessions.push({
+          uuid,
+          modified: new Date(),
+          ip: req.ip || '',
+          useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+        })
+        await user.save()
+        req.session.uuid = uuid
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            debug('Error saving session after login:', saveErr)
+            return res.status(500).json({
+              message: 'Internal Server Error',
+              status: 500,
+            })
+          }
+          debug('User logged in:', user.username)
+          return res.status(200).json({
+            success: true,
+            status: 200,
+            user,
+            session: user.sessions[user.sessions.length - 1],
+          })
+        })
+      } catch (error) {
+        debug('Failed to login a user (post-login):', error)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
+        })
+      }
     })
   } catch (error) {
     debug('Failed to login a user:', error)

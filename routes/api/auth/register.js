@@ -52,22 +52,45 @@ router.post(['', '/'], async (req, res) => {
   })
   try {
     const uuid = require('uuid').v4()
-    req.login(user, async () => {
-      user.sessions = user.sessions || []
-      user.sessions.push({
-        uuid,
-        modified: new Date(),
-        ip: req.ip || '',
-        useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
-      })
-      await user.save()
-      req.session.uuid = uuid
-      debug('Login after registration succeeded:', user)
-      return res.status(200).json({
-        success: true,
-        status: 200,
-        user,
-      })
+    req.login(user, async (err) => {
+      if (err) {
+        debug('Error during req.login after registration:', err)
+        return res
+          .status(500)
+          .json({ message: 'Internal Server Error', status: 500 })
+      }
+      try {
+        user.sessions = user.sessions || []
+        user.sessions.push({
+          uuid,
+          modified: new Date(),
+          ip: req.ip || '',
+          useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+        })
+        await user.save()
+        req.session.uuid = uuid
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            debug('Error saving session after registration login:', saveErr)
+            return res.status(500).json({
+              message: 'Internal Server Error',
+              status: 500,
+            })
+          }
+          debug('Login after registration succeeded:', user)
+          return res.status(200).json({
+            success: true,
+            status: 200,
+            user,
+          })
+        })
+      } catch (error) {
+        debug('Failed to login user after registration (post-login):', error)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
+        })
+      }
     })
   } catch (error) {
     debug('Failed to login user after registration:', error)

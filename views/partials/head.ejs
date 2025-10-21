@@ -5,15 +5,36 @@
   <meta name="description" content="<%= description %>" />
   <meta name="author" content="<%= author %>" />
   <meta name="keywords" content="<%= keywords %>" />
+  <meta name="theme-color" content="#000000">
   <meta property="og:title" content="<%= title %>" />
   <meta property="og:description" content="<%= description %>" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="<%= url %>" />
-  <meta property="og:image" content="/favicon.ico" />
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <meta property="og:image" content="/svg/nodejs.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="<%= title %>">
+  <link rel="apple-touch-icon" href="/svg/nodejs.svg">
+  <link rel="apple-touch-startup-image" href="/svg/nodejs.svg" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+  <link rel="shortcut icon" href="/icons/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+  <link rel="manifest" href="/icons/site.webmanifest" />
+  <link rel="preload" as="font" type="font/ttf" href="/font/Montserrat.ttf" />
+  <link rel="preload" as="font" type="font/ttf" href="/font/Montserrat-Italic.ttf" />
   <link rel="stylesheet preload" type="text/css" href="/css/files.css" />
+  <link rel="stylesheet preload" type="text/css" href="/css/globals.css" />
   <script type="text/javascript" src="https://cdn.tailwindcss.com/"></script>
-  <style type="text/css">
-    html,body{-ms-overflow-style: none;scrollbar-width: none;}
-  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['opensans', 'ubuntusans', 'roboto', 'lexend'],
+          },
+        },
+      },
+    }
+  </script>
 </head>

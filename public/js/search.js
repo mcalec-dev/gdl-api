@@ -1,5 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import { MIN_IMAGE_SCALE } from '../min/settings.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput')
   const searchButton = document.getElementById('searchButton')
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'input[name="searchType"]'
   )
   const API_URL = '/api/search'
+  const imageScale = `?x=${MIN_IMAGE_SCALE}`
   function getSearchType() {
     const selected = document.querySelector('input[name="searchType"]:checked')
     return selected ? selected.value : 'all'
@@ -139,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="aspect-square w-full overflow-hidden bg-gray-900/50">
               ${
                 isVideo
-                  ? `<video src="${result.url}?x=50" controls preload="metadata" class="w-full h-full object-contain select-none" style="max-height:100%;"></video>`
-                  : `<img src="${result.url}?x=50" alt="${result.name}" class="w-full h-full object-contain pointer-events-none select-none loading" loading="lazy">`
+                  ? `<video src="${result.url}" controls preload="metadata" class="w-full h-full object-contain select-none" style="max-height:100%;"></video>`
+                  : `<img src="${result.url}${imageScale}" alt="${result.name}" class="w-full h-full object-contain pointer-events-none select-none loading" loading="lazy">`
               }
             </div>
             <div class="p-4 space-y-3">

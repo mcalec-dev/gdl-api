@@ -8,7 +8,7 @@
       <h1 id="title" class="mb-8 text-center text-3xl font-light capitalize text-white">
         <%= currentPage %>
       </h1>
-      <form id="registerForm" class="space-y-4">
+      <form id="registerForm" class="space-y-3">
         <div>
           <label for="username" class="mb-1 block text-gray-300">
             Username
@@ -22,7 +22,7 @@
               (optional)
             </span>
           </label>
-          <input type="email" id="email" name="email" autocomplete="email" placeholder="Enter your email (optional)" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="Enter your email" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
         <div>
           <label for="password" class="mb-1 block text-gray-300">
@@ -37,12 +37,12 @@
           <input type="password" id="confirm" name="confirm" required autocomplete="new-password" placeholder="Confirm your password" class="w-full rounded border border-white/20 bg-[#1f1f1f] px-4 py-2 text-white" />
         </div>
         <div>
-          <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+          <script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js" crossorigin="anonymous"></script>
           <div id="cf-turnstile" class="cf-turnstile w-full" data-sitekey="0x4AAAAAAAXoeQTEYHCuF4f1" data-theme="auto" data-size="flexible" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" data-expired-callback="onTurnstileExpired"></div>
-          <button id="submit-btn" type="submit" class="w-full rounded bg-blue-600 py-2 font-semibold text-white" hidden>
+          <button id="submit-btn" type="submit" class="w-full rounded bg-blue-600 py-2 font-medium text-white" hidden>
             Register
           </button>
-          <script>
+          <script type="text/javascript">
             function onTurnstileSuccess(token) {document.getElementById('submit-btn').hidden = false;document.getElementById('cf-turnstile').hidden = true}
             function onTurnstileError(errorCode) {console.error('Turnstile error:', errorCode);document.getElementById('submit-btn').hidden = true}
             function onTurnstileExpired() {console.warn('Turnstile token expired');document.getElementById('submit-btn').hidden = true}
@@ -58,12 +58,12 @@
           or
         </span>
       </div>
-      <div class="flex flex-col gap-2 md:flex-row">
-        <a href="/api/auth/discord" class="flex w-full items-center justify-center gap-2 rounded bg-[#5662f6] px-3 py-2 font-semibold text-white">
-          <img src="/svg/discord.svg" alt="Discord" class="h-5 w-5 invert" />
+      <div class="flex flex-col w-full items-center justify-center gap-2 md:flex-row">
+        <a href="/api/auth/discord" class="flex w-fit items-center justify-center gap-2 rounded bg-[#5662f6] px-3 py-2 font-medium text-white">
+          <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5" />
           Register with Discord
         </a>
-        <a href="/api/auth/github" class="flex w-full items-center justify-center gap-2 rounded bg-[#212830] px-3 py-2 font-semibold text-white">
+        <a href="/api/auth/github" class="flex w-fit items-center justify-center gap-2 rounded bg-[#212830] px-3 py-2 font-medium text-white">
           <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5" />
           Register with GitHub
         </a>

@@ -1,11 +1,13 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import { IMAGE_SCALE } from '../min/settings.min.js'
 const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
 const imageInfo = document.getElementById('item-info')
 const HISTORY_KEY = 'randomMediaHistory'
 const HISTORY_LIMIT = 10
+const imageScale = `?x=${IMAGE_SCALE}`
 let history = []
 let historyIndex = 0
 function showMedia(data) {
@@ -28,7 +30,7 @@ function showMedia(data) {
   loading.hidden = false
   loading.classList.remove('error')
   mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
-  const mediaUrl = data.url
+  const mediaUrl = data.url + imageScale
   const isVideo = data.file.toLowerCase().match(/\.(mp4|webm|mov)$/)
   const mediaElement = isVideo
     ? document.createElement('video')
@@ -44,10 +46,10 @@ function showMedia(data) {
     mediaElement.playsInline = true
   }
   imageInfo.innerHTML = `
-    <span id="image-author" class="font-semibold text-gray-300">${data.author}</span>
-    <span class="text-gray-400"> on </span>
-    <span id="image-collection" class="font-semibold text-gray-300">${data.collection}</span><br>
-    <span id="image-size" class="text-gray-400">${utils.formatSize(data.size)}</span>
+    <span id="image-author" class="font-medium text-gray-300">${data.author}</span>
+    <span class="text-gray-500 text-light"> on </span>
+    <span id="image-collection" class="font-medium text-gray-300">${data.collection}</span><br>
+    <span id="image-size" class="text-gray-500 text-light">${utils.formatSize(data.size)}</span>
   `
   const loadHandler = () => {
     loading.hidden = true
@@ -57,7 +59,7 @@ function showMedia(data) {
   }
   mediaElement.addEventListener(isVideo ? 'loadeddata' : 'load', loadHandler)
   mediaElement.addEventListener('error', handleMediaError)
-  mediaElement.src = mediaUrl + ''
+  mediaElement.src = mediaUrl + imageScale
   mediaElement.onclick = () => window.open(mediaUrl, '_blank')
   mediaContainer.appendChild(mediaElement)
 }

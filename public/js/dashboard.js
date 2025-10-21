@@ -27,12 +27,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="text-gray-300 text-sm">UUID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.uuid}</code></div>
         </div>
         <div class="mt-6">
-          <div class="flex flex-row w-full items-center justify-center gap-3 mt-4">
-            <button id="link-discord" class="flex px-4 py-2 w-fit rounded bg-[#5865F2] text-white font-semibold items-center align-middle gap-2">
-              <img src="/svg/discord.svg" alt="Discord" class="invert h-4 w-4">${discordLinked ? 'Unlink Discord' : 'Link Discord'}
+          <div class="flex flex-col w-full items-center justify-center gap-2 mt-4 md:flex-row">
+            <button id="link-discord" class="flex w-fit px-4 py-2 rounded bg-[#5865F2] text-white font-medium items-center justify-center align-middle gap-2">
+              <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5" />
+              ${discordLinked ? 'Unlink Discord' : 'Link Discord'}
             </button>
-            <button id="link-github" class="flex px-4 py-2 w-fit rounded bg-[#24292f] text-white font-semibold items-center align-middle gap-2">
-              <img src="/svg/github.svg" alt="GitHub" class="h-4 w-4">${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
+            <button id="link-github" class="flex w-fit px-4 py-2 rounded bg-[#24292f] text-white font-medium items-center justify-center align-middle gap-2">
+              <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5" />
+              ${githubLinked ? 'Unlink GitHub' : 'Link GitHub'}
             </button>
           </div>
           <div class="mt-4 w-full md:max-w-full sm:max-w-full overflow-auto">

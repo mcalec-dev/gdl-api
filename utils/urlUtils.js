@@ -1,4 +1,4 @@
-const { BASE_PATH } = require('../config')
+const { BASE_PATH, HOST } = require('../config')
 function normalizeUrl(url) {
   return url.replace(/\\/g, '/').replace(/\/+/g, '/').normalize()
 }
@@ -17,11 +17,19 @@ function decodeUrl(url) {
 function decodeUrlPath(path) {
   return decodeURIComponent(path.replace(/\+/g, ' '))
 }
+async function constructUrl(path) {
+  const url = new URL(path, `https://${HOST}`)
+  return url.toString()
+}
+async function constructApiUrl(path) {
+  const url = new URL(path, `https://${HOST}${BASE_PATH}/api`)
+  return url.toString()
+}
 function getApiUrl(req) {
-  return `${req.protocol}://${req.hostname}${BASE_PATH}/api`
+  return `${req.protocol}://${HOST}${BASE_PATH}/api`
 }
 function getHostUrl(req) {
-  return `${req.protocol}://${req.hostname}${BASE_PATH}`
+  return `${req.protocol}://${HOST}${BASE_PATH}`
 }
 module.exports = {
   normalizeUrl,
@@ -30,6 +38,8 @@ module.exports = {
   encodeUrlPath,
   decodeUrl,
   decodeUrlPath,
+  constructUrl,
+  constructApiUrl,
   getApiUrl,
   getHostUrl,
 }
