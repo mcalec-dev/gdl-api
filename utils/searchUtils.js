@@ -21,19 +21,11 @@ function scoreResult(result, queryStr, type) {
   score = Math.max(0, Math.min(100, score))
   return score
 }
-async function searchDatabase({
-  q,
-  type,
-  files,
-  directories,
-  basePath,
-  protocol,
-  hostname,
-}) {
+async function searchDatabase({ q, type, basePath, protocol, hostname }) {
   const queryStr = q.toLowerCase()
   let dbResults = []
   const fileQuery =
-    files === 'false'
+    type === 'files'
       ? null
       : {
           $or: [
@@ -45,7 +37,7 @@ async function searchDatabase({
           ],
         }
   const dirQuery =
-    directories === 'false'
+    type === 'directories'
       ? null
       : {
           $or: [

@@ -59,7 +59,7 @@ function showMedia(data) {
   }
   mediaElement.addEventListener(isVideo ? 'loadeddata' : 'load', loadHandler)
   mediaElement.addEventListener('error', handleMediaError)
-  mediaElement.src = mediaUrl + imageScale
+  mediaElement.src = mediaUrl
   mediaElement.onclick = () => window.open(mediaUrl, '_blank')
   mediaContainer.appendChild(mediaElement)
 }

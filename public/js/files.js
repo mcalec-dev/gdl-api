@@ -480,14 +480,22 @@ function setupLazyLoading() {
           ) {
             const loadImage = () => {
               const tempImage = new window.Image()
+              const iconPlaceholder =
+                element.parentElement?.parentElement?.querySelector(
+                  '.absolute.inset-0'
+                )
               tempImage.onload = () => {
                 element.src = element.dataset.src
                 element.classList.remove('loading')
                 element.classList.add('loaded')
+                if (iconPlaceholder) {
+                  iconPlaceholder.style.display = 'none'
+                }
               }
               tempImage.onerror = () => {
                 element.classList.remove('loading')
                 element.classList.add('error')
+                element.style.display = 'none'
               }
               tempImage.src = element.dataset.src
             }
@@ -495,17 +503,46 @@ function setupLazyLoading() {
               element.tagName.toLowerCase() === 'video' ||
               element.tagName.toLowerCase() === 'audio'
             ) {
+              const iconPlaceholder =
+                element.parentElement?.parentElement?.querySelector(
+                  '.absolute.inset-0'
+                )
               element.preload = 'metadata'
               element.src = element.dataset.src
               element.muted = element.tagName.toLowerCase() === 'video'
               element.classList.remove('loading')
               element.classList.add('loaded')
+              element.addEventListener(
+                'loadeddata',
+                () => {
+                  if (iconPlaceholder) {
+                    iconPlaceholder.style.display = 'none'
+                  }
+                },
+                { once: true }
+              )
+
+              element.addEventListener(
+                'error',
+                () => {
+                  element.style.display = 'none'
+                },
+                { once: true }
+              )
             } else {
               loadImage()
             }
           }
         } else {
           if (!element.classList.contains('zoomed')) {
+            const iconPlaceholder =
+              element.parentElement?.parentElement?.querySelector(
+                '.absolute.inset-0'
+              )
+            if (iconPlaceholder) {
+              iconPlaceholder.style.display = 'flex'
+            }
+
             if (
               element.tagName.toLowerCase() === 'video' ||
               element.tagName.toLowerCase() === 'audio'
@@ -656,8 +693,8 @@ async function renderDirectory(contents, path) {
     if (itemType === 'directory') {
       if (hasDirectories && !hasFiles) {
         html += `
-        <div class="file-item directory group bg-black/20 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
-          <div class="file-icon ${itemType} flex w-6 h-6 flex-shrink-0 mr-3">${icons[itemType]}</div>
+        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+          <div class="file-icon ${itemType} flex w-8 h-8 flex-shrink-0 mr-3">${icons[itemType]}</div>
           <div class="flex-1 min-w- overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
@@ -670,7 +707,7 @@ async function renderDirectory(contents, path) {
       `
       } else {
         html += `
-        <div class="file-item directory group place-items-start bg-black/20 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
             <div class="file-icon ${itemType} flex w-6 h-6">${icons[itemType]}</div>
             <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
@@ -688,11 +725,13 @@ async function renderDirectory(contents, path) {
       previewUrl
     ) {
       html += `
-        <div class="file-item ${item.type} group relative bg-black/20 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="w-full h-full">
             ${(() => {
+              const iconPlaceholder = `<div class="absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${icons[itemType]}</span></div>`
               if (itemType === 'audio') {
                 return `
+                  ${iconPlaceholder}
                   <div class="audio-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
                     <audio class="file-preview audio loading w-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
                   </div>
@@ -700,15 +739,17 @@ async function renderDirectory(contents, path) {
               }
               if (itemType === 'image') {
                 return `
+                  ${iconPlaceholder}
                   <div class="image-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" draggable="false">
+                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" draggable="false" onerror="this.style.display='none'">
                   </div>
                 `
               }
               if (itemType === 'video') {
                 return `
+                  ${iconPlaceholder}
                   <div class="video-preview-container aspect-video h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></video>
+                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
                   </div>
                 `
               }
@@ -733,7 +774,7 @@ async function renderDirectory(contents, path) {
       `
     } else {
       html += `
-        <div class="file-item other group bg-black/20 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
+        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="flex items-center w-full gap-3">
             <div class="file-icon ${itemType} flex w-6 h-6 flex-shrink-0">${icons[itemType] || icons.other}</div>
             <div class="file-details flex-1 min-w-0">

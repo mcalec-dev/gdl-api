@@ -10,8 +10,8 @@ your local directory sturcture should be look similar this:
 
 ```text
 base-dir/
-└─ collection-1/
-  └─ author-1/
+└─ collection/
+  └─ author/
     ├─ files.png
     ├─ files.mp4
     └─ etc...
@@ -83,6 +83,11 @@ TROLLING_TERMS=[]
 
 # bot/crawler user agents
 BOT_USER_AGENTS=[]
+
+# boolean value (true/false)
+# turn off if you want to scan when directory or file is accessed
+# else leave on for a full fs database scan
+AUTO_SCAN=
 
 # github application credentials
 # create an application at https://github.com/settings/developers

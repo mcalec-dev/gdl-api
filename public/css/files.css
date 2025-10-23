@@ -20,19 +20,29 @@
   fill: currentColor;
   transform: translate(-50%, -75%);
 }
-.file-icon svg {
-  width: 24px;
-  height: 24px;
-  fill: currentColor;
-}
 .file-icon.directory {
   color: #66b3ff;
+  stroke: #66b3ff;
 }
 .file-icon.audio {
   color: #cc8323;
+  stroke: #cc8323;
+}
+.file-icon.image {
+  color: #2AA198;
+  stroke: #2AA198;
+}
+.file-icon.text {
+  color: #7A869A;
+  stroke: #7A869A;
+}
+.file-icon.video {
+  color: #6C5CE7;
+  stroke: #6C5CE7;
 }
 .file-icon.other {
-  color: #757575;
+  color: #95A5A6;
+  stroke: #95A5A6;
 }
 
 /* Image Preview Styles */

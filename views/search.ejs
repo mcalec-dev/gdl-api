@@ -24,14 +24,14 @@
             </span>
           </label>
           <label class="inline-flex cursor-pointer items-center">
-            <input type="radio" name="searchType" value="files" class="peer sr-only" />
+            <input type="radio" name="searchType" value="file" class="peer sr-only" />
             <div class="h-4 w-4 rounded-full border-2 border-gray-400 peer-checked:border-4 peer-checked:border-blue-500"></div>
             <span class="ml-2 text-gray-300">
               Files
             </span>
           </label>
           <label class="inline-flex cursor-pointer items-center">
-            <input type="radio" name="searchType" value="directories" class="peer sr-only" />
+            <input type="radio" name="searchType" value="directory" class="peer sr-only" />
             <div class="h-4 w-4 rounded-full border-2 border-gray-400 peer-checked:border-4 peer-checked:border-blue-500"></div>
             <span class="ml-2 text-gray-300">
               Directories
@@ -45,8 +45,8 @@
       <div id="noResults" class="hidden py-10 text-center text-lg text-gray-400">
         No results found.
       </div>
-      <div id="searchInfo" class="mx-auto hidden max-w-max rounded border border-white/20 px-4 py-2 text-center text-white backdrop-blur-lg"></div>
-      <div id="results" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+      <div id="searchInfo" class="mx-auto my-4 hidden max-w-max rounded border border-white/20 px-4 py-2 text-center text-white backdrop-blur-lg"></div>
+      <div id="results" class="grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"></div>
     </div>
     <script type="module" src="/js/min/search.min.js"></script>
     <%- include('partials/bg') %>

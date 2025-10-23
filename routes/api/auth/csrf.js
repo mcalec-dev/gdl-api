@@ -10,7 +10,7 @@ const debug = require('debug')('gdl-api:api:auth:csrf')
 router.get(['/', ''], (req, res) => {
   try {
     return res.json({
-      csrf: req.csrfToken(),
+      csrf: req.csrfToken,
     })
   } catch (error) {
     debug('Error sending CSRF token:', error)

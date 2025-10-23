@@ -19,7 +19,7 @@
     {
       "name": "Files",
       "short_name": "Files",
-      "url": "/files",
+      "url": "/files/",
       "icons": [
         { "src": "/icons/web-app-manifest-192x192.png", "sizes": "192x192" }
       ]
@@ -27,5 +27,5 @@
   ],
   "theme_color": "#3a3a3a",
   "background_color": "#3a3a3a",
-  "display": "standalone"
+  "display": "miminal"
 }

@@ -2,42 +2,33 @@ const sharp = require('sharp')
 const debug = require('debug')('gdl-api:utils:image')
 const { HOST, NAME } = require('../config')
 const { buffer } = require('stream/consumers')
+const { isImageFile, isVideoFile } = require('./fileUtils')
 const MAX_PIXELS = 10000
 const MAX_SCALE = 1000
 const MAX_BUFFER_SIZE = 1 * 1024 * 1024 * 1024
 sharp.simd(true)
 sharp.cache(false)
 sharp.concurrency(5)
-async function getImageMeta(imagePath, ext) {
+async function getImageMeta(imagePath) {
   if (buffer.length > MAX_BUFFER_SIZE) return null
-  let metadata
-  const isImage = [
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.webp',
-    '.bmp',
-    '.gif',
-    '.tiff',
-    '.svg',
-    '.avif',
-  ].includes(ext)
-  const isVideo = ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
-  if (isImage) {
+  let meta
+  if (isImageFile(imagePath)) {
     try {
-      metadata = await sharp(imagePath, {
+      meta = await sharp(imagePath, {
         failOnError: false,
         useOriginalDate: true,
         limitInputPixels: false,
       }).metadata()
-      return metadata
+      return meta
     } catch (error) {
       debug('Failed to read image metadata', error)
       return null
     }
-  } else if (isVideo) {
+  }
+  if (isVideoFile(imagePath)) {
     return {}
   }
+  return {}
 }
 async function resizeImage(imagePath, { width, height, scale }) {
   if (scale > MAX_SCALE) return null
@@ -103,34 +94,29 @@ async function resizeImage(imagePath, { width, height, scale }) {
       return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`
     }
     const metaIFD0 = {
-      Software: 'Gallery-DL API',
-      ProcessingSoftware: 'Sharp',
-      Description: `Downloaded from ${await HOST}`,
-      ImageDescription: `Downloaded from ${await HOST}`,
+      Software: 'sharp',
+      ProcessingSoftware: 'sharp',
+      Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
       Copyright: 'All Rights Reserved',
       DateTime: formatExifDateTime(mtime),
       DateTimeOriginal: formatExifDateTime(mtime),
       DateTimeDigitized: formatExifDateTime(mtime),
-      ModifyDate: formatExifDateTime(new Date()),
-      Artist: NAME,
-      XPComment: `Processed by ${NAME}`,
-      UserComment: `Processed on ${new Date().toISOString()}`,
-      ColorSpace: 'sRGB',
-      YCbCrPositioning: 'centered',
+      ModifyDate: formatExifDateTime(mtime),
     }
     const metaExifIFD = {
-      Software: NAME,
-      ProcessingSoftware: 'Sharp',
-      Description: `Downloaded from ${await HOST}`,
-      ImageDescription: `Downloaded from ${await HOST}`,
+      Software: 'sharp',
+      ProcessingSoftware: 'sharp',
+      Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+      UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
       Copyright: 'All Rights Reserved',
       DateTimeOriginal: formatExifDateTime(mtime),
       DateTimeDigitized: formatExifDateTime(mtime),
-      Artist: NAME,
-      XPComment: `Processed by ${NAME}`,
-      UserComment: `Processed on ${new Date().toISOString()}`,
-      ColorSpace: 'sRGB',
-      YCbCrPositioning: 'centered',
+      ModifyDate: formatExifDateTime(mtime),
     }
     transformer.withMetadata({
       exif: {

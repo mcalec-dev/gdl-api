@@ -92,6 +92,8 @@ const BOT_USER_AGENTS = JSON.parse(process.env.BOT_USER_AGENTS)
 debug('Bot user agents:', BOT_USER_AGENTS)
 const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
 debug('Auto scan enabled:', AUTO_SCAN)
+const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
+debug('OAuth Providers:', OAUTH_PROVIDERS)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -113,5 +115,6 @@ module.exports = {
   TROLLING_TERMS,
   BOT_USER_AGENTS,
   AUTO_SCAN,
+  OAUTH_PROVIDERS,
   debug,
 }

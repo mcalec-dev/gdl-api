@@ -14,8 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const API_URL = '/api/search'
   const imageScale = `?x=${MIN_IMAGE_SCALE}`
   function getSearchType() {
-    const selected = document.querySelector('input[name="searchType"]:checked')
-    return selected ? selected.value : 'all'
+    return document.querySelector('input[name="searchType"]:checked').value
   }
   function formattedUrl(url, type) {
     if (type === 'file') {
@@ -45,19 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.history.pushState({}, '', newUrl)
       const searchUrl = new URL(API_URL, window.location.origin)
       searchUrl.searchParams.set('q', query)
-      switch (searchType) {
-        case 'files':
-          searchUrl.searchParams.set('files', 'true')
-          searchUrl.searchParams.set('directories', 'false')
-          break
-        case 'directories':
-          searchUrl.searchParams.set('files', 'false')
-          searchUrl.searchParams.set('directories', 'true')
-          break
-        default:
-          searchUrl.searchParams.set('files', 'true')
-          searchUrl.searchParams.set('directories', 'true')
-      }
+      searchUrl.searchParams.set('type', searchType)
       const response = await fetch(searchUrl).catch((error) => {
         utils.handleError(error)
         loading.style.display = 'none'
@@ -81,13 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const fragment = document.createDocumentFragment()
         data.results.forEach((result) => {
           const card = document.createElement('div')
-          card.classList = `bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden backdrop-blur-sm transition-colors`
+          card.classList = `bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden backdrop-blur-sm transition-colors h-fit`
           const isVideo =
             result.type === 'file' && /\.(mp4|webm|mkv)$/i.test(result.name)
           card.innerHTML =
             result.type === 'directory'
               ? `
-            <div class="p-4 space-y-3">
+            <div id="result-item directory" class="p-4 space-y-3">
               <div class="flex items-start justify-between gap-2 mb-1">
                 <h3 class="text-white font-light text-lg truncate flex-1" title="${result.name}">${result.name}</h3>
               </div>
@@ -138,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             `
               : `
-            <div class="aspect-square w-full overflow-hidden bg-gray-900/50">
+            <div id="result-item file" class="aspect-square w-full overflow-hidden bg-gray-900/50">
               ${
                 isVideo
                   ? `<video src="${result.url}" controls preload="metadata" class="w-full h-full object-contain select-none" style="max-height:100%;"></video>`

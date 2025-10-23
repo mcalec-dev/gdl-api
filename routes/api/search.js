@@ -22,29 +22,15 @@ const { requireRole } = require('../../utils/authUtils')
  *           type: string
  *           enum: [file, directory]
  *         description: Filter by type (file or directory)
- *       - in: query
- *         name: files
- *         required: false
- *         schema:
- *           type: boolean
- *         description: Include files in search results
- *       - in: query
- *         name: directories
- *         required: false
- *         schema:
- *           type: boolean
- *         description: Include directories in search results
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({ message: 'Unauthorized', status: 401 })
   }
-  const { q, type, files, directories } = req.query
+  const { q, type } = req.query
   debug('Starting DB search for: "%s" with filter(s): %o', q, {
     type,
-    files,
-    directories,
   })
   if (!q || q.length === 0) {
     debug('Search query is empty')
@@ -54,8 +40,6 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
     const simplifiedResults = await searchDatabase({
       q,
       type,
-      files,
-      directories,
       basePath: BASE_PATH,
       protocol: req.protocol,
       hostname: req.hostname,

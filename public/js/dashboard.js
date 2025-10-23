@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="text-gray-300 text-sm">UUID: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.uuid}</code></div>
         </div>
         <div class="mt-6">
-          <div class="flex flex-col w-full items-center justify-center gap-2 mt-4 md:flex-row">
+          <div class="flex flex-row w-full items-center justify-center gap-2 mt-4">
             <button id="link-discord" class="flex w-fit px-4 py-2 rounded bg-[#5865F2] text-white font-medium items-center justify-center align-middle gap-2">
               <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5" />
               ${discordLinked ? 'Unlink Discord' : 'Link Discord'}
@@ -127,26 +127,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         .getElementById('link-github')
         .addEventListener('click', async () => {
           if (githubLinked) {
-            await fetch(document.location.origin + '/api/auth/unlink/github', {
-              method: 'GET',
-              credentials: 'include',
-            })
+            await fetch(
+              document.location.origin + '/api/auth/provider/unlink/github',
+              {
+                method: 'GET',
+                credentials: 'include',
+              }
+            )
             window.location.reload()
           } else {
-            window.location.href = '/api/auth/link/github'
+            window.location.href = '/api/auth/provider/link/github'
           }
         })
       document
         .getElementById('link-discord')
         .addEventListener('click', async () => {
           if (discordLinked) {
-            await fetch(document.location.origin + '/api/auth/unlink/discord', {
-              method: 'GET',
-              credentials: 'include',
-            })
+            await fetch(
+              document.location.origin + '/api/auth/provider/unlink/discord',
+              {
+                method: 'GET',
+                credentials: 'include',
+              }
+            )
             window.location.reload()
           } else {
-            window.location.href = '/api/auth/link/discord'
+            window.location.href = '/api/auth/provider/link/discord'
           }
         })
       const logoutBtn = document.getElementById('logout')

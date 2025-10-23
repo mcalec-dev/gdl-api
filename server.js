@@ -26,7 +26,6 @@ const {
   BASE_PATH,
   BASE_DIR,
   SESSION_SECRET,
-  CSRF_SECRET,
   MONGODB_URL,
   COOKIE_MAX_AGE,
   RATE_LIMIT_WINDOW,
@@ -297,9 +296,8 @@ async function initApp() {
   // use crsf
   app.use(
     lusca({
-      csrf: true,
+      //csrf: true,
       xframe: 'SAMEORIGIN',
-      p3p: CSRF_SECRET,
       hsts: {
         maxAge: COOKIE_MAX_AGE,
         includeSubDomains: true,

@@ -1,7 +1,7 @@
 const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
-const DiscordStrategy = require('passport-discord').Strategy
+const DiscordStrategy = require('passport-discord-auth').Strategy
 const bcrypt = require('bcrypt')
 const User = require('../models/User')
 const { BASE_PATH } = require('../config')
@@ -50,13 +50,14 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: `https://${process.env.HOST}${BASE_PATH}/api/auth/callback/github/`,
+      callbackURL: `https://${process.env.HOST}${BASE_PATH}/api/auth/provider/callback/github`,
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
         const uuid = require('uuid').v4()
-        let email = profile.email || (profile.emails && profile.emails[0]?.value)
+        let email =
+          profile.email || (profile.emails && profile.emails[0]?.value)
         let username = profile.username || profile.displayName || profile.login
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
@@ -75,7 +76,8 @@ passport.use(
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
-              useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
             req.session.uuid = uuid
@@ -102,7 +104,8 @@ passport.use(
             created: new Date(),
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
-            useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+            useragent:
+              req?.headers['user-agent'] || req.get('User-Agent') || '',
           })
           await user.save()
           req.session.uuid = uuid
@@ -119,7 +122,8 @@ passport.use(
                 created: new Date(),
                 expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 ip: req?.ip,
-                useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+                useragent:
+                  req?.headers['user-agent'] || req.get('User-Agent') || '',
               },
             ],
             oauth: {
@@ -148,17 +152,20 @@ passport.use(
 passport.use(
   new DiscordStrategy(
     {
-      clientID: process.env.DISCORD_CLIENT_ID,
+      clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      callbackURL: `https://${process.env.HOST}${BASE_PATH}/api/auth/callback/discord/`,
+      callbackUrl: `https://${process.env.HOST}${BASE_PATH}/api/auth/provider/callback/discord`,
       scope: ['identify', 'email'],
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
         const uuid = require('uuid').v4()
-        let email = profile.email || (profile.emails && profile.emails[0]?.value)
-        let avatar = profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}` : undefined
+        let email =
+          profile.email || (profile.emails && profile.emails[0]?.value)
+        let avatar = profile.avatar
+          ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}`
+          : undefined
         let username = profile.username || profile.displayName
         if (profile && profile._json && profile._json.state) {
           const user = await User.findById(profile._json.state)
@@ -177,7 +184,8 @@ passport.use(
               created: new Date(),
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
-              useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+              useragent:
+                req?.headers['user-agent'] || req.get('User-Agent') || '',
             })
             await user.save()
             req.session.uuid = uuid
@@ -207,7 +215,8 @@ passport.use(
             created: new Date(),
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
-            useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+            useragent:
+              req?.headers['user-agent'] || req.get('User-Agent') || '',
           })
           await user.save()
           req.session.uuid = uuid
@@ -224,7 +233,8 @@ passport.use(
                 created: new Date(),
                 expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 ip: req?.ip,
-                useragent: req?.headers['user-agent'] || req.get('User-Agent') || '',
+                useragent:
+                  req?.headers['user-agent'] || req.get('User-Agent') || '',
               },
             ],
             oauth: {

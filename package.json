@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "description": "gdl-api express api server + frontend + bots",
   "author": "McAlec",
   "keywords": [
@@ -46,7 +46,7 @@
     "node-cache": "^5.1.2",
     "node-telegram-bot-api": "^0.66.0",
     "passport": "^0.7.0",
-    "passport-discord": "^0.1.4",
+    "passport-discord-auth": "^1.2.0",
     "passport-github2": "^0.1.12",
     "passport-local": "^1.0.0",
     "sharp": "^0.34.3",
@@ -58,14 +58,17 @@
     "@eslint/css": "^0.10.0",
     "@eslint/js": "^9.28.0",
     "@eslint/json": "^0.13.1",
+    "@rollup/plugin-commonjs": "^28.0.8",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "@types/figlet": "^1.7.0",
     "eslint": "^9.28.0",
     "eslint-plugin-json": "^4.0.1",
+    "fast-glob": "^3.3.3",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.6.14"
-  },
-  "engines": {
-    "node": ">=22.0.0"
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "rollup": "^4.52.5",
+    "rollup-plugin-copy": "^3.5.0"
   }
 }

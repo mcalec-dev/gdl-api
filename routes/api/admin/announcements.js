@@ -2,7 +2,6 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin:announcements')
 const { requireRole } = require('../../../utils/authUtils')
 const Announcement = require('../../../models/Announcement')
-const { Types } = require('mongoose')
 /**
  * @swagger
  * /api/admin/announcements:
@@ -65,7 +64,7 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
         status: 400,
       })
     }
-    const announcement = new Announcement({
+    const createdAnncouncement = new Announcement({
       title,
       message,
       severity,
@@ -74,9 +73,9 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
       modified: Date.now(),
       uuid,
     })
-    await announcement.save()
-    debug('Announcement created:', announcement)
-    return res.json({ success: true, announcement })
+    await createdAnncouncement.save()
+    debug('Announcement created:', createdAnncouncement)
+    return res.json({ success: true, createdAnncouncement })
   } catch (error) {
     debug('Error creating announcement:', error)
     return res.status(500).json({
@@ -113,7 +112,7 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
  */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { title, message, severity } = req.body
-  if (!title || title !== Types.string) {
+  if (!title || !message || !severity) {
     return res.status(400).json({
       error: 'Bad Request',
       status: 400,
@@ -176,7 +175,7 @@ router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   }
   try {
     const deletedAnnouncement = await Announcement.findOneAndDelete({
-      uuid: req.params.uuid,
+      uuid: { $eq: req.params.uuid },
     })
     if (!deletedAnnouncement) {
       return res.status(404).json({
