@@ -23,3 +23,5 @@
 - compiling tailwindcss within the dist dir
 - start converting to SvelteKit for the frontend
 - split backend api and frontend
+- rollup with nexe
+- `AUTO_SCAN` even if its on, it should upsert directories when accessed too

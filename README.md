@@ -1,5 +1,7 @@
 # gdl-api
 
+## **Don't use the new frontend yet because it is in the early alpha stages**
+
 an express api thing i made mainly for gallery-dl downloads.  
 
 Swagger documentation accessible at `/docs/`
@@ -17,7 +19,7 @@ base-dir/
     └─ etc...
 ```
 
-sample `.env` file:
+sample `.env` file for backend:
 
 ```env
 # imported with config.js

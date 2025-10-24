@@ -6,21 +6,20 @@ const debug = require('debug')('gdl-api:api:auth:register')
  * @swagger
  * /api/auth/register/:
  *   post:
- *    summary: User registration
- *    description: Register a new user with username, email, and password.
- *   parameters:
- *   - in: body
- *     name: user
- *     description: User information for registration.
- *    schema:
- *     type: object
- *     properties:
- *      username:
- *        type: string
- *      email:
- *        type: string
- *      password:
- *        type: string
+ *     summary: User registration
+ *     description: Register a new user with username, email, and password.
+ *     parameters:
+ *      - in: body
+ *        name: user
+ *        schema:
+ *          type: object
+ *        properties:
+ *          username:
+ *            type: string
+ *          email:
+ *            type: string
+ *          password:
+ *            type: string
  *   required:
  *     - username
  *     - email

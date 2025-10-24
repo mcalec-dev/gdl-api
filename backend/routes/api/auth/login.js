@@ -7,13 +7,11 @@ const debug = require('debug')('gdl-api:api:auth:login')
  * /api/auth/login/:
  *   post:
  *     summary: User login
- *     description: Authenticate a user with username/email and password.
- *    parameters:
- *    - in: body
- *      name: credentials
- *      description: User credentials for login.
- *      schema:
- *        type: object
+ *     parameters:
+ *      - in: body
+ *        name: credentials
+ *        schema:
+ *          type: object
  *        properties:
  *          username:
  *            type: string

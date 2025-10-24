@@ -1,0 +1,133 @@
+---
+function currentPage() {
+  let currentPath = Astro.url.pathname
+  currentPath.replace('/', '')
+  if (currentPath.length >= 0) return 'home'
+  else return currentPath
+}
+---
+<!doctype html>
+<html lang="en">
+	<head>
+    <slot name="head" />
+	</head>
+	<body>
+		<slot name="navbar" />
+		<slot />
+    <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] w-full rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:p-8 md:w-auto md:min-w-[25%] md:max-w-[65%]">
+      <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
+        {currentPage()}
+      </h1>
+      <p class="mb-6 text-center text-base text-gray-300 sm:mb-8">
+        I suggest you to check the
+        <a href="/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">Swagger documentation</a>
+        <br />
+        or see the
+        <a href="//github.com/mcalec-dev/gdl-api" rel="noopener" target="_blank" class="text-blue-500 hover:underline">GitHub repository</a>
+        <br />
+        You can also visit my main site at
+        <a href="//mcalec.dev/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">mcalec.dev</a>
+        <br />
+        Contact me at:
+        <span class="text-gray-400">hello[at]mcalec[dot]dev</span>
+      </p>
+      <div class="scrollbar-none -mx-2 overflow-x-auto sm:mx-0">
+        <table class="w-full overflow-hidden border border-white/10 bg-[#171717]/90 text-left text-sm text-gray-400 shadow-lg">
+          <thead class="border-white/10 bg-[#131316] text-gray-300">
+            <tr>
+              <th class="border border-[#404040] px-2 py-2 font-semibold">Endpoint/Page</th>
+              <th class="border border-[#404040] px-2 py-2 font-semibold">Description</th>
+              <th class="border border-[#404040] px-2 py-2 font-semibold">Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Landing page</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/dashboard/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">View your account dashboard</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/dashboard/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/docs/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Swagger Documentation</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/docs/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/login/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Log into your account</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/login/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/search/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Search interface</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/search/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/stats/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Detailed statistics dashboard</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/stats/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/random/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Random images interface</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/random/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/register/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Register a new account</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/register/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-[#404040] px-2 py-2">
+                <code class="rounded bg-[#1f1f1f] px-1 py-1 text-white">/files/</code>
+              </td>
+              <td class="border border-[#404040] px-2 py-2">Browse all files</td>
+              <td class="border border-[#404040] px-2 py-2">
+                <a href="/files/" class="text-blue-500 hover:underline">link</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h2 class="mb-3 mt-8 text-xl font-semibold text-white sm:mb-4 sm:mt-12 sm:text-2xl">API Usage</h2>
+      <p class="mb-6 text-gray-300 sm:mb-8">The API supports both JSON responses and direct file access. All endpoints should return the proper CORS headers.</p>
+    </div>
+		<slot name="background" />
+	</body>
+</html>

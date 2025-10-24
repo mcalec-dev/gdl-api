@@ -89,26 +89,26 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
  * /api/admin/announcements/{id}:
  *   put:
  *    summary: Update an announcement
- *   parameters:
- *    - in: path
- *     name: id
- *    required: true
- *    schema:
- *      type: string
+ *    parameters:
+ *      - in: path
+ *        name: id
+ *        required: true
+ *        schema:
+ *          type: string
  *    requestBody:
- *     required: true
- *    content:
- *     application/json:
- *      schema:
- *       type: object
- *       properties:
- *         title:
- *           type: string
- *         message:
- *           type: string
- *         severity:
- *           type: string
- *           enum: [info, warning, error]
+ *      required: true
+ *      content:
+ *        application/json:
+ *          schema:
+ *            type: object
+ *            properties:
+ *              title:
+ *                type: string
+ *              message:
+ *                type: string
+ *              severity:
+ *                type: string
+ *                enum: [info, warning, error]
  */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { title, message, severity } = req.body

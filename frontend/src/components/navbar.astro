@@ -1,0 +1,146 @@
+---
+function isActive(path) {
+  const currentPath = Astro.url.pathname
+  if (currentPath === path) return true
+  if (currentPath.startsWith(path)) return true
+  else return false
+}
+function siteName() {
+  const name = import.meta.env.SITE_NAME
+  if (name) return name
+  if (!name) return ''
+}
+function currentPage() {
+  let currentPath = Astro.url.pathname
+  currentPath.replace('/', '')
+  if (currentPath.length >= 0) return 'home'
+  else return currentPath
+}
+---
+<div class="fixed top-0 left-0 w-full z-50 flex flex-col items-center">
+  <div id="announcements-container" class="w-full" hidden>
+    <div id="announcement" class="flex flex-col items-center justify-between px-4 py-2 text-white">
+      <span id="announcement-title" class="flex items-center text-lg font-semibold text-white"></span>
+      <span id="severity-icon" class="mr-2"></span>
+      <span id="announcement-message" class="text-md text-white"></span>
+    </div>
+  </div>
+  <script defer type="module" src="/js/announcements.js"></script>
+  <div id="navbar" class="backdrop-blur-md border-b border-x border-white/20 w-full lg:max-w-[65%] rounded-b-xl shadow-lg mb-6">
+    <div class="flex flex-wrap items-center justify-between p-4">
+      <a href="/" class="flex items-center">
+        <p id="navbar-title" class="self-center text-2xl mr-auto ml-0 font-semibold whitespace-nowrap text-white hover:text-blue-400 transition-colors duration-300">
+          {siteName()} - {currentPage()}
+        </p>
+      </a>
+      <div class="flex lg:order-2">
+        <button id="mobile-menu-button" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" aria-controls="navbar-sticky" aria-expanded="false">
+          <span class="sr-only">
+            Open main menu
+          </span>
+          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15" /></svg>
+        </button>
+      </div>
+      <!-- Mobile Navbar Menu -->
+      <div id="mobile-navbar-menu" class="absolute right-4 top-[65%] w-56 backdrop-blur-md rounded-xl shadow-lg border border-white/20 z-50 hidden lg:hidden">
+        <ul class="flex flex-col space-y-2 p-4">
+          <li>
+            <a href="/" class={isActive('/') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Home
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/files/" class={isActive('/files') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Files
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/random/" class={isActive('/random') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Random
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/download/" class={isActive('/download') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Download
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/stats/" class={isActive('/stats') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Stats
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/search/" class={isActive('/search') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Search
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <hr>
+          <li>
+            <a href="/login/" id="login-register" class={(isActive('/login') || isActive('/register') || isActive('/dashboard')) ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal dark:text-white'}>
+              Login / Register
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <!-- Desktop Navbar -->
+      <div id="navbar-sticky" class="hidden lg:flex items-center ml-auto mr-2">
+        <ul class="flex flex-row space-x-8 font-medium">
+          <li>
+            <a href="/" class={isActive('/') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Home
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/files/" class={isActive('/files') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Files
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/random/" class={isActive('/random') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Random
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/download/" class={isActive('/download') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Download
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/stats/" class={isActive('/stats') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Stats
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/search/" class={isActive('/search') ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Search
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+          <li>
+            <a href="/login/" id="login-register" class={(isActive('/login') || isActive('/register') || isActive('/dashboard')) ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium lg:bg-transparent lg:text-blue-700 lg:p-0 lg:dark:text-blue-500' : 'block py-2 pl-3 pr-4 text-gray-900 rounded font-normal lg:p-0 lg:dark:hover:text-blue-500 dark:text-white'}>
+              Login / Register
+              <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

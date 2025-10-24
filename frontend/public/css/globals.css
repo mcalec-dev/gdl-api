@@ -1,0 +1,62 @@
+/* no scrollbars */
+body, html {
+  scrollbar-width: none;
+}
+body::-webkit-scrollbar, html::-webkit-scrollbar {
+  display: none;
+}
+
+/* lexend */
+@font-face {
+  font-family: lexend;
+  src: url("/font/Lexend.ttf") format('truetype');
+  font-style: normal;
+}
+
+/* montserrat */
+@font-face {
+  font-family: montserrat;
+  src: url("/font/Montserrat.ttf") format('truetype');
+  font-style: normal;
+}
+@font-face {
+  font-family: montserrat;
+  src: url("/font/Montserrat-Italic.ttf") format('truetype');
+  font-style: italic;
+}
+
+/* OpenSans */
+@font-face {
+  font-family: opensans;
+  src: url("/font/OpenSans.ttf") format('truetype');
+  font-style: normal;
+}
+@font-face {
+  font-family: opensans;
+  src: url("/font/OpenSans-Italic.ttf") format('truetype');
+  font-style: italic;
+}
+
+/* Roboto */
+@font-face {
+  font-family: roboto;
+  src: url("/font/roboto.ttf") format('truetype');
+  font-style: normal;
+}
+@font-face {
+  font-family: roboto;
+  src: url("/font/Roboto-Italic.ttf") format('truetype');
+  font-style: italic;
+}
+
+/* UbuntuSans */
+@font-face {
+  font-family: ubuntusans;
+  src: url("/font/Roboto.ttf") format('truetype');
+  font-style: normal;
+}
+@font-face {
+  font-family: ubuntusans;
+  src: url("/font/Roboto-Italic.ttf") format('truetype');
+  font-style: italic;
+}
