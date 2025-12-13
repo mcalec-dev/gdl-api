@@ -1,7 +1,14 @@
 const path = require('path')
 const fs = require('fs').promises
 const debug = require('debug')('gdl-api:utils:file')
-const { normalizeString, normalizePath, safeApiPath } = require('./pathUtils')
+const {
+  normalizeString,
+  normalizePath,
+  safeApiPath,
+  safePath,
+  isSubPath,
+} = require('./pathUtils')
+const { getHostUrl } = require('./urlUtils')
 const {
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
@@ -9,27 +16,26 @@ const {
   MAX_DEPTH,
   BASE_DIR,
   BASE_PATH,
+  AUTO_SCAN,
 } = require('../config')
 const { getImageMeta } = require('./imageUtils')
 const Directory = require('../models/Directory')
 const File = require('../models/File')
 const uuid = require('uuid')
-async function safeReadJson(filePath) {
-  try {
-    const data = await fs.readFile(filePath, 'utf8')
-    return JSON.parse(data)
-  } catch (error) {
-    debug(`Error reading file ${filePath}:`, error)
-    return null
-  }
-}
 function hasAllowedExtension(filePath) {
   if (!filePath) return false
   const ext = path.extname(filePath).toLowerCase()
-  const isDisallowed = DISALLOWED_EXTENSIONS?.some((pattern) => {
-    if (pattern.startsWith('*.')) return ext === pattern.slice(1)
-    return ext === pattern
-  })
+  const extNoDot = ext.startsWith('.') ? ext.slice(1) : ext
+  const isDisallowed = Array.isArray(DISALLOWED_EXTENSIONS)
+    ? DISALLOWED_EXTENSIONS.some((pattern) => {
+        if (!pattern) return false
+        const p = pattern.toString().toLowerCase().trim()
+        let patternNoDot = p
+        if (p.startsWith('*.')) patternNoDot = p.slice(2)
+        else if (p.startsWith('.')) patternNoDot = p.slice(1)
+        return extNoDot === patternNoDot
+      })
+    : false
   return !isDisallowed
 }
 const safeDisallowedDirs = Array.isArray(DISALLOWED_DIRS) ? DISALLOWED_DIRS : []
@@ -67,163 +73,6 @@ async function isExcluded(dirName, isRoot = false) {
     return true
   return false
 }
-function isFileExcluded(fileName) {
-  if (!fileName) return true
-  const normalized = normalizeString(fileName).toLowerCase()
-  if (
-    safeDisallowedFiles.some((pattern) => {
-      if (pattern.startsWith('*.')) {
-        return normalized.endsWith(pattern.slice(1))
-      }
-      return (
-        normalized === pattern.toLowerCase() ||
-        normalized.includes(pattern.toLowerCase())
-      )
-    })
-  )
-    return true
-  return DISALLOWED_FILES.some((pattern) => {
-    if (pattern instanceof RegExp) {
-      return pattern.test(normalized)
-    }
-    return normalized.includes(pattern.toLowerCase())
-  })
-}
-async function getAllDirectories(dirPath, relativePath = '', depth = 0) {
-  if (depth >= MAX_DEPTH) return []
-  try {
-    const entries = await fs.readdir(dirPath, {
-      withFileTypes: true,
-    })
-    const dirs = entries.filter(
-      (entry) => entry.isDirectory() && !isExcluded(entry.name)
-    )
-    let results = dirs.map((dir) => {
-      const dirRelativePath = relativePath
-        ? `${relativePath}/${dir.name}`
-        : dir.name
-      return {
-        name: dir.name,
-        path: dirRelativePath,
-        fullPath: path.join(dirPath, dir.name),
-      }
-    })
-    for (const dir of results) {
-      const subDirs = await getAllDirectories(dir.fullPath, dir.path, depth + 1)
-      results = results.concat(subDirs)
-    }
-    return results
-  } catch (error) {
-    debug('Error reading directory:', dirPath, error)
-    return []
-  }
-}
-async function getAllDirectoriesAndFiles(
-  dirPath,
-  relativePath = '',
-  depth = 0,
-  topLevelOnly = false
-) {
-  if (depth >= MAX_DEPTH)
-    return {
-      items: [],
-      total: 0,
-    }
-  try {
-    const entries = await fs.readdir(dirPath, {
-      withFileTypes: true,
-    })
-    const results = []
-    for (let i = 0; i < entries.length; i) {
-      const batch = entries.slice(i, i)
-      const batchPromises = batch.map(async (entry) => {
-        const fullPath = path.join(dirPath, entry.name)
-        const relPath = path.join(relativePath, entry.name)
-        if (await isExcluded(relPath)) {
-          return null
-        }
-        try {
-          const stats = await fs.stat(fullPath)
-          if (entry.isDirectory()) {
-            if (!topLevelOnly) {
-              const subDirContents = await getAllDirectoriesAndFiles(
-                fullPath,
-                relPath,
-                depth + 1,
-                false
-              )
-              if (subDirContents.items.length > 0) {
-                return {
-                  type: 'directory',
-                  fullPath,
-                  name: entry.name,
-                  size: 0,
-                  modified: stats.mtime,
-                  contents: subDirContents.items,
-                }
-              }
-              return null
-            }
-            return {
-              type: 'directory',
-              fullPath,
-              name: entry.name,
-              size: 0,
-              modified: stats.mtime,
-            }
-          } else if (!topLevelOnly && hasAllowedExtension(entry.names)) {
-            return {
-              type: 'file',
-              fullPath,
-              name: entry.name,
-              size: stats.size,
-              modified: stats.mtime,
-            }
-          }
-        } catch (error) {
-          debug('Error processing entry:', {
-            entry: entry.name,
-            error: error.message,
-          })
-          return null
-        }
-      })
-      const batchResults = await Promise.all(batchPromises)
-      results.push(...batchResults.filter(Boolean))
-    }
-    const sortedResults = results.sort((a, b) => {
-      if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
-      return a.name.localeCompare(b.name)
-    })
-    return {
-      items: sortedResults,
-      total: sortedResults.length,
-    }
-  } catch (error) {
-    debug('Error scanning directory:', {
-      dirPath,
-      relativePath,
-      error: error.message,
-    })
-    return {
-      items: [],
-      total: 0,
-    }
-  }
-}
-async function getCollections(basePath) {
-  try {
-    const dirs = await fs.readdir(basePath, {
-      withFileTypes: true,
-    })
-    return dirs
-      .filter((dirent) => dirent.isDirectory() && !isExcluded(dirent.name))
-      .map((dirent) => dirent.name)
-      .sort()
-  } catch (error) {
-    debug('Error reading collections directory:', error)
-  }
-}
 function isDocFile(filename) {
   if (!filename) return false
   const ext = ['.doc', '.docx']
@@ -232,17 +81,20 @@ function isDocFile(filename) {
 function isImageFile(filename) {
   if (!filename) return false
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
+  if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
+  else return false
 }
 function isVideoFile(filename) {
   if (!filename) return false
   const ext = ['.mp4', '.mkv', '.webm', '.avi', '.mov']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
+  if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
+  else return false
 }
 function isAudioFile(filename) {
   if (!filename) return false
   const ext = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
-  return ext.some((e) => filename.toLowerCase().endsWith(e))
+  if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
+  else return false
 }
 function isDisallowedExtension(filename) {
   if (!filename) return false
@@ -258,42 +110,6 @@ function getFileMime(file) {
   let type = require('mime-types').lookup(ext) || 'n/a'
   type = type.replace('application/mp4', 'video/mp4')
   return type
-}
-function isPathExcluded(pathStr) {
-  if (!pathStr) return true
-  const normalizedPath = normalizePath(pathStr).toLowerCase()
-  const segments = normalizedPath.split('/').filter(Boolean)
-  for (const segment of segments) {
-    const normalizedSegment = normalizeString(segment)
-    for (const pattern of DISALLOWED_DIRS) {
-      const normalizedPattern = pattern.toLowerCase().trim()
-      if (normalizedPattern.includes('*')) {
-        const regexPattern = normalizedPattern
-          .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-          .replace(/\*/g, '.*')
-        const regex = new RegExp(`^${regexPattern}$`)
-        if (regex.test(normalizedSegment)) {
-          debug('Path excluded due to wildcard match:', {
-            segment,
-            pattern: normalizedPattern,
-            fullPath: pathStr,
-          })
-          return true
-        }
-      } else if (
-        normalizedSegment === normalizedPattern ||
-        normalizedSegment.includes(normalizedPattern)
-      ) {
-        debug('Path excluded due to exact/partial match:', {
-          segment,
-          pattern: normalizedPattern,
-          fullPath: pathStr,
-        })
-        return true
-      }
-    }
-  }
-  return false
 }
 async function upsertDirectoryEntry(dirObj) {
   try {
@@ -408,10 +224,9 @@ async function upsertAccessedItem(realPath) {
         })
       }
     }
-
     if (stats.isFile()) {
       let meta = {}
-      if (isImageFile(realPath)) {
+      if (isImageFile(realPath) === true) {
         try {
           meta = await getImageMeta(realPath)
         } catch (error) {
@@ -421,13 +236,19 @@ async function upsertAccessedItem(realPath) {
           })
         }
       }
-
       try {
+        const pathParts = relative ? relative.split('/').filter(Boolean) : []
+        const collection = pathParts.length > 0 ? pathParts[0] : ''
+        const author = pathParts.length > 1 ? pathParts[1] : ''
+        const mime = getFileMime(name) || 'n/a'
         result = await upsertFileEntry({
           name,
           paths,
-          size: stats.size,
+          size: stats.size || 0,
           type: 'file',
+          collection: collection,
+          author: author,
+          mime: mime,
           created: stats.birthtime,
           modified: stats.mtime,
           meta,
@@ -440,7 +261,6 @@ async function upsertAccessedItem(realPath) {
         })
       }
     }
-
     return result
   } catch (error) {
     debug('Error accessing or upserting item:', {
@@ -449,22 +269,311 @@ async function upsertAccessedItem(realPath) {
     })
   }
 }
+function normalizeLocalPath(p) {
+  if (!p) return ''
+  return p.replace(/\\/g, '/')
+}
+function buildPaths(localBase, relative) {
+  const rel = relative || ''
+  const local = normalizeLocalPath(path.join(localBase, rel))
+  let remote = safeApiPath(`${BASE_PATH}/api/files`, rel)
+  remote = remote.replace(/([^:])\/\//g, '$1/')
+  if (/\.[a-zA-Z0-9]+\/$/.test(remote)) {
+    remote = remote.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+  }
+  return {
+    local,
+    relative: rel,
+    remote,
+  }
+}
+function deriveCollectionAuthor(relative) {
+  const parts = relative ? relative.split('/').filter(Boolean) : []
+  return {
+    collection: parts.length > 0 ? parts[0] : null,
+    author: parts.length > 1 ? parts[1] : null,
+  }
+}
+async function maybeUpsertAccessed(realPath) {
+  if (AUTO_SCAN === false) {
+    try {
+      debug('Upserting accessed path:', realPath)
+      await upsertAccessedItem(realPath)
+    } catch (err) {
+      debug('Background upsertAccessedItem failed:', err)
+    }
+  }
+}
+function sortContents(contents, sortBy = 'name', direction = 'none') {
+  if (!Array.isArray(contents)) return []
+  if (!direction || direction === 'none') {
+    return [...contents].sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+      return a.name.localeCompare(b.name, undefined, { numeric: true })
+    })
+  }
+  return [...contents].sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+    let comparison = 0
+    switch (sortBy) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name, undefined, { numeric: true })
+        break
+      case 'modified':
+        comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
+        break
+      case 'type': {
+        const extA = (a.name.split('.').pop() || '').toLowerCase()
+        const extB = (b.name.split('.').pop() || '').toLowerCase()
+        comparison = extA.localeCompare(extB)
+        break
+      }
+      case 'size':
+        comparison = (a.size || 0) - (b.size || 0)
+        break
+      case 'created':
+        comparison = new Date(a.created || 0) - new Date(b.created || 0)
+        break
+      default:
+        comparison = a.name.localeCompare(b.name, undefined, { numeric: true })
+    }
+    return direction === 'asc' ? comparison : -comparison
+  })
+}
+function parseSortQuery(query) {
+  const allowed = ['name', 'modified', 'type', 'size', 'created']
+  if (!query) return { sortBy: 'name', direction: 'none' }
+  for (const key of Object.keys(query)) {
+    if (allowed.includes(key)) {
+      const dir = (query[key] || '').toString().toLowerCase()
+      if (dir === 'asc' || dir === 'desc')
+        return { sortBy: key, direction: dir }
+    }
+  }
+  return { sortBy: 'name', direction: 'none' }
+}
+async function scanAndSyncDirectory(dirPath, relativePath = '') {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name)
+      const entryRelativePath = relativePath
+        ? `${relativePath}/${entry.name}`
+        : entry.name
+      if (
+        (await isExcluded(entry.name)) ||
+        (await isExcluded(entryRelativePath)) ||
+        DISALLOWED_DIRS.includes(entry.name) ||
+        (entry.isFile() &&
+          (DISALLOWED_FILES.includes(entry.name) ||
+            isDisallowedExtension(entry.name)))
+      ) {
+        debug(`Skipping excluded item: ${entryRelativePath}`)
+        continue
+      }
+      let size = 0
+      let mtime = new Date()
+      let ctime = new Date()
+      try {
+        const stats = await fs.stat(entryPath)
+        mtime = stats.mtime
+        ctime = stats.birthtime
+        if (entry.isDirectory()) {
+          size = null
+        } else {
+          size = stats.size
+        }
+      } catch (statError) {
+        debug(`Error getting stats for ${entryPath}:`, statError)
+        continue
+      }
+      const paths = buildPaths(dirPath, entryRelativePath)
+      if (entry.isDirectory()) {
+        await upsertDirectoryEntry({
+          name: entry.name,
+          paths,
+          size: size,
+          created: ctime,
+          modified: mtime,
+        })
+        await scanAndSyncDirectory(entryPath, entryRelativePath)
+      }
+      if (entry.isFile()) {
+        if (!hasAllowedExtension(entryPath)) {
+          debug(`Skipping file with disallowed extension: ${entryRelativePath}`)
+          continue
+        }
+        let metadata = {}
+        if (isImageFile(entryPath)) {
+          metadata = await getImageMeta(entryPath)
+        } else {
+          metadata = {}
+        }
+        const { collection, author } = deriveCollectionAuthor(entryRelativePath)
+        const mime = await getFileMime(entry.name)
+        await upsertFileEntry({
+          name: entry.name,
+          paths,
+          author,
+          collection,
+          size,
+          type: 'file',
+          created: ctime,
+          modified: mtime,
+          mime,
+          meta: metadata,
+        })
+      }
+    }
+  } catch (error) {
+    debug(`Error scanning directory ${dirPath}:`, error)
+    throw error
+  }
+}
+async function syncAllFilesToDatabase() {
+  try {
+    debug('Starting comprehensive database sync...')
+    const stats = await fs.stat(BASE_DIR)
+    if (!stats.isDirectory()) {
+      throw new Error(`${BASE_DIR} is not a directory`)
+    }
+    await scanAndSyncDirectory(BASE_DIR, '')
+    debug('Database sync completed successfully')
+    return {
+      success: true,
+      message: 'All files and directories synced to database',
+    }
+  } catch (error) {
+    debug('Error during database sync:', error)
+    return {
+      success: false,
+      message: `Database sync failed: ${error.message}`,
+    }
+  }
+}
+async function initializeDatabaseSync() {
+  try {
+    debug('Initializing database sync...')
+    await syncAllFilesToDatabase()
+  } catch (error) {
+    debug('Failed to initialize database sync:', error)
+  }
+}
+async function formatListingEntry(
+  entry,
+  baseDir,
+  normalizedDir,
+  req,
+  includeMime = false
+) {
+  if (!entry) return null
+  try {
+    if (
+      (await isExcluded(entry.name)) ||
+      DISALLOWED_DIRS.includes(entry.name) ||
+      (entry.isFile() &&
+        (DISALLOWED_FILES.includes(entry.name) ||
+          isDisallowedExtension(entry.name)))
+    ) {
+      debug(`Excluded entry: ${entry.name}`)
+      return null
+    }
+    const entryPath = safePath(baseDir, entry.name)
+    if (!entryPath || !isSubPath(entryPath, normalizedDir)) return null
+    let stats
+    try {
+      stats = await fs.stat(entryPath)
+    } catch {
+      return null
+    }
+    const size = entry.isDirectory() ? null : stats.size
+    const mtime = stats.mtime
+    const ctime = stats.birthtime
+    const relativePath = path
+      .relative(normalizedDir, entryPath)
+      .replace(/\\/g, '/')
+    const { collection, author } = deriveCollectionAuthor(relativePath)
+    let fullPath = safeApiPath(`${BASE_PATH}/api/files`, relativePath)
+    fullPath = fullPath.replace(/([^:])\/\//g, '$1/')
+    if (/\.[a-zA-Z0-9]+\/$/.test(fullPath)) {
+      fullPath = fullPath.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+    }
+    const url = (await getHostUrl(req)) + fullPath
+    const result = {
+      name: entry.name,
+      type: entry.isDirectory() ? 'directory' : 'file',
+      size,
+      modified: mtime,
+      created: ctime,
+      path: fullPath,
+      url,
+      collection,
+      author,
+    }
+    if (includeMime && !entry.isDirectory()) {
+      result.mime = await getFileMime(entry.name)
+    }
+    return result
+  } catch (error) {
+    debug('Error formatting listing entry:', error)
+    return null
+  }
+}
+async function createDbEntriesForContents(items, parentPath = '') {
+  try {
+    for (const item of items) {
+      const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
+      const paths = buildPaths(BASE_DIR, relPath)
+      const localPath = paths.local
+      let metadata = {}
+      if (isImageFile(localPath)) {
+        metadata = await getImageMeta(localPath)
+      } else {
+        metadata = {}
+      }
+      if (item.type === 'directory') {
+        await upsertDirectoryEntry({
+          name: item.name,
+          paths,
+          size: item.size || 0,
+          created: item.created || null,
+          modified: item.modified || null,
+        })
+        if (item.contents) {
+          await createDbEntriesForContents(item.contents, relPath)
+        }
+      }
+      if (item.type === 'file') {
+        await upsertFileEntry({
+          name: item.name,
+          paths,
+          size: item.size || 0,
+          type: item.type || null,
+          collection: item.collection || null,
+          author: item.author || null,
+          created: item.created || null,
+          modified: item.modified || null,
+          meta: { ...metadata },
+        })
+      }
+    }
+  } catch (error) {
+    debug('Error creating DB entries for contents:', error)
+  }
+}
 module.exports = {
-  safeReadJson,
   isExcluded,
   hasAllowedExtension,
-  isFileExcluded,
-  getAllDirectories,
-  getAllDirectoriesAndFiles,
-  getCollections,
-  isPathExcluded,
   isDocFile,
   isImageFile,
   isVideoFile,
   isAudioFile,
   isDisallowedExtension,
   getFileMime,
-  upsertAccessedItem,
-  upsertDirectoryEntry,
-  upsertFileEntry,
+  maybeUpsertAccessed,
+  sortContents,
+  parseSortQuery,
+  formatListingEntry,
+  createDbEntriesForContents,
+  initializeDatabaseSync,
 }

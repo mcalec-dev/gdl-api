@@ -29,19 +29,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const mobileMenu = document.getElementById('mobile-navbar-menu')
   mobileMenuButton.addEventListener('click', function (e) {
     e.stopPropagation()
-    mobileMenu.classList.toggle('hidden')
+    mobileMenu.hidden = !mobileMenu.hidden
   })
   mobileMenu.querySelectorAll('a').forEach((link) => {
     link.addEventListener('click', function () {
-      mobileMenu.classList.add('hidden')
+      mobileMenu.hidden = true
     })
   })
   document.addEventListener('click', function (event) {
     const isClickInsideNav =
       mobileMenu.contains(event.target) ||
       mobileMenuButton.contains(event.target)
-    if (!isClickInsideNav && !mobileMenu.classList.contains('hidden')) {
-      mobileMenu.classList.add('hidden')
+    if (!isClickInsideNav && !mobileMenu.hidden) {
+      mobileMenu.hidden = true
     }
   })
   const loginRegisterButtons = document.querySelectorAll('#login-register')

@@ -1,5 +1,5 @@
 'use strict'
-import * as utils from './index.js'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', function () {
   const API_URL = '/api/stats'
   async function updateStats() {

@@ -7,6 +7,8 @@
 .DS_Store
 Thumbs.db
 SECURITY.md
+package-lock.json
+yarn.lock
 
 dist/
 node_modules/

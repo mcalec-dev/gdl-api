@@ -1,6 +1,6 @@
 'use strict'
-import * as utils from './index.js'
-import { IMAGE_SCALE } from './settings.js'
+import * as utils from '../min/index.min.js'
+import { IMAGE_SCALE } from '../min/settings.min.js'
 const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')

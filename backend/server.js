@@ -13,7 +13,6 @@ const debug = require('debug')('gdl-api:server')
 const chalk = require('chalk')
 const swaggerUi = require('swagger-ui-express')
 const passport = require('./utils/passport')
-const User = require('./models/User')
 const RateLimit = require('express-rate-limit')
 const morganBody = require('morgan-body')
 const fs = require('fs').promises
@@ -67,20 +66,19 @@ if (BASE_PATH) {
 async function initDB() {
   const store = sessionStore()
   try {
-    await mongoose.connect(MONGODB_URL)
+    const connection = await mongoose.connect(MONGODB_URL)
     debug('MongoDB connected')
+    if (store) {
+      const db = connection.connection.db
+      const sessions = db.collection('sessions')
+      const result = await sessions.deleteMany({ expires: { $lt: new Date() } })
+      debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
+    }
   } catch (error) {
-    debug('MongoDB connection error:', error)
-  }
-  try {
-    store.clear()
-    debug('All sessions cleared on server start.')
-    await User.updateMany({}, { $set: { sessions: [] } })
-    debug('All user sessions cleared for all users.')
-  } catch (error) {
-    debug('Failed to clear sessions on server start:', error)
+    console.error('Database initialization failed:', error)
   }
 }
+
 // common template variables
 async function webVars() {
   return {
@@ -267,6 +265,8 @@ async function initApp() {
     noColors: false,
     prettify: true,
     includeNewLine: true,
+    logReqDateTime: true,
+    timezone: 'America/New_York',
     dateTimeFormat: 'utc',
     logReqUserAgent: true,
     logRequestBody: true,

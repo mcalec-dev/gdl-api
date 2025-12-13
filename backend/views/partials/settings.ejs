@@ -18,6 +18,22 @@
       </span>
       <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="oneko-toggle" />
     </div>
+    <div id="server-sort-toggle_container" class="flex gap-1 items-center">
+      <span class="text-white">
+        Server sorting:
+      </span>
+      <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="server-sort-toggle" />
+    </div>
+    <div id="pagination-setter_container" class="flex gap-1 items-center flex-col">
+      <div>
+        <span class="text-white">
+          Pagination:
+        </span>
+        <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="pagination-toggle" />
+      </div>
+      <span class="text-white/80 text-sm mb-1">items per page</span>
+      <input class="bg-black/80 rounded border border-white/20 text-center px-2 py-1 select-text pointer-events-auto text-white min-w-20" type="number" id="pagination-items-input" min="10" max="1000" step="10" value="100">
+    </div>
     <div id="image-scale-container" class="gap-2 flex-col flex items-center justify-center">
       <span class="text-white">
         Image Scale (default in %):

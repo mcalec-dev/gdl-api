@@ -1,6 +1,6 @@
 'use strict'
-import * as utils from './index.js'
-import { MIN_IMAGE_SCALE } from '../settings.js'
+import * as utils from '../min/index.min.js'
+import { MIN_IMAGE_SCALE } from '../min/settings.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput')
   const searchButton = document.getElementById('searchButton')

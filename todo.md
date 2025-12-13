@@ -8,10 +8,8 @@
 - implement logging for the entire project (via debug with log files and live ones)
 - proper error handler middleware
 - validator for json api data
-- add testing applications (like insomnia or postman)
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
-- add testing modules (`*.test.js` or `test/`) that only check for errors
 - create a wiki to reflect the api endpoints
 - proper MIME setter in `files.js` (for each file)
 - npm packages to utilize; moment, pm2, async, sitemap, glob, express-useragent, rollup
@@ -19,9 +17,8 @@
 - autocomplete for search frontend (like google)
 - implement google oauth with passport
 - fix discord bot embed buttons from not working
-- fix files frontend with a gallery grid layout (masonry layout)
+- configurable grid layout for frontend files
 - compiling tailwindcss within the dist dir
-- start converting to SvelteKit for the frontend
-- split backend api and frontend
 - rollup with nexe
 - `AUTO_SCAN` even if its on, it should upsert directories when accessed too
+- npm package `emailvalid` for email validation in user registrations

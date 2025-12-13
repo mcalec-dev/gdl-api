@@ -1,0 +1,12 @@
+db/
+node_modules/
+min/
+dist/
+.github/
+node_modules/
+
+*.config.js
+*.json
+*.md
+*.txt
+*.html

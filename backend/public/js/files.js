@@ -6,6 +6,26 @@ import {
   setupFileClickHandlers,
   loadViewerIcons,
 } from '../min/viewer.min.js'
+import {
+  setupFileItemContextMenu,
+  setContextIcons,
+  setContextBasePaths,
+} from '../min/contextmenu.min.js'
+function setCookie(name, value, days = 365) {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`
+}
+function getCookie(name) {
+  const nameEQ = name + '='
+  const ca = document.cookie.split(';')
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
 let icons
@@ -33,202 +53,6 @@ async function loadIcons() {
       download: icon.nav.download,
     },
   }
-}
-let contextMenu = null
-let _contextOutsideHandler = null
-let _prevBodyOverflow = null
-async function lockScroll() {
-  try {
-    _prevBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-  } catch {
-    try {
-      document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to lock scroll')
-    }
-  }
-}
-async function unlockScroll() {
-  try {
-    if (_prevBodyOverflow === null || _prevBodyOverflow === undefined) {
-      document.body.style.removeProperty('overflow')
-    } else {
-      document.body.style.overflow = _prevBodyOverflow
-    }
-    _prevBodyOverflow = null
-  } catch {
-    try {
-      document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to unlock scroll')
-    }
-  }
-}
-function createContextMenu() {
-  if (contextMenu) return
-  contextMenu = document.getElementById('context-menu-container')
-  if (!contextMenu) {
-    contextMenu = document.createElement('div')
-    contextMenu.id = 'context-menu-container'
-    document.body.appendChild(contextMenu)
-  }
-  contextMenu.hidden = true
-}
-async function showContextMenu(e, itemElem) {
-  if (!contextMenu) createContextMenu()
-  contextMenu.innerHTML = ''
-  const fileType = itemElem.dataset.fileType
-  const itemPath = itemElem.dataset.path
-  const encodedPath = itemPath.split('/').map(encodeURIComponent).join('/')
-  const fileUrl = `${apiBasePath}/${encodedPath}`
-  contextMenu.innerHTML = `
-    <div class="border-b border-white/20 px-2 py-2 mb-2 flex items-center gap-1">
-      <span class="w-4 h-4">${icons[fileType]}</span>
-      <span class="truncate">${itemPath.split('/').pop()}</span>
-    </div>
-  `
-  const menuItems = []
-  menuItems.push({
-    label: 'Copy URL',
-    icon: icons.nav.copy,
-    handler: () => {
-      navigator.clipboard.writeText(fileUrl)
-    },
-  })
-  if (fileType === 'image' || fileType === 'video' || fileType === 'audio') {
-    menuItems.push({
-      label: 'Open in New Tab',
-      icon: icons.nav.link,
-      handler: () => {
-        window.open(fileUrl, '_blank')
-      },
-    })
-    if (fileType === 'image') {
-      menuItems.push({
-        label: 'Copy Image',
-        icon: icons.nav.copy,
-        handler: async () => {
-          try {
-            const req = await fetch(fileUrl)
-            const blob = await req.blob()
-            const type = blob.type || 'image/png'
-            await navigator.clipboard.write([
-              new window.ClipboardItem({ [type]: blob }),
-            ])
-          } catch {
-            utils.handleError('Failed to copy image.')
-          }
-        },
-      })
-    }
-  }
-  menuItems.push({
-    label: 'Download',
-    icon: icons.nav.download,
-    handler: () => {
-      const a = document.createElement('a')
-      a.href = `/api/download/?url="${encodeURIComponent(fileUrl)}"`
-      a.download = ''
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    },
-  })
-  const menuContainer = document.createElement('div')
-  menuContainer.className = 'menu-items flex flex-col gap-1'
-  menuItems.forEach(({ label, icon }, index) => {
-    const item = document.createElement('div')
-    item.className =
-      'px-2 py-1 rounded-lg cursor-pointer flex items-center gap-2 menu-item'
-    item.dataset.index = index.toString()
-    item.innerHTML = `
-      <span class="w-3.5 h-3.5 stroke-white stroke-2">${icon}</span>
-      <span>${label}</span>
-    `
-    menuContainer.appendChild(item)
-  })
-  contextMenu.appendChild(menuContainer)
-  menuContainer.addEventListener('click', (ev) => {
-    const menuItem = ev.target.closest('.menu-item')
-    if (!menuItem) return
-    ev.preventDefault()
-    ev.stopPropagation()
-    ev.stopImmediatePropagation()
-    const index = parseInt(menuItem.dataset.index)
-    if (!isNaN(index) && menuItems[index]) {
-      hideContextMenu()
-      menuItems[index].handler()
-    }
-  })
-  menuContainer.addEventListener('mouseover', (ev) => {
-    const menuItem = ev.target.closest('.menu-item')
-    if (menuItem) {
-      menuItem.style.background = 'rgba(255,255,255,0.08)'
-    }
-  })
-  menuContainer.addEventListener('mouseout', (ev) => {
-    const menuItem = ev.target.closest('.menu-item')
-    if (menuItem) {
-      menuItem.style.background = 'none'
-    }
-  })
-  const rect = contextMenu.getBoundingClientRect()
-  const viewportW = window.innerWidth
-  const viewportH = window.innerHeight
-  let left = e.clientX
-  let top = e.clientY
-  contextMenu.style.display = 'block'
-  contextMenu.hidden = false
-  const menuW = contextMenu.offsetWidth || rect.width || 180
-  const menuH = contextMenu.offsetHeight || rect.height || 40
-  if (left + menuW > viewportW) left = Math.max(8, viewportW - menuW - 8)
-  if (top + menuH > viewportH) top = Math.max(8, viewportH - menuH - 8)
-  contextMenu.style.left = left + 'px'
-  contextMenu.style.top = top + 'px'
-  if (_contextOutsideHandler) {
-    document.removeEventListener('pointerdown', _contextOutsideHandler, true)
-    _contextOutsideHandler = null
-  }
-  _contextOutsideHandler = function outsideHandler(ev) {
-    if (!contextMenu.contains(ev.target)) {
-      ev.preventDefault()
-      ev.stopPropagation()
-      hideContextMenu()
-      document.removeEventListener('pointerdown', _contextOutsideHandler, true)
-      _contextOutsideHandler = null
-    }
-  }
-  document.addEventListener('pointerdown', _contextOutsideHandler, true)
-  await lockScroll()
-}
-async function hideContextMenu() {
-  if (!contextMenu) return
-  contextMenu.style.display = 'none'
-  contextMenu.hidden = true
-  if (_contextOutsideHandler) {
-    document.removeEventListener('pointerdown', _contextOutsideHandler, true)
-    _contextOutsideHandler = null
-  }
-  await unlockScroll()
-}
-function setupFileItemContextMenu() {
-  if (!contextMenu) createContextMenu()
-  document.addEventListener('contextmenu', (e) => {
-    e.stopPropagation()
-    e.stopImmediatePropagation()
-    const itemElem = e.target.closest('.file-item[data-file-type]')
-    if (
-      itemElem &&
-      itemElem.dataset.fileType &&
-      itemElem.dataset.fileType !== 'directory'
-    ) {
-      e.preventDefault()
-      showContextMenu(e, itemElem)
-    } else {
-      hideContextMenu()
-    }
-  })
 }
 function constructApiPath(path) {
   const cleanPath = path.replace(/^\/|\/$/g, '').replace(/^files\/?/, '')
@@ -270,26 +94,53 @@ let SORT_STATES = {
   size: 'none',
   created: 'none',
 }
+function saveSortState() {
+  const sortState = JSON.stringify({
+    sort: currentSort,
+    dir: currentSortDir,
+    states: SORT_STATES,
+  })
+  setCookie('fileSortState', sortState)
+}
+function loadSortState() {
+  const saved = getCookie('fileSortState')
+  if (saved) {
+    try {
+      const state = JSON.parse(saved)
+      currentSort = state.sort || 'name'
+      currentSortDir = state.dir || 'none'
+      SORT_STATES = state.states || {
+        name: 'none',
+        modified: 'none',
+        type: 'none',
+        size: 'none',
+        created: 'none',
+      }
+    } catch (error) {
+      console.error('Failed to parse sort state cookie:', error)
+    }
+  }
+}
 function getSortIcon(state) {
   switch (state) {
     case 'asc':
-      return icons.sort.asc
+      return icons?.sort?.asc || ''
     case 'desc':
-      return icons.sort.desc
+      return icons?.sort?.desc || ''
     default:
-      return icons.sort.default
+      return icons?.sort?.default || ''
   }
 }
 function renderSortToolbar() {
   const sortToolbar = document.getElementById('sort-toolbar')
   sortToolbar.classList.remove('invisible')
   const sortButtonStyle =
-    'flex items-center text-center justify-between min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl pointer text-white transition'
+    'flex items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl pointer text-white transition'
   const sortStateStyle = 'w-4 h-4 align-middle font-white'
   const sortToolbarHtml = `
     <button id="goBack" class="${sortButtonStyle}">
       <span>Back</span>
-      <span class="${sortStateStyle}">${icons.back}</span>
+      <span class="${sortStateStyle}">${icons?.back || ''}</span>
     </button>
     <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
       <span>Name</span>
@@ -381,7 +232,7 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       'loading fixed left-1/2 top-1/2 min-w-[180px] max-w-[320px] p-4 bg-black/80 select-none rounded-xl text-white border border-white/20 text-center transform -translate-x-1/2 -translate-y-1/2 z-50 cursor-not-allowed'
     loadingIndicator.innerHTML = '<span>Loading...</span>'
     fileList.appendChild(loadingIndicator)
-    const apiPath = constructApiPath(path)
+    const apiPath = constructApiPath(path) + window.location.search
     let needsFetch =
       !currentDirectoryData ||
       currentDirectoryData.path !== path ||
@@ -480,17 +331,32 @@ function setupLazyLoading() {
           ) {
             const loadImage = () => {
               const tempImage = new window.Image()
-              const iconPlaceholder =
-                element.parentElement?.parentElement?.querySelector(
-                  '.absolute.inset-0'
-                )
+              const fileItem = element.closest('.file-item')
+              const iconPlaceholder = fileItem?.querySelector(
+                '.file-icon-placeholder'
+              )
               tempImage.onload = () => {
+                element.addEventListener(
+                  'load',
+                  () => {
+                    element.classList.remove('loading')
+                    element.classList.add('loaded')
+                    if (iconPlaceholder && iconPlaceholder.parentNode) {
+                      iconPlaceholder.parentNode.removeChild(iconPlaceholder)
+                    }
+                  },
+                  { once: true }
+                )
+                element.addEventListener(
+                  'error',
+                  () => {
+                    element.classList.remove('loading')
+                    element.classList.add('error')
+                    element.style.display = 'none'
+                  },
+                  { once: true }
+                )
                 element.src = element.dataset.src
-                element.classList.remove('loading')
-                element.classList.add('loaded')
-                if (iconPlaceholder) {
-                  iconPlaceholder.style.display = 'none'
-                }
               }
               tempImage.onerror = () => {
                 element.classList.remove('loading')
@@ -503,25 +369,33 @@ function setupLazyLoading() {
               element.tagName.toLowerCase() === 'video' ||
               element.tagName.toLowerCase() === 'audio'
             ) {
-              const iconPlaceholder =
-                element.parentElement?.parentElement?.querySelector(
-                  '.absolute.inset-0'
-                )
+              const fileItem = element.closest('.file-item')
+              const iconPlaceholder = fileItem?.querySelector(
+                '.file-icon-placeholder'
+              )
               element.preload = 'metadata'
               element.src = element.dataset.src
               element.muted = element.tagName.toLowerCase() === 'video'
-              element.classList.remove('loading')
-              element.classList.add('loaded')
               element.addEventListener(
                 'loadeddata',
                 () => {
-                  if (iconPlaceholder) {
-                    iconPlaceholder.style.display = 'none'
+                  element.classList.remove('loading')
+                  element.classList.add('loaded')
+                  if (iconPlaceholder && iconPlaceholder.parentNode) {
+                    iconPlaceholder.parentNode.removeChild(iconPlaceholder)
                   }
                 },
                 { once: true }
               )
-
+              element.addEventListener(
+                'error',
+                () => {
+                  element.classList.remove('loading')
+                  element.classList.add('error')
+                  element.style.display = 'none'
+                },
+                { once: true }
+              )
               element.addEventListener(
                 'error',
                 () => {
@@ -535,14 +409,12 @@ function setupLazyLoading() {
           }
         } else {
           if (!element.classList.contains('zoomed')) {
-            const iconPlaceholder =
-              element.parentElement?.parentElement?.querySelector(
-                '.absolute.inset-0'
-              )
+            const iconPlaceholder = element
+              .closest('.file-item')
+              ?.querySelector('.file-icon-placeholder, .absolute.inset-0')
             if (iconPlaceholder) {
-              iconPlaceholder.style.display = 'flex'
+              iconPlaceholder.style.display = ''
             }
-
             if (
               element.tagName.toLowerCase() === 'video' ||
               element.tagName.toLowerCase() === 'audio'
@@ -582,6 +454,7 @@ function handleDirectoryClick(event) {
   if (!newPath.endsWith('/')) newPath += '/'
   const cleanPath = itemPath.replace(new RegExp(`^${frontendBasePath}/?`), '')
   const url = new URL(window.location.href)
+  url.searchParams.set('page', '1')
   const params = url.search
   history.pushState({ path: cleanPath }, '', newPath + params)
   loadDirectory(cleanPath, null, true)
@@ -609,6 +482,7 @@ function setupSortButtons() {
       }
       currentSort = sortBy
       currentSortDir = SORT_STATES[sortBy]
+      saveSortState()
       const url = new URL(window.location.href)
       ;['name', 'size', 'type', 'modified', 'created'].forEach((param) =>
         url.searchParams.delete(param)
@@ -619,7 +493,32 @@ function setupSortButtons() {
       let pathname = url.pathname
       if (!pathname.endsWith('/')) pathname += '/'
       window.history.replaceState({}, '', pathname + url.search)
-      renderDirectory(currentDirectoryData.contents, currentDirectoryData.path)
+      const useServerSort = getCookie('server-sort') !== 'false'
+      if (useServerSort) {
+        if (
+          currentDirectoryData &&
+          typeof currentDirectoryData.path === 'string'
+        ) {
+          loadDirectory(currentDirectoryData.path, null, true)
+        } else {
+          loadDirectory('', null, true)
+        }
+      } else {
+        if (
+          currentDirectoryData &&
+          Array.isArray(currentDirectoryData.contents)
+        ) {
+          const sorted = sortContents(
+            currentDirectoryData.contents,
+            currentSort,
+            currentSortDir
+          )
+          currentDirectoryData.contents = sorted
+          renderDirectory(sorted, currentDirectoryData.path || '')
+        } else {
+          loadDirectory('', null, true)
+        }
+      }
     })
   })
 }
@@ -628,8 +527,6 @@ async function renderDirectory(contents, path) {
   const hasDirectories = contents.some((item) => item.type === 'directory')
   fileList.className = ''
   fileList.style.gridAutoFlow = ''
-  // all this styling is pissing me off
-  // im the original mcalec
   if (hasFiles) {
     fileList.classList.add(
       'grid-view',
@@ -653,7 +550,7 @@ async function renderDirectory(contents, path) {
     fileList.style.gridAutoRows = ''
     fileList.classList.add('flex', 'flex-col', 'items-start', 'gap-4')
   }
-  const sortedContents = sortContents(contents, currentSort, currentSortDir)
+  const sortedContents = contents
   renderSortToolbar()
   const goBack = document.getElementById('goBack')
   goBack.addEventListener('click', () => {
@@ -661,8 +558,15 @@ async function renderDirectory(contents, path) {
       .split('/')
       .slice(0, -1)
       .join('/')
-    loadDirectory(parentPath)
-    window.history.pushState({}, '', `${frontendBasePath}/${parentPath}`)
+    const url = new URL(window.location.href)
+    url.searchParams.set('page', '1')
+    const params = url.search
+    window.history.pushState(
+      {},
+      '',
+      `${frontendBasePath}/${parentPath}${params}`
+    )
+    loadDirectory(parentPath, null, true)
   })
   await setupFileClickHandlers('#file-list')
   let html = ''
@@ -694,7 +598,7 @@ async function renderDirectory(contents, path) {
       if (hasDirectories && !hasFiles) {
         html += `
         <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
-          <div class="file-icon ${itemType} flex w-8 h-8 flex-shrink-0 mr-3">${icons[itemType]}</div>
+          <div class="file-icon ${itemType} flex w-8 h-8 mr-3">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
           <div class="flex-1 min-w- overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
@@ -709,7 +613,7 @@ async function renderDirectory(contents, path) {
         html += `
         <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
-            <div class="file-icon ${itemType} flex w-6 h-6">${icons[itemType]}</div>
+            <div class="file-icon ${itemType} flex w-6 h-6">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
             <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span>
@@ -728,7 +632,7 @@ async function renderDirectory(contents, path) {
         <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="w-full h-full">
             ${(() => {
-              const iconPlaceholder = `<div class="absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${icons[itemType]}</span></div>`
+              const iconPlaceholder = `<div class="file-icon-placeholder absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${(icons && icons[itemType]) || (icons && icons.other) || ''}</span></div>`
               if (itemType === 'audio') {
                 return `
                   ${iconPlaceholder}
@@ -756,7 +660,7 @@ async function renderDirectory(contents, path) {
               if (itemType === 'text') {
                 return `
                   <div class="text-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <div class="file-preview text loading w-full h-full object-contain select-none flex items-center justify-center p-4 text-sm text-gray-300 bg-black/50 border border-white/10 rounded">${icons.text}</div>
+                    <div class="file-preview text loading w-full h-full object-contain select-none flex items-center justify-center p-4 text-sm text-gray-300 bg-black/50 border border-white/10 rounded">${(icons && icons.text) || ''}</div>
                   </div>
                 `
               }
@@ -776,7 +680,7 @@ async function renderDirectory(contents, path) {
       html += `
         <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="flex items-center w-full gap-3">
-            <div class="file-icon ${itemType} flex w-6 h-6 flex-shrink-0">${icons[itemType] || icons.other}</div>
+            <div class="file-icon ${itemType} flex w-6 h-6">${icons?.[itemType] || icons?.other || ''}</div>
             <div class="file-details flex-1 min-w-0">
               <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
               <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
@@ -812,6 +716,99 @@ async function renderDirectory(contents, path) {
       })
     })
   setupLazyLoading()
+  renderPaginationUI(contents)
+}
+function renderPaginationUI(contents) {
+  try {
+    const container =
+      document.getElementById('pagination-controls') ||
+      document.getElementById('pagination-container')
+    if (!container) return
+    const url = new URL(window.location.href)
+    const limitRaw = parseInt(url.searchParams.get('limit'), 10)
+    if (isNaN(limitRaw) || limitRaw <= 0) {
+      container.hidden = true
+      return
+    }
+    const limit = limitRaw
+    container.hidden = false
+    const page = Math.max(
+      1,
+      parseInt(url.searchParams.get('page') || 'Page 0', 10) || 1
+    )
+    const disablePrev = page <= 1
+    const disableNext = Array.isArray(contents) ? contents.length < limit : true
+    const prevBtn = document.getElementById('pager-prev')
+    const nextBtn = document.getElementById('pager-next')
+    const currentSpan = document.getElementById('pager-current')
+    if (prevBtn) {
+      prevBtn.innerHTML = ''
+      if (icons?.nav?.prev)
+        prevBtn.insertAdjacentHTML('afterbegin', icons.nav.prev)
+      else
+        prevBtn.insertAdjacentHTML('afterbegin', prevBtn.innerHTML || '&#8249;')
+      const prevSvg = prevBtn.querySelector('svg')
+      if (prevSvg) {
+        prevSvg.style.display = 'block'
+        prevSvg.style.width = prevSvg.style.width || '20px'
+        prevSvg.style.height = prevSvg.style.height || '20px'
+        prevSvg.setAttribute('focusable', 'false')
+      }
+      if (disablePrev) {
+        prevBtn.classList.add('opacity-30')
+        prevBtn.classList.add('pointer-events-none')
+      } else {
+        prevBtn.classList.remove('opacity-30')
+        prevBtn.classList.remove('pointer-events-none')
+      }
+      prevBtn.onclick = () => {
+        if (disablePrev) return
+        const u = new URL(window.location.href)
+        u.searchParams.set('page', String(Math.max(1, page - 1)))
+        window.history.replaceState({}, '', u.pathname + u.search)
+        loadDirectory(
+          currentDirectoryData ? currentDirectoryData.path : '',
+          null,
+          true
+        )
+      }
+    }
+    if (nextBtn) {
+      nextBtn.innerHTML = ''
+      if (icons?.nav?.next)
+        nextBtn.insertAdjacentHTML('afterbegin', icons.nav.next)
+      else
+        nextBtn.insertAdjacentHTML('afterbegin', nextBtn.innerHTML || '&#8250;')
+      const nextSvg = nextBtn.querySelector('svg')
+      if (nextSvg) {
+        nextSvg.style.display = 'block'
+        nextSvg.style.width = nextSvg.style.width || '20px'
+        nextSvg.style.height = nextSvg.style.height || '20px'
+        nextSvg.setAttribute('focusable', 'false')
+      }
+      if (disableNext) {
+        nextBtn.classList.add('opacity-30')
+        nextBtn.classList.add('pointer-events-none')
+      } else {
+        nextBtn.classList.remove('opacity-30')
+        nextBtn.classList.remove('pointer-events-none')
+      }
+      nextBtn.onclick = () => {
+        if (disableNext) return
+        const u = new URL(window.location.href)
+        u.searchParams.set('page', String(page + 1))
+        window.history.replaceState({}, '', u.pathname + u.search)
+        loadDirectory(
+          currentDirectoryData ? currentDirectoryData.path : '',
+          null,
+          true
+        )
+      }
+    }
+    if (currentSpan) currentSpan.textContent = `Page ${String(page)}`
+  } catch (err) {
+    console.error('Failed to render pagination UI:', err)
+  }
 }
 function getSortFromQuery() {
   const params = new URLSearchParams(window.location.search)
@@ -827,19 +824,34 @@ function getSortFromQuery() {
     }
   })
   if (!found) {
-    currentSort = 'name'
-    currentSortDir = 'none'
-    Object.keys(SORT_STATES).forEach((key) => (SORT_STATES[key] = 'none'))
+    loadSortState()
+    if (currentSortDir !== 'none') {
+      const url = new URL(window.location.href)
+      url.searchParams.set(currentSort, currentSortDir)
+      let pathname = url.pathname
+      if (!pathname.endsWith('/')) pathname += '/'
+      window.history.replaceState({}, '', pathname + url.search)
+    }
+  } else {
+    saveSortState()
   }
 }
 async function init() {
   if (isInitialized) return
   isInitialized = true
-  await loadIcons()
-  await loadViewerIcons()
-  await setupViewerEvents()
-  getSortFromQuery()
-  setupFileItemContextMenu()
+  try {
+    await loadIcons()
+    setContextIcons(icons)
+    setContextBasePaths(frontendBasePath, apiBasePath)
+    await loadViewerIcons()
+    await setupViewerEvents()
+    getSortFromQuery()
+    setupFileItemContextMenu()
+  } catch {
+    utils.handleError('Failed to finish initialization')
+    console.error('Failed to finish initialization.')
+    return
+  }
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
   const initialPath = window.location.pathname
     .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')

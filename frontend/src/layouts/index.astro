@@ -1,19 +1,19 @@
 ---
 function currentPage() {
-  let currentPath = Astro.url.pathname
-  currentPath.replace('/', '')
-  if (currentPath.length >= 0) return 'home'
-  else return currentPath
+  let currentPath = Astro.url.pathname.replaceAll('/', '')
+  if (currentPath === '') return 'home'
+  return currentPath
 }
 ---
 <!doctype html>
 <html lang="en">
 	<head>
-    <slot name="head" />
+    <slot name="Head" />
 	</head>
 	<body>
-		<slot name="navbar" />
-		<slot />
+		<slot name="Navbar" />
+		<slot name="Settings" />
+    <slot />
     <div id="container" class="z-10 mx-auto mb-[6vh] mt-[12vh] w-full rounded-xl border border-white/20 p-4 shadow-2xl backdrop-blur-md sm:p-8 md:w-auto md:min-w-[25%] md:max-w-[65%]">
       <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8">
         {currentPage()}
@@ -128,6 +128,6 @@ function currentPage() {
       <h2 class="mb-3 mt-8 text-xl font-semibold text-white sm:mb-4 sm:mt-12 sm:text-2xl">API Usage</h2>
       <p class="mb-6 text-gray-300 sm:mb-8">The API supports both JSON responses and direct file access. All endpoints should return the proper CORS headers.</p>
     </div>
-		<slot name="background" />
+		<slot name="Background" />
 	</body>
 </html>

@@ -19,19 +19,16 @@ async function loadViewerIcons() {
   }
 }
 let _prevBodyOverflow = null
-async function lockScroll() {
+function lockScroll() {
   try {
     _prevBodyOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
   } catch {
-    try {
-      document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to lock scroll')
-    }
+    utils.handleError('Unable to lock scroll')
   }
+  document.body.style.removeProperty('overflow')
 }
-async function unlockScroll() {
+function unlockScroll() {
   try {
     if (_prevBodyOverflow === null || _prevBodyOverflow === undefined) {
       document.body.style.removeProperty('overflow')
@@ -40,12 +37,9 @@ async function unlockScroll() {
     }
     _prevBodyOverflow = null
   } catch {
-    try {
-      document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to unlock scroll')
-    }
+    utils.handleError('Unable to unlock scroll')
   }
+  document.body.style.removeProperty('overflow')
 }
 function getMediaUrl(item) {
   return item.previewSrc || `/api/files/${item.encodedPath}`
@@ -58,9 +52,8 @@ function preloadMedia(item) {
       ? getMediaUrl(item) + defaultImageSize
       : getMediaUrl(item)
 }
-// let me just find a way to make this work in other files
-// like random.js for previewing those damn images
-async function showViewer(index) {
+function showViewer(index) {
+  lockScroll()
   if (index < 0 || index >= currentItemList.length) return
   const item = currentItemList[index]
   const popupViewer = document.getElementById('popup-viewer')
@@ -128,7 +121,6 @@ async function showViewer(index) {
   nextButton.disabled = index === currentItemList.length - 1
   popupViewer.style.display = 'flex'
   popupViewer.classList.remove('hidden')
-  await lockScroll()
   currentItemIndex = index
   if (index > 0) {
     preloadMedia(currentItemList[index - 1])
@@ -150,39 +142,39 @@ async function setupViewerEvents() {
   const popupAudio = document.getElementById('popup-audio')
   const popupEmbed = document.getElementById('popup-embed')
   let isZoomed = false
-  async function closeViewer() {
+  function closeViewer() {
+    if (isZoomed) {
+      handleZoom(0, 0)
+    }
+    isZoomed = false
     if (!popupVideo.paused) {
       popupVideo.pause()
     }
     if (!popupAudio.paused) {
       popupAudio.pause()
     }
-    if (isZoomed) {
-      handleZoom(0, 0)
-    }
-    isZoomed = false
-    await unlockScroll()
     popupImage.src = ''
     popupVideo.src = ''
     popupAudio.src = ''
     popupEmbed.src = ''
     popupViewer.hidden = true
     popupViewer.style.display = 'none'
+    unlockScroll()
   }
-  async function next() {
+  function next() {
     if (currentItemIndex < currentItemList.length - 1) {
       if (isZoomed) {
         handleZoom(0, 0)
       }
-      await showViewer(currentItemIndex + 1)
+      showViewer(currentItemIndex + 1)
     }
   }
-  async function prev() {
+  function prev() {
     if (currentItemIndex > 0) {
       if (isZoomed) {
         handleZoom(0, 0)
       }
-      await showViewer(currentItemIndex - 1)
+      showViewer(currentItemIndex - 1)
     }
   }
   newTabButton.addEventListener('click', async () => {
@@ -206,18 +198,18 @@ async function setupViewerEvents() {
     navigator.clipboard.writeText(fileUrl)
   })
   closeButton.addEventListener('click', async () => {
-    await closeViewer()
+    closeViewer()
   })
   popupViewer.addEventListener('click', async (e) => {
     if (e.target === popupViewer) {
-      await closeViewer()
+      closeViewer()
     }
   })
   nextButton.addEventListener('click', next)
   prevButton.addEventListener('click', prev)
   window.addEventListener('beforeunload', async () => {
     if (!popupViewer.hidden || popupViewer.style.display !== 'none') {
-      await unlockScroll()
+      unlockScroll()
     }
   })
   document.addEventListener('keydown', async (e) => {
@@ -225,18 +217,18 @@ async function setupViewerEvents() {
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
-          await closeViewer()
+          closeViewer()
           break
         case 'ArrowUp':
           e.preventDefault()
           break
         case 'ArrowLeft':
           e.preventDefault()
-          await prev()
+          prev()
           break
         case 'ArrowRight':
           e.preventDefault()
-          await next()
+          next()
           break
         case 'ArrowDown':
           e.preventDefault()

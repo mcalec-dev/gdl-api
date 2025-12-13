@@ -1,5 +1,5 @@
 'use strict'
-import * as utils from './index.js'
+import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', async () => {
   const registerForm = document.getElementById('registerForm')
   const errorDiv = document.getElementById('error')

@@ -1,8 +1,8 @@
 /* no scrollbars */
-body, html {
+html, body {
   scrollbar-width: none;
 }
-body::-webkit-scrollbar, html::-webkit-scrollbar {
+html::-webkit-scrollbar, body::-webkit-scrollbar {
   display: none;
 }
 

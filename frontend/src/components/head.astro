@@ -1,3 +1,16 @@
+---
+import { SEO } from "astro-seo";
+function siteName() {
+  const name = import.meta.env.SITE_NAME
+  if (name) return name
+  if (!name) return ''
+}
+function currentPage() {
+  let currentPath = Astro.url.pathname.replaceAll('/', '')
+  if (currentPath === '') return 'home'
+  return currentPath
+}
+---
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="title" content="<%= title %>" />
@@ -46,3 +59,12 @@
     },
   }
 </script>
+<title>{siteName()} - {currentPage()}</title>
+<SEO
+  title="{siteName()} - {currentPage()}"
+  description="A powerful API for generating and manipulating images."
+  author="mcalec-dev"
+  keywords={["API", "image generation", "image manipulation", "GDL API", "graphics", "developer tools"]}
+  url={import.meta.env.SITE_URL}
+  image="/favicon.ico"
+/>

@@ -112,7 +112,7 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
  */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { title, message, severity } = req.body
-  if (!title || !message || !severity) {
+  if (!severity) {
     return res.status(400).json({
       error: 'Bad Request',
       status: 400,

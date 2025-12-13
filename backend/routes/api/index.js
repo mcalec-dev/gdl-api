@@ -3,6 +3,7 @@ require('dotenv').config({ quiet: true })
 const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api')
 const pathUtils = require('../../utils/pathUtils')
+const { getHostUrl } = require('../../utils/urlUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {
@@ -42,7 +43,7 @@ try {
  *     summary: Get API information
  */
 router.get(['/', ''], async (req, res) => {
-  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
+  const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     api: 'v2',
     name: NAME,

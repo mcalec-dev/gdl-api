@@ -23,9 +23,15 @@ async function fetchAnnouncements() {
         container.classList.add('bg-red-600')
     }
     container.hidden = false
-    document.getElementById('announcement-title').innerHTML = announcement.title
-    document.getElementById('announcement-message').innerHTML =
-      await utils.parseEmojis(announcement.message)
+    const title = (await utils.parseEmojis(announcement.title))
+      .trim()
+      .replace(/\n/g, '<br />')
+    document.getElementById('announcement-title').innerHTML = title
+    const message = (await utils.parseEmojis(announcement.message))
+      .trim()
+      .replace(/\n/g, '<br />')
+      .replace(/\s{2,}/g, ' ')
+    document.getElementById('announcement-message').innerHTML = message
   }
 }
 window.fetchAnnouncements = fetchAnnouncements

@@ -80,6 +80,8 @@ const COOKIE_MAX_AGE = ms(process.env.COOKIE_MAX_AGE)
 debug('Max cookie age (ms):', COOKIE_MAX_AGE)
 const MAX_DEPTH = process.env.MAX_DEPTH
 debug('Max depth:', MAX_DEPTH)
+const PAGINATION_LIMIT = process.env.PAGINATION_LIMIT
+debug('Pagination limit:', PAGINATION_LIMIT)
 const RATE_LIMIT_WINDOW = ms(process.env.RATE_LIMIT_WINDOW)
 debug('Rate limit window (ms):', RATE_LIMIT_WINDOW)
 const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX
@@ -109,6 +111,7 @@ module.exports = {
   CSRF_SECRET,
   COOKIE_MAX_AGE,
   MAX_DEPTH,
+  PAGINATION_LIMIT,
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
   TROLLING_CHANCE,

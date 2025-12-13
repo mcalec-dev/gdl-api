@@ -9,7 +9,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.15.1"
+    "@astrojs/sitemap": "^3.6.0",
+    "@astrojs/svelte": "^7.2.1",
+    "@lucide/astro": "^0.555.0",
+    "@tabler/icons-svelte": "^3.35.0",
+    "astro": "^5.15.1",
+    "astro-seo": "^0.8.4",
+    "dotenv": "^17.2.3",
+    "svelte": "^5.43.2",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",

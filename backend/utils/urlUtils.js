@@ -25,11 +25,23 @@ async function constructApiUrl(path) {
   const url = new URL(path, `https://${HOST}${BASE_PATH}/api`)
   return url.toString()
 }
-function getApiUrl(req) {
-  return `${req.protocol}://${HOST}${BASE_PATH}/api`
+async function getApiUrl(req) {
+  const host = req.headers.host
+  if (host.includes(':')) {
+    const hostname = host.split(':')[0]
+    const port = host.split(':')[1]
+    return `${req.protocol}://${hostname}:${port}${BASE_PATH}/api`
+  }
+  return `${req.protocol}://${await HOST}${BASE_PATH}/api`
 }
-function getHostUrl(req) {
-  return `${req.protocol}://${HOST}${BASE_PATH}`
+async function getHostUrl(req) {
+  const host = req.headers.host
+  if (host.includes(':')) {
+    const hostname = host.split(':')[0]
+    const port = host.split(':')[1]
+    return `${req.protocol}://${hostname}:${port}${BASE_PATH}`
+  }
+  return `${req.protocol}://${await HOST}${BASE_PATH}`
 }
 module.exports = {
   normalizeUrl,

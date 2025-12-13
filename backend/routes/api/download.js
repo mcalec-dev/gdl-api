@@ -2,28 +2,11 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:download')
 const { HOST } = require('../../config')
 const { requireRole } = require('../../utils/authUtils')
-const BLOCKED_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^172\.(1[6-9]|2[0-9]|3[01])\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  /^::1$/,
-  /^fc00:/,
-  /^fe80:/,
-]
 async function isHostAllowed(hostname) {
   const cfgHost = await HOST
   if (!cfgHost || hostname !== cfgHost) {
     debug('Host mismatch:', { hostname, cfgHost })
     return false
-  }
-  for (const pattern of BLOCKED_PATTERNS) {
-    if (pattern.test(hostname)) {
-      debug('Blocked hostname pattern match:', hostname)
-      return false
-    }
   }
   return true
 }

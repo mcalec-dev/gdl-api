@@ -2,7 +2,6 @@ const sharp = require('sharp')
 const debug = require('debug')('gdl-api:utils:image')
 const { HOST, NAME } = require('../config')
 const { buffer } = require('stream/consumers')
-const { isImageFile, isVideoFile } = require('./fileUtils')
 const MAX_PIXELS = 10000
 const MAX_SCALE = 1000
 const MAX_BUFFER_SIZE = 1 * 1024 * 1024 * 1024
@@ -12,23 +11,17 @@ sharp.concurrency(5)
 async function getImageMeta(imagePath) {
   if (buffer.length > MAX_BUFFER_SIZE) return null
   let meta
-  if (isImageFile(imagePath)) {
-    try {
-      meta = await sharp(imagePath, {
-        failOnError: false,
-        useOriginalDate: true,
-        limitInputPixels: false,
-      }).metadata()
-      return meta
-    } catch (error) {
-      debug('Failed to read image metadata', error)
-      return null
-    }
+  try {
+    meta = await sharp(imagePath, {
+      failOnError: false,
+      useOriginalDate: true,
+      limitInputPixels: false,
+    }).metadata()
+    return meta
+  } catch (error) {
+    debug('Failed to read image metadata', error)
+    return null
   }
-  if (isVideoFile(imagePath)) {
-    return {}
-  }
-  return {}
 }
 async function resizeImage(imagePath, { width, height, scale }) {
   if (scale > MAX_SCALE) return null

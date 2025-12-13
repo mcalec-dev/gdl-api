@@ -8,25 +8,26 @@ module.exports = defineConfig([
       ecmaVersion: 'latest',
       sourceType: 'script',
       globals: {
-        require: 'readonly', 
-        module: 'readonly', 
-        __dirname: 'readonly', 
-        __filename: 'readonly', 
-        exports: 'readonly', 
-        process: 'readonly', 
-        setInterval: 'readonly', 
-        setTimeout: 'readonly', 
-        clearInterval: 'readonly', 
-        clearTimeout: 'readonly', 
-        Buffer: 'readonly', 
+        require: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        exports: 'readonly',
+        process: 'readonly',
+        setInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearInterval: 'readonly',
+        clearTimeout: 'readonly',
+        Buffer: 'readonly',
         global: 'readonly',
         console: 'readonly',
         URL: 'readonly',
         startTimeout: 'readonly',
         URLSearchParams: 'readonly',
         AbortController: 'readonly',
-      }
-    }
+        setImmediate: 'readonly',
+      },
+    },
   },
   {
     files: ['public/**/*.js'],
@@ -48,12 +49,12 @@ module.exports = defineConfig([
         URL: 'readonly',
         AbortController: 'readonly',
         setTimeout: 'readonly',
-      }
-    }
+      },
+    },
   },
   {
     ...json.configs.recommended,
     files: ['**/*.json'],
   },
-  { ignores: ['node_modules/**', '**/*.min.js'] }
-]);
+  { ignores: ['node_modules/**', '**/*.min.js'] },
+])

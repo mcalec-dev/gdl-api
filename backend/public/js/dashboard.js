@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loadingDiv = document.getElementById('loading')
   const errorDiv = document.getElementById('error')
   const CSRF = await utils.getCSRF()
-  // why is this so much easier to do here but so much harder in the other fetch calls
   fetch(`/api/user/dashboard`, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {

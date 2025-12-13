@@ -3,28 +3,43 @@ const settingsButton = document.getElementById('settings-button')
 const settingsContainer = document.getElementById('settings-container')
 const closeSettings = document.getElementById('close-settings')
 const onekoToggle = document.getElementById('oneko-toggle')
+const serverSortToggle = document.getElementById('server-sort-toggle')
 const imageScaleMinInput = document.getElementById('image-scale-min-input')
 const imageScaleDefaultInput = document.getElementById(
   'image-scale-default-input'
 )
 const imageScaleMaxInput = document.getElementById('image-scale-max-input')
+const paginationToggle = document.getElementById('pagination-toggle')
+const paginationInput = document.getElementById('pagination-input')
 const defaults = {
   theme: {
     bg: 'auto',
+    color: 'match-bg',
   },
   oneko: false,
+  serverSort: true,
+  pagination: {
+    enabled: true,
+    limit: 100,
+  },
   lang: 'en',
   imageScale: {
     max: 200,
     default: 100,
-    min: 10,
+    min: 50,
   },
 }
 const settings = {
   theme: {
-    bg: getCookie('bg') || defaults.theme.bg,
+    bg: getCookie('theme-bg') || defaults.theme.bg,
+    color: getCookie('theme-color') || defaults.theme.color,
   },
   oneko: getCookie('oneko') === 'true' || defaults.oneko,
+  serverSort: getCookie('server-sort') || defaults.serverSort,
+  pagination: {
+    enabled: getCookie('pagination-enabled') || defaults.pagination.enabled,
+    limit: parseInt(getCookie('pagination'), 10) || defaults.pagination.limit,
+  },
   lang: getCookie('lang') || defaults.lang,
   imageScale: {
     max: parseInt(getCookie('image-scale-max'), 10) || defaults.imageScale.max,
@@ -34,11 +49,16 @@ const settings = {
     min: parseInt(getCookie('image-scale-min'), 10) || defaults.imageScale.min,
   },
 }
-function setCookie(name, value) {
-  const d = new Date()
-  d.setTime(d.getTime() + 1 * 365 * 24 * 60 * 60 * 1000) // 1 years
-  const expires = 'expires=' + d.toUTCString()
-  document.cookie = `${name}=${value};${expires};path=/`
+function setCookie(name, value, expires = '') {
+  let date = new Date()
+  if (!expires) {
+    date.setTime(date.getTime() + 1 * 365 * 24 * 60 * 60 * 1000) // 1 year
+  }
+  if (expires) {
+    date.setTime(date.getTime() + expires * 1000)
+  }
+  let exp = 'expires=' + date.toUTCString()
+  document.cookie = `${name}=${value};${exp};path=/`
 }
 function getCookie(name) {
   const cname = name + '='
@@ -76,6 +96,11 @@ function toggleOneko(toggle) {
 export let MIN_IMAGE_SCALE = settings.imageScale.min
 export let IMAGE_SCALE = settings.imageScale.default
 export let MAX_IMAGE_SCALE = settings.imageScale.max
+export let SERVER_SIDE_SORT = settings.serverSort
+export let PAGINATION = {
+  enabled: settings.pagination.enabled,
+  limit: settings.pagination.limit,
+}
 function setExportVals(min, def, max) {
   MIN_IMAGE_SCALE = min
   IMAGE_SCALE = def
@@ -101,6 +126,43 @@ async function updateSettings() {
   } else {
     onekoToggle.checked = false
     toggleOneko(false)
+  }
+  if (serverSortToggle) {
+    serverSortToggle.checked = settings.serverSort
+    serverSortToggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        settings.serverSort = true
+        SERVER_SIDE_SORT = true
+        setCookie('server-sort', 'true')
+      } else {
+        settings.serverSort = false
+        SERVER_SIDE_SORT = false
+        setCookie('server-sort', 'false')
+      }
+    })
+  }
+  if (paginationToggle) {
+    paginationToggle.checked = settings.pagination.enabled
+    paginationToggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        settings.pagination.enabled = true
+        PAGINATION.enabled = true
+        setCookie('pagination-enabled', 'true')
+      } else {
+        settings.pagination.enabled = false
+        PAGINATION.enabled = false
+        setCookie('pagination-enabled', 'false')
+      }
+    })
+  }
+  if (paginationInput) {
+    paginationInput.value = String(settings.pagination.limit)
+    paginationInput.addEventListener('change', (e) => {
+      const v = parseInt(e.target.value, 10)
+      settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
+      PAGINATION.limit = settings.pagination.limit
+      setCookie('pagination', String(settings.pagination.limit))
+    })
   }
   try {
     const minVal = parseInt(settings.imageScale.min, 10)
