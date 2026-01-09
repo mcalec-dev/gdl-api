@@ -1,11 +1,11 @@
+const bcrypt = require('bcrypt')
 const passport = require('passport')
+const User = require('../models/User')
+const debug = require('debug')('gdl-api:utils:passport')
+const { BASE_PATH } = require('../config')
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const DiscordStrategy = require('passport-discord-auth').Strategy
-const bcrypt = require('bcrypt')
-const User = require('../models/User')
-const { BASE_PATH } = require('../config')
-const debug = require('debug')('gdl-api:utils:passport')
 require('dotenv').config({ quiet: true })
 passport.serializeUser((user, done) => {
   debug('Serializing user:', user.username)

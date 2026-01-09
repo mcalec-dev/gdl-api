@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const content = document.getElementById('dashboard-content')
   const loadingDiv = document.getElementById('loading')
   const errorDiv = document.getElementById('error')
-  const CSRF = await utils.getCSRF()
   fetch(`/api/user/dashboard`, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
@@ -75,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               })()}
             </div>
             <span class="mt-4 text-gray-400 text-xs mb-1">Current Sessions:</span>
-            <div class="flex lg:flex-row flex-col w-full gap-4 overflow-auto text-clip">
+            <div class="flex flex-col w-full gap-4 overflow-auto text-clip">
               ${(() => {
                 let html = ''
                 if (Array.isArray(data.sessions) && data.sessions.length > 0) {
@@ -160,9 +159,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           try {
             await fetch(document.location.origin + '/api/auth/logout', {
               method: 'POST',
-              headers: {
-                'X-CSRF-Token': CSRF,
-              },
               credentials: 'include',
             })
           } catch (error) {

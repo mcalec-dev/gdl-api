@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault()
     const username = document.getElementById('username').value
     const password = document.getElementById('password').value
-    const CSRF = await utils.getCSRF()
     if (!username || !password) {
       showError('Username and password are required')
       return
@@ -20,7 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': CSRF,
         },
         body: JSON.stringify({
           username,

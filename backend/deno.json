@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "default": {
+      "env": true,
+      "ffi": true,
+      "net": true,
+      "read": true,
+      "run": {
+        "allow": ["git"]
+      },
+      "sys": ["osRelease", "systemMemoryInfo"],
+      "write": true
+    }
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-read --allow-env --allow-write --allow-ffi --allow-sys --allow-run server.js",
+    "dev": "deno run --allow-net --allow-read --allow-env --allow-write --allow-ffi --allow-sys --allow-run server.js"
+  }
+}

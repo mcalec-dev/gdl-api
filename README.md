@@ -59,12 +59,12 @@ DISALLOWED_EXTENSIONS=[]
 # e.g mongodb://127.0.0.1:27017/{your_db_name}
 MONGODB_URL=
 
-# secrets for sessions and csrf
+# secrets for sessions and jwt
 # change this to something else in production
 SESSION_SECRET=
-CSRF_SECRET=
+JWT_SECRET=
 
-# session & csrf max cookie age
+# session max cookie age
 # in days, hours, minutes, etc
 # ex. 30d, 30m, 12h, 1h
 COOKIE_MAX_AGE=
@@ -82,9 +82,6 @@ RATE_LIMIT_MAX=
 # trolling middleware values
 TROLLING_CHANCE=
 TROLLING_TERMS=[]
-
-# bot/crawler user agents
-BOT_USER_AGENTS=[]
 
 # boolean value (true/false)
 # turn off if you want to scan when directory or file is accessed

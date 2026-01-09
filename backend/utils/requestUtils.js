@@ -1,7 +1,11 @@
 function requestLogger(req) {
   const ip =
-    req.headers['x-forwarded-for']?.split(',')[0] ||
-    req.connection.remoteAddress
+    req.headers['X-Forwarded-For']?.split(',')[0] ||
+    req.headers['cf-connecting-ip'] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket?.remoteAddress ||
+    'unknown'
   const url = req.url
   console.log(ip, url)
 }

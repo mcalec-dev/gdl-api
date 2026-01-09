@@ -111,7 +111,15 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
  *                enum: [info, warning, error]
  */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
+  const { uuid } = req.params
   const { title, message, severity } = req.body
+  if (!uuid || typeof uuid !== 'string') {
+    debug('Invalid UUID parameter:', uuid)
+    return res.status(400).json({
+      error: 'Bad Request',
+      status: 400,
+    })
+  }
   if (!severity) {
     return res.status(400).json({
       error: 'Bad Request',
@@ -166,6 +174,14 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
  *           type: string
  */
 router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
+  const { uuid } = req.params
+  if (!uuid || typeof uuid !== 'string') {
+    debug('Invalid UUID parameter:', uuid)
+    return res.status(400).json({
+      error: 'Bad Request',
+      status: 400,
+    })
+  }
   if (!req.user || !req.user.roles.includes('admin')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({

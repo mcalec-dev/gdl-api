@@ -3,7 +3,6 @@ const fs = require('fs').promises
 const debug = require('debug')('gdl-api:utils:file')
 const {
   normalizeString,
-  normalizePath,
   safeApiPath,
   safePath,
   isSubPath,
@@ -13,7 +12,6 @@ const {
   DISALLOWED_DIRS,
   DISALLOWED_FILES,
   DISALLOWED_EXTENSIONS,
-  MAX_DEPTH,
   BASE_DIR,
   BASE_PATH,
   AUTO_SCAN,

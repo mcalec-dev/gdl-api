@@ -3,6 +3,7 @@ const debug = require('debug')('gdl-api:api:random')
 const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
 const { getHostUrl } = require('../../utils/urlUtils')
+const { BASE_PATH } = require('../../config')
 /**
  * @swagger
  * /api/random:
@@ -68,7 +69,7 @@ router.get(['/image/', '/image'], requireRole('user'), async (req, res) => {
       })
     })
     const randomImage = getRandomImage[0]
-    return res.sendFile(randomImage.paths.remote)
+    return res.sendFile(BASE_PATH + randomImage.paths.relative)
   } catch (error) {
     debug('Error in random image route:', error)
     return res.status(500).json({

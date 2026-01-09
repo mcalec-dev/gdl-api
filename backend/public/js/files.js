@@ -1,6 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import { MIN_IMAGE_SCALE } from '../min/settings.min.js'
+import { MIN_IMAGE_SCALE, PAGINATION } from '../min/settings.min.js'
 import {
   setupViewerEvents,
   setupFileClickHandlers,
@@ -137,11 +137,18 @@ function renderSortToolbar() {
   const sortButtonStyle =
     'flex items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl pointer text-white transition'
   const sortStateStyle = 'w-4 h-4 align-middle font-white'
-  const sortToolbarHtml = `
+  const isRootDirectory =
+    !currentDirectoryData || currentDirectoryData.path === ''
+  const goBackButton = isRootDirectory
+    ? ''
+    : `
     <button id="goBack" class="${sortButtonStyle}">
       <span>Back</span>
       <span class="${sortStateStyle}">${icons?.back || ''}</span>
     </button>
+  `
+  const sortToolbarHtml = `
+    ${goBackButton}
     <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
       <span>Name</span>
       <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
@@ -232,7 +239,13 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       'loading fixed left-1/2 top-1/2 min-w-[180px] max-w-[320px] p-4 bg-black/80 select-none rounded-xl text-white border border-white/20 text-center transform -translate-x-1/2 -translate-y-1/2 z-50 cursor-not-allowed'
     loadingIndicator.innerHTML = '<span>Loading...</span>'
     fileList.appendChild(loadingIndicator)
-    const apiPath = constructApiPath(path) + window.location.search
+    let queryString = window.location.search
+    if (PAGINATION.enabled && PAGINATION.limit) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('limit', PAGINATION.limit)
+      queryString = url.search
+    }
+    const apiPath = constructApiPath(path) + queryString
     let needsFetch =
       !currentDirectoryData ||
       currentDirectoryData.path !== path ||
@@ -455,6 +468,9 @@ function handleDirectoryClick(event) {
   const cleanPath = itemPath.replace(new RegExp(`^${frontendBasePath}/?`), '')
   const url = new URL(window.location.href)
   url.searchParams.set('page', '1')
+  if (PAGINATION.enabled && PAGINATION.limit) {
+    url.searchParams.set('limit', PAGINATION.limit)
+  }
   const params = url.search
   history.pushState({ path: cleanPath }, '', newPath + params)
   loadDirectory(cleanPath, null, true)
@@ -553,21 +569,26 @@ async function renderDirectory(contents, path) {
   const sortedContents = contents
   renderSortToolbar()
   const goBack = document.getElementById('goBack')
-  goBack.addEventListener('click', () => {
-    const parentPath = currentDirectoryData.path
-      .split('/')
-      .slice(0, -1)
-      .join('/')
-    const url = new URL(window.location.href)
-    url.searchParams.set('page', '1')
-    const params = url.search
-    window.history.pushState(
-      {},
-      '',
-      `${frontendBasePath}/${parentPath}${params}`
-    )
-    loadDirectory(parentPath, null, true)
-  })
+  if (goBack) {
+    goBack.addEventListener('click', () => {
+      const parentPath = currentDirectoryData.path
+        .split('/')
+        .slice(0, -1)
+        .join('/')
+      const url = new URL(window.location.href)
+      url.searchParams.set('page', '1')
+      if (PAGINATION.enabled && PAGINATION.limit) {
+        url.searchParams.set('limit', PAGINATION.limit)
+      }
+      const params = url.search
+      window.history.pushState(
+        {},
+        '',
+        `${frontendBasePath}/${parentPath}${params}`
+      )
+      loadDirectory(parentPath, null, true)
+    })
+  }
   await setupFileClickHandlers('#file-list')
   let html = ''
   for (const item of sortedContents) {
@@ -598,7 +619,7 @@ async function renderDirectory(contents, path) {
       if (hasDirectories && !hasFiles) {
         html += `
         <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
-          <div class="file-icon ${itemType} flex w-8 h-8 mr-3">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
+          <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
           <div class="flex-1 min-w- overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
@@ -613,7 +634,7 @@ async function renderDirectory(contents, path) {
         html += `
         <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
-            <div class="file-icon ${itemType} flex w-6 h-6">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
+            <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
             <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span>
@@ -680,7 +701,7 @@ async function renderDirectory(contents, path) {
       html += `
         <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}">
           <div class="flex items-center w-full gap-3">
-            <div class="file-icon ${itemType} flex w-6 h-6">${icons?.[itemType] || icons?.other || ''}</div>
+            <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${icons?.[itemType] || icons?.other || ''}</div>
             <div class="file-details flex-1 min-w-0">
               <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
               <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
@@ -720,18 +741,18 @@ async function renderDirectory(contents, path) {
 }
 function renderPaginationUI(contents) {
   try {
-    const container =
+    const controls =
       document.getElementById('pagination-controls') ||
       document.getElementById('pagination-container')
-    if (!container) return
+    if (!controls) return
     const url = new URL(window.location.href)
     const limitRaw = parseInt(url.searchParams.get('limit'), 10)
     if (isNaN(limitRaw) || limitRaw <= 0) {
-      container.hidden = true
+      controls.hidden = true
       return
     }
     const limit = limitRaw
-    container.hidden = false
+    controls.hidden = false
     const page = Math.max(
       1,
       parseInt(url.searchParams.get('page') || 'Page 0', 10) || 1
@@ -755,16 +776,19 @@ function renderPaginationUI(contents) {
         prevSvg.setAttribute('focusable', 'false')
       }
       if (disablePrev) {
-        prevBtn.classList.add('opacity-30')
+        prevBtn.classList.add('opacity-50')
         prevBtn.classList.add('pointer-events-none')
       } else {
-        prevBtn.classList.remove('opacity-30')
+        prevBtn.classList.remove('opacity-50')
         prevBtn.classList.remove('pointer-events-none')
       }
       prevBtn.onclick = () => {
         if (disablePrev) return
         const u = new URL(window.location.href)
         u.searchParams.set('page', String(Math.max(1, page - 1)))
+        if (PAGINATION.enabled && PAGINATION.limit) {
+          u.searchParams.set('limit', PAGINATION.limit)
+        }
         window.history.replaceState({}, '', u.pathname + u.search)
         loadDirectory(
           currentDirectoryData ? currentDirectoryData.path : '',
@@ -787,16 +811,19 @@ function renderPaginationUI(contents) {
         nextSvg.setAttribute('focusable', 'false')
       }
       if (disableNext) {
-        nextBtn.classList.add('opacity-30')
+        nextBtn.classList.add('opacity-50')
         nextBtn.classList.add('pointer-events-none')
       } else {
-        nextBtn.classList.remove('opacity-30')
+        nextBtn.classList.remove('opacity-50')
         nextBtn.classList.remove('pointer-events-none')
       }
       nextBtn.onclick = () => {
         if (disableNext) return
         const u = new URL(window.location.href)
         u.searchParams.set('page', String(page + 1))
+        if (PAGINATION.enabled && PAGINATION.limit) {
+          u.searchParams.set('limit', PAGINATION.limit)
+        }
         window.history.replaceState({}, '', u.pathname + u.search)
         loadDirectory(
           currentDirectoryData ? currentDirectoryData.path : '',
@@ -859,6 +886,23 @@ async function init() {
     .replace(/^\/|\/$/g, '')
     .replace(/^files\/?/, '')
   document.addEventListener('click', handleDirectoryClick)
+  const url = new URL(window.location.href)
+  let hasChanges = false
+  if (!url.searchParams.has('page')) {
+    url.searchParams.set('page', '1')
+    hasChanges = true
+  }
+  if (
+    PAGINATION.enabled &&
+    PAGINATION.limit &&
+    !url.searchParams.has('limit')
+  ) {
+    url.searchParams.set('limit', PAGINATION.limit)
+    hasChanges = true
+  }
+  if (hasChanges) {
+    window.history.replaceState({}, '', url.pathname + url.search)
+  }
   await loadDirectory(initialPath)
 }
 document.addEventListener('DOMContentLoaded', init)

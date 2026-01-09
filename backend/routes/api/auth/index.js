@@ -11,8 +11,6 @@ router.use((req, res, next) => {
 try {
   debug('Mounting check route')
   router.use('/check', require('./check'))
-  debug('Mounting csrf route')
-  router.use('/csrf', require('./csrf'))
   debug('Mounting logout route')
   router.use('/logout', require('./logout'))
   debug('Mounting login route')

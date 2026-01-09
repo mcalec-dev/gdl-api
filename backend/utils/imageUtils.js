@@ -10,14 +10,12 @@ sharp.cache(false)
 sharp.concurrency(5)
 async function getImageMeta(imagePath) {
   if (buffer.length > MAX_BUFFER_SIZE) return null
-  let meta
   try {
-    meta = await sharp(imagePath, {
+    return await sharp(imagePath, {
       failOnError: false,
       useOriginalDate: true,
       limitInputPixels: false,
     }).metadata()
-    return meta
   } catch (error) {
     debug('Failed to read image metadata', error)
     return null
@@ -127,7 +125,54 @@ async function resizeImage(imagePath, { width, height, scale }) {
     debug('Sharp resize error:', error)
   }
 }
+async function convertImage(imagePath, format, { quality }) {
+  if (buffer.length > MAX_BUFFER_SIZE) return null
+  let transformer
+  try {
+    transformer = sharp(imagePath, {
+      failOnError: false,
+      useOriginalDate: true,
+      limitInputPixels: false,
+    })
+    switch (format.toLowerCase()) {
+      case 'jpeg':
+      case 'jpg':
+        transformer = transformer.jpeg({
+          quality: quality,
+          mozjpeg: true,
+        })
+        break
+      case 'png':
+        transformer = transformer.png({
+          compressionLevel: 9,
+        })
+        break
+      case 'webp':
+        transformer = transformer.webp({
+          quality: quality,
+        })
+        break
+      case 'tiff':
+        transformer = transformer.tiff({
+          quality: quality,
+        })
+        break
+      case 'avif':
+        transformer = transformer.avif({
+          quality: quality,
+        })
+        break
+      default:
+        return null
+    }
+    return transformer
+  } catch (error) {
+    debug('Sharp convert error:', error)
+    return null
+  }
+}
 module.exports = {
   resizeImage,
   getImageMeta,
+  convertImage,
 }

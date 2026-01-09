@@ -60,8 +60,3 @@ export function handleError(error) {
   console.error(error)
   window.alert(`${error.message || error}`)
 }
-export async function getCSRF() {
-  const res = await fetch('/api/auth/csrf')
-  const data = await res.json()
-  return data.csrf
-}

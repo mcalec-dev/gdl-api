@@ -10,7 +10,7 @@ const imageScaleDefaultInput = document.getElementById(
 )
 const imageScaleMaxInput = document.getElementById('image-scale-max-input')
 const paginationToggle = document.getElementById('pagination-toggle')
-const paginationInput = document.getElementById('pagination-input')
+const paginationInput = document.getElementById('pagination-items-select')
 const defaults = {
   theme: {
     bg: 'auto',
@@ -27,26 +27,6 @@ const defaults = {
     max: 200,
     default: 100,
     min: 50,
-  },
-}
-const settings = {
-  theme: {
-    bg: getCookie('theme-bg') || defaults.theme.bg,
-    color: getCookie('theme-color') || defaults.theme.color,
-  },
-  oneko: getCookie('oneko') === 'true' || defaults.oneko,
-  serverSort: getCookie('server-sort') || defaults.serverSort,
-  pagination: {
-    enabled: getCookie('pagination-enabled') || defaults.pagination.enabled,
-    limit: parseInt(getCookie('pagination'), 10) || defaults.pagination.limit,
-  },
-  lang: getCookie('lang') || defaults.lang,
-  imageScale: {
-    max: parseInt(getCookie('image-scale-max'), 10) || defaults.imageScale.max,
-    default:
-      parseInt(getCookie('image-scale-default'), 10) ||
-      defaults.imageScale.default,
-    min: parseInt(getCookie('image-scale-min'), 10) || defaults.imageScale.min,
   },
 }
 function setCookie(name, value, expires = '') {
@@ -72,6 +52,36 @@ function getCookie(name) {
   }
   return ''
 }
+function loadSettings() {
+  const saved = getCookie('settings')
+  if (!saved) return { ...defaults }
+  try {
+    const parsed = JSON.parse(saved)
+    return {
+      theme: { ...defaults.theme, ...parsed.theme },
+      oneko: typeof parsed.oneko === 'boolean' ? parsed.oneko : defaults.oneko,
+      serverSort:
+        typeof parsed.serverSort === 'boolean'
+          ? parsed.serverSort
+          : defaults.serverSort,
+      pagination: { ...defaults.pagination, ...parsed.pagination },
+      lang: parsed.lang || defaults.lang,
+      imageScale: { ...defaults.imageScale, ...parsed.imageScale },
+    }
+  } catch (e) {
+    console.error('Failed to parse settings:', e)
+    return { ...defaults }
+  }
+}
+function saveSettings(settings) {
+  try {
+    const json = JSON.stringify(settings)
+    setCookie('settings', encodeURIComponent(json))
+  } catch (e) {
+    console.error('Failed to save settings:', e)
+  }
+}
+const settings = loadSettings()
 function toggleOneko(toggle) {
   const onekoEl = document.getElementById('oneko')
   const onekoScript = document.getElementById('oneko-script')
@@ -109,17 +119,11 @@ function setExportVals(min, def, max) {
 }
 async function updateSettings() {
   onekoToggle.addEventListener('change', async (e) => {
-    if (e.target.checked) {
-      settings.oneko = true
-      setCookie('oneko', 'true')
-      toggleOneko(true)
-    }
-    if (!e.target.checked) {
-      settings.oneko = false
-      setCookie('oneko', 'false')
-      toggleOneko(false)
-    }
+    settings.oneko = e.target.checked
+    saveSettings(settings)
+    toggleOneko(settings.oneko)
   })
+
   if (settings.oneko) {
     onekoToggle.checked = true
     toggleOneko(true)
@@ -130,29 +134,17 @@ async function updateSettings() {
   if (serverSortToggle) {
     serverSortToggle.checked = settings.serverSort
     serverSortToggle.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        settings.serverSort = true
-        SERVER_SIDE_SORT = true
-        setCookie('server-sort', 'true')
-      } else {
-        settings.serverSort = false
-        SERVER_SIDE_SORT = false
-        setCookie('server-sort', 'false')
-      }
+      settings.serverSort = e.target.checked
+      SERVER_SIDE_SORT = settings.serverSort
+      saveSettings(settings)
     })
   }
   if (paginationToggle) {
     paginationToggle.checked = settings.pagination.enabled
     paginationToggle.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        settings.pagination.enabled = true
-        PAGINATION.enabled = true
-        setCookie('pagination-enabled', 'true')
-      } else {
-        settings.pagination.enabled = false
-        PAGINATION.enabled = false
-        setCookie('pagination-enabled', 'false')
-      }
+      settings.pagination.enabled = e.target.checked
+      PAGINATION.enabled = settings.pagination.enabled
+      saveSettings(settings)
     })
   }
   if (paginationInput) {
@@ -161,7 +153,7 @@ async function updateSettings() {
       const v = parseInt(e.target.value, 10)
       settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
       PAGINATION.limit = settings.pagination.limit
-      setCookie('pagination', String(settings.pagination.limit))
+      saveSettings(settings)
     })
   }
   try {
@@ -174,7 +166,7 @@ async function updateSettings() {
       imageScaleMinInput.addEventListener('change', (ev) => {
         const v = parseInt(ev.target.value, 10)
         settings.imageScale.min = isNaN(v) ? defaults.imageScale.min : v
-        setCookie('image-scale-min', String(settings.imageScale.min))
+        saveSettings(settings)
         if (imageScaleDefaultInput)
           imageScaleDefaultInput.min = String(settings.imageScale.min)
         if (imageScaleMaxInput)
@@ -193,7 +185,7 @@ async function updateSettings() {
       imageScaleDefaultInput.addEventListener('change', (ev) => {
         const v = parseInt(ev.target.value, 10)
         settings.imageScale.default = isNaN(v) ? defaults.imageScale.default : v
-        setCookie('image-scale-default', String(settings.imageScale.default))
+        saveSettings(settings)
         setExportVals(
           settings.imageScale.min,
           settings.imageScale.default,
@@ -212,7 +204,7 @@ async function updateSettings() {
       imageScaleMaxInput.addEventListener('change', (ev) => {
         const v = parseInt(ev.target.value, 10)
         settings.imageScale.max = isNaN(v) ? defaults.imageScale.max : v
-        setCookie('image-scale-max', String(settings.imageScale.max))
+        saveSettings(settings)
         if (imageScaleDefaultInput)
           imageScaleDefaultInput.max = String(settings.imageScale.max)
         if (imageScaleMinInput)

@@ -72,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault()
     const title = document.getElementById('announcement-title-input').value
     const message = document.getElementById('announcement-message-input').value
-    const CSRF = await utils.getCSRF()
     const severity = document.getElementById(
       'announcement-severity-input'
     ).value
@@ -80,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': CSRF,
       },
       body: JSON.stringify({ title, message, severity }),
     })
@@ -134,12 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const severity = announcementDiv.querySelector(
       `#edit-severity-input-${uuid}`
     ).value
-    const CSRF = await utils.getCSRF()
     fetch(`/api/admin/announcements/${uuid}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': CSRF,
       },
       body: JSON.stringify({ title, message, severity }),
     })
@@ -180,11 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
       })
   }
   async function deleteAnnouncement(id) {
-    const CSRF = await utils.getCSRF()
     fetch(`/api/admin/announcements/${id}`, {
       method: 'DELETE',
       headers: {
-        'X-CSRF-Token': CSRF,
       },
     })
       .then((res) => res.json())

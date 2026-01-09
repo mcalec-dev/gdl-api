@@ -61,8 +61,8 @@ export function showContextMenu(e, itemElem) {
   const fileUrl = `${apiBasePath}/${encodedPath}`
   const dirUrl = `${frontendBasePath}/${itemPath}`
   contextMenu.innerHTML = `
-    <div class="border-b border-white/20 px-2 py-2 mb-2 flex items-center gap-1 align-middle">
-      <span class="w-4 h-4 mr-1">${icons?.[fileType] || ''}</span>
+    <div class="border-b border-white/20 px-2 py-2 mb-1 flex items-center gap-2 align-middle">
+      <span class="w-5 h-5">${icons?.[fileType] || ''}</span>
       <span class="truncate">${itemPath.split('/').pop()}</span>
     </div>
   `
@@ -99,7 +99,7 @@ export function showContextMenu(e, itemElem) {
           try {
             const req = await fetch(fileUrl)
             const blob = await req.blob()
-            const type = blob.type || 'image/png'
+            const type = blob.type
             await navigator.clipboard.write([
               new window.ClipboardItem({ [type]: blob }),
             ])

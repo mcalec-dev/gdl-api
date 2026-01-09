@@ -32,7 +32,15 @@
         <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="pagination-toggle" />
       </div>
       <span class="text-white/80 text-sm mb-1">items per page</span>
-      <input class="bg-black/80 rounded border border-white/20 text-center px-2 py-1 select-text pointer-events-auto text-white min-w-20" type="number" id="pagination-items-input" min="10" max="1000" step="10" value="100">
+      <select id="pagination-items-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="250">250</option>
+        <option value="500">500</option>
+        <option value="1000">1000</option>
+      </select>
     </div>
     <div id="image-scale-container" class="gap-2 flex-col flex items-center justify-center">
       <span class="text-white">

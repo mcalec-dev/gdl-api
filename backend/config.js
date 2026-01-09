@@ -3,6 +3,8 @@ const dotenv = require('dotenv')
 const debug = require('debug')('gdl-api:config')
 const https = require('https')
 const http = require('http')
+const path = require('path')
+const fs = require('fs')
 dotenv.config({ quiet: true })
 function checkHostOnline(host) {
   return new Promise((resolve) => {
@@ -52,6 +54,27 @@ function parseBooleanEnv(value) {
     return true
   else return false
 }
+function validatePath(baseDirPath) {
+  if (!baseDirPath || typeof baseDirPath !== 'string') {
+    throw new Error('BASE_DIR environment variable must be set and be a string')
+  }
+  try {
+    const resolvedPath = path.resolve(baseDirPath)
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`BASE_DIR does not exist: ${resolvedPath}`)
+    }
+    const stats = fs.statSync(resolvedPath)
+    if (!stats.isDirectory()) {
+      throw new Error(`BASE_DIR is not a directory: ${resolvedPath}`)
+    }
+    return resolvedPath
+  } catch (error) {
+    if (error.message.includes('BASE_DIR')) {
+      throw error
+    }
+    throw new Error(`Invalid BASE_DIR configuration: ${error.message}`)
+  }
+}
 const NODE_ENV = process.env.NODE_ENV
 debug('Node environment:', NODE_ENV)
 const PORT = process.env.PORT
@@ -62,7 +85,7 @@ const HOST = getHost()
 debug('Host:', HOST)
 const BASE_PATH = process.env.BASE_PATH
 debug('Base path:', BASE_PATH)
-const BASE_DIR = process.env.BASE_DIR
+const BASE_DIR = validatePath(process.env.BASE_DIR)
 debug('Base directory:', BASE_DIR)
 const DISALLOWED_DIRS = JSON.parse(process.env.DISALLOWED_DIRS)
 debug('Disallowed directories:', DISALLOWED_DIRS)
@@ -74,8 +97,8 @@ const MONGODB_URL = process.env.MONGODB_URL
 debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
 debug('Session secret:', SESSION_SECRET)
-const CSRF_SECRET = process.env.CSRF_SECRET
-debug('CSRF secret:', CSRF_SECRET)
+const JWT_SECRET = process.env.JWT_SECRET
+debug('JWT secret:', JWT_SECRET)
 const COOKIE_MAX_AGE = ms(process.env.COOKIE_MAX_AGE)
 debug('Max cookie age (ms):', COOKIE_MAX_AGE)
 const MAX_DEPTH = process.env.MAX_DEPTH
@@ -90,12 +113,12 @@ const TROLLING_CHANCE = parseFloat(process.env.TROLLING_CHANCE)
 debug('Trolling chance:', TROLLING_CHANCE)
 const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
 debug('Trolling terms:', TROLLING_TERMS)
-const BOT_USER_AGENTS = JSON.parse(process.env.BOT_USER_AGENTS)
-debug('Bot user agents:', BOT_USER_AGENTS)
 const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
 debug('Auto scan enabled:', AUTO_SCAN)
 const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
 debug('OAuth Providers:', OAUTH_PROVIDERS)
+const FILE_UPLOAD_LIMIT = process.env.FILE_UPLOAD_LIMIT
+debug('File upload limit:', FILE_UPLOAD_LIMIT)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -108,7 +131,7 @@ module.exports = {
   DISALLOWED_EXTENSIONS,
   MONGODB_URL,
   SESSION_SECRET,
-  CSRF_SECRET,
+  JWT_SECRET,
   COOKIE_MAX_AGE,
   MAX_DEPTH,
   PAGINATION_LIMIT,
@@ -116,8 +139,8 @@ module.exports = {
   RATE_LIMIT_MAX,
   TROLLING_CHANCE,
   TROLLING_TERMS,
-  BOT_USER_AGENTS,
   AUTO_SCAN,
   OAUTH_PROVIDERS,
+  FILE_UPLOAD_LIMIT,
   debug,
 }

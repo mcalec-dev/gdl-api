@@ -2,6 +2,7 @@ const router = require('express').Router()
 const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:login')
+const validator = require('validator')
 /**
  * @swagger
  * /api/auth/login/:
@@ -35,6 +36,13 @@ router.post(['/', ''], async (req, res) => {
   const { username, email, password } = req.body
   if ((!username && !email) || !password) {
     debug('Username/email or password was not provided')
+    return res.status(400).json({
+      message: 'Bad request',
+      status: 400,
+    })
+  }
+  if (email && !validator.isEmail(email)) {
+    debug('Invalid email format:', email)
     return res.status(400).json({
       message: 'Bad request',
       status: 400,

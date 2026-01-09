@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       : ''
     const password = document.getElementById('password').value
     const confirm = document.getElementById('confirm').value
-    const CSRF = await utils.getCSRF()
     if (!username || !password || !confirm) {
       showError('All required fields must be filled')
       return
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': CSRF,
         },
         body: JSON.stringify({
           username,

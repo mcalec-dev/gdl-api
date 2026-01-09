@@ -7,7 +7,7 @@ const directorySchema = new mongoose.Schema({
     relative: { type: String, required: true },
     remote: { type: String, required: true },
   },
-  size: { type: Number, required: true },
+  size: { type: Number },
   created: { type: Date },
   modified: { type: Date },
   tags: [{ type: String, index: true }],

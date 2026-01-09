@@ -1,22 +1,23 @@
 const express = require('express')
-const figlet = require('figlet')
-const swaggerJsdoc = require('swagger-jsdoc')
 const session = require('express-session')
+const swaggerJsdoc = require('swagger-jsdoc')
 const cors = require('cors')
-const { processFiles } = require('./minify')
 const lusca = require('lusca')
-const sessionStore = require('./utils/sessionStore')
+const { isbot } = require('isbot')
+const { processFiles } = require('./minify')
 const app = express()
-const server = require('http').createServer(app)
-const path = require('path')
-const debug = require('debug')('gdl-api:server')
-const chalk = require('chalk')
-const swaggerUi = require('swagger-ui-express')
+const sessionStore = require('./utils/sessionStore')
 const passport = require('./utils/passport')
+const path = require('path')
+const chalk = require('chalk')
+const server = require('http').createServer(app)
+const figlet = require('figlet')
 const RateLimit = require('express-rate-limit')
-const morganBody = require('morgan-body')
+const swaggerUi = require('swagger-ui-express')
+const debug = require('debug')('gdl-api:server')
+const BodyParser = require('body-parser')
 const fs = require('fs').promises
-const mongoose = require('mongoose')
+const morganBody = require('morgan-body')
 const {
   NODE_ENV,
   PORT,
@@ -31,9 +32,7 @@ const {
   RATE_LIMIT_MAX,
   TROLLING_CHANCE,
   TROLLING_TERMS,
-  BOT_USER_AGENTS,
 } = require('./config')
-
 // init swagger docs
 async function initSwagger() {
   const swaggerOptions = {
@@ -66,19 +65,21 @@ if (BASE_PATH) {
 async function initDB() {
   const store = sessionStore()
   try {
-    const connection = await mongoose.connect(MONGODB_URL)
+    const connection = await require('mongoose').connect(MONGODB_URL)
     debug('MongoDB connected')
+    const gridfsUtils = require('./utils/gridfsUtils')
+    gridfsUtils.initGridFS()
     if (store) {
       const db = connection.connection.db
       const sessions = db.collection('sessions')
-      const result = await sessions.deleteMany({ expires: { $lt: new Date() } })
-      debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
+      const cutoffDate = new Date(Date.now() - COOKIE_MAX_AGE)
+      const result = await sessions.deleteMany({ expires: { $lt: cutoffDate } })
+      debug(`Expired sessions cleaned up (${result.deletedCount} removed, cutoff: ${cutoffDate})`)
     }
   } catch (error) {
     console.error('Database initialization failed:', error)
   }
 }
-
 // common template variables
 async function webVars() {
   return {
@@ -275,9 +276,14 @@ async function initApp() {
     theme: 'dimmed',
     immediateReqLog: true,
   })
-  // dont trust proxies
+  // trust proxy
   app.set('trust proxy', true)
-  // express sessions
+  // parse cookies
+  //app.use(cookieParser())
+  // parse body
+  app.use(BodyParser.urlencoded({ extended: true }))
+  app.use(BodyParser.json())
+  // session middleware
   app.use(
     session({
       secret: SESSION_SECRET,
@@ -293,10 +299,9 @@ async function initApp() {
       },
     })
   )
-  // use crsf
+  // security middleware
   app.use(
     lusca({
-      //csrf: true,
       xframe: 'SAMEORIGIN',
       hsts: {
         maxAge: COOKIE_MAX_AGE,
@@ -307,6 +312,8 @@ async function initApp() {
       referrerPolicy: 'same-origin',
     })
   )
+  // jwt middleware
+  //app.use(jwtMiddleware)
   // init passport
   app.use(passport.initialize())
   app.use(passport.session())
@@ -349,28 +356,26 @@ async function initApp() {
   })
   // trolling middleware
   app.use((req, res, next) => {
-    const UserAgent = req.headers['user-agent'] || req.get('User-Agent') || ''
-    const isBot = BOT_USER_AGENTS.some((botAgent) =>
-      UserAgent.includes(botAgent)
-    )
+    const ua = req.headers['user-agent'] || req.get('User-Agent')
+    const uri = req.path + '?' + new URLSearchParams(req.query).toString()
     const chance = TROLLING_CHANCE
     const terms = TROLLING_TERMS
-    if (Math.random() < chance) {
-      if (isBot) {
-        debug('Bot detected:', UserAgent)
+    const uriRickroll = uri.toLowerCase().includes('rickroll')
+    if (Math.random() < chance || uriRickroll) {
+      if (isbot(ua)) {
+        debug('Bot detected:', ua)
         return res.send('Bot detected!')
       }
-      debug('Sending troll to:', req.ip, UserAgent)
+      debug('Sending troll to:', req.ip, ua)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
     }
-    const uri = req.path + '?' + new URLSearchParams(req.query).toString()
     const containsBlockedTerm = terms.some((term) =>
       uri.toLowerCase().includes(term.toLowerCase())
     )
     if (containsBlockedTerm) {
-      debug('Sending troll to:', req.ip, UserAgent)
+      debug('Sending troll to:', req.ip, ua)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'so-you-found-it.mp4')
       )
@@ -379,18 +384,9 @@ async function initApp() {
   })
   // bot detection middleware
   app.use((req, res, next) => {
-    const UserAgent = req.headers['user-agent'] || req.get('User-Agent') || ''
-    const isBot = BOT_USER_AGENTS.some((botAgent) =>
-      UserAgent.includes(botAgent)
-    )
-    if (isBot) {
-      debug('Bot detected:', UserAgent)
-      if (res.headersSent) {
-        return next()
-      }
-    }
-    if (isBot) {
-      debug('Bot detected:', UserAgent)
+    const ua = req.headers['user-agent'] || req.get('User-Agent')
+    if (isbot(ua)) {
+      debug('Bot detected:', ua)
       if (res.headersSent) {
         return next()
       }
@@ -427,6 +423,13 @@ async function setupRoutes() {
     debug(error.stack)
     if (res.headersSent) {
       return next(error)
+    }
+    if (error && error.name === 'UnauthorizedError') {
+      return res.status(401).json({
+        message: 'Invalid or missing authentication token',
+        status: '401',
+        error: NODE_ENV === 'development' ? error.message : 'Unauthorized',
+      })
     }
     res.status(500).json({
       message: 'Interal Server Error',
