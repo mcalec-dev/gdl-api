@@ -7,10 +7,21 @@ function requestLogger(req) {
     req.connection.socket?.remoteAddress ||
     'unknown'
   const url = req.url
-  console.log(ip, url)
+  const useragent = req.headers['user-agent'] || req.get('User-Agent') || ''
+  console.log(ip, url, useragent)
 }
-async function getReqIp(req) {
-  const ip = req.connection.remoteAddress
-  return ip
+function setReqVars(req, res, next) {
+  req.ip =
+    req.headers['X-Forwarded-For']?.split(',')[0] ||
+    req.headers['cf-connecting-ip'] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket?.remoteAddress ||
+    'unknown'
+  req.useragent = req.headers['user-agent'] || req.get('User-Agent') || ''
+  next()
 }
-module.exports = { requestLogger, getReqIp }
+module.exports = {
+  requestLogger,
+  setReqVars,
+}

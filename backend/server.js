@@ -5,6 +5,7 @@ const cors = require('cors')
 const lusca = require('lusca')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
+const { setReqVars } = require('./utils/requestUtils')
 const app = express()
 const sessionStore = require('./utils/sessionStore')
 const passport = require('./utils/passport')
@@ -74,7 +75,9 @@ async function initDB() {
       const sessions = db.collection('sessions')
       const cutoffDate = new Date(Date.now() - COOKIE_MAX_AGE)
       const result = await sessions.deleteMany({ expires: { $lt: cutoffDate } })
-      debug(`Expired sessions cleaned up (${result.deletedCount} removed, cutoff: ${cutoffDate})`)
+      debug(
+        `Expired sessions cleaned up (${result.deletedCount} removed, cutoff: ${cutoffDate})`
+      )
     }
   } catch (error) {
     console.error('Database initialization failed:', error)
@@ -252,6 +255,8 @@ async function renderApp() {
 }
 // init the express app
 async function initApp() {
+  // set request variables
+  app.use(setReqVars)
   // use cors headers
   app.use(cors())
   // rate limiting

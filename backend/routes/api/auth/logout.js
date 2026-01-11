@@ -51,9 +51,9 @@ router.post(['/', ''], async (req, res) => {
           })
         }
         res.clearCookie('connect.sid')
-        return res.json({
+        return res.status(201).json({
           success: true,
-          status: 200,
+          status: 201,
         })
       })
     })

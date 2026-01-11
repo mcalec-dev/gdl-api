@@ -9,13 +9,6 @@ const debug = require('debug')('gdl-api:api:user:dashboard')
  *     description: Retrieve dashboard information for the authenticated user.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     debug('Getting dashboard for:', req.user.username || 'user')
     res.json({

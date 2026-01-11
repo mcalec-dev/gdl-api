@@ -6,6 +6,9 @@ const {
   safeApiPath,
   safePath,
   isSubPath,
+  normalizeLocalPath,
+  buildPaths,
+  deriveCollectionAuthor,
 } = require('./pathUtils')
 const { getHostUrl } = require('./urlUtils')
 const {
@@ -104,10 +107,16 @@ function isDisallowedExtension(filename) {
   )
 }
 function getFileMime(file) {
-  const ext = path.extname(file)
-  let type = require('mime-types').lookup(ext) || 'n/a'
-  type = type.replace('application/mp4', 'video/mp4')
-  return type
+  if (!file) return null
+  const ext = path.extname(file).toLowerCase()
+  if (!ext) return null
+  let type = require('mime-types').lookup(ext)
+  if (type === false) type = null
+  if (type) {
+    type = type.replace('application/mp4', 'video/mp4')
+    return type
+  }
+  return null
 }
 async function upsertDirectoryEntry(dirObj) {
   try {
@@ -117,7 +126,13 @@ async function upsertDirectoryEntry(dirObj) {
       debug('Creating new directory entry:', dirObj.paths.relative)
       const newDirectory = new Directory({
         ...dirObj,
-        uuid: uuid.v4(),
+        paths: {
+          local: dirObj.paths.local || null,
+          relative: dirObj.paths.relative || null,
+          remote: dirObj.paths.remote || null,
+        },
+        uuid: uuid.v4() || null,
+        size: dirObj.size || 0,
         created: dirObj.created || new Date(),
         modified: dirObj.modified || new Date(),
       })
@@ -130,8 +145,15 @@ async function upsertDirectoryEntry(dirObj) {
         {
           $set: {
             ...dirObj,
-            uuid: existing.uuid,
-            modified: dirObj.modified || new Date(),
+            paths: {
+              local: dirObj.paths.local || existing.paths.local || null,
+              relative:
+                dirObj.paths.relative || existing.paths.relative || null,
+              remote: dirObj.paths.remote || existing.paths.remote || null,
+            },
+            uuid: existing.uuid || uuid.v4() || null,
+            size: dirObj.size || existing.size || 0,
+            modified: dirObj.modified || existing.modified || new Date(),
           },
         },
         { new: true }
@@ -153,9 +175,19 @@ async function upsertFileEntry(fileObj) {
       debug('Creating new file entry:', fileObj.paths.relative)
       const newFile = new File({
         ...fileObj,
-        uuid: uuid.v4(),
+        paths: {
+          local: fileObj.paths.local || null,
+          relative: fileObj.paths.relative || null,
+          remote: fileObj.paths.remote || null,
+        },
+        uuid: uuid.v4() || null,
+        size: fileObj.size || 0,
+        type: fileObj.type || null,
+        collection: fileObj.collection || null,
+        mime: fileObj.mime || null,
         created: fileObj.created || new Date(),
         modified: fileObj.modified || new Date(),
+        meta: { ...fileObj.meta },
       })
       await newFile.save()
       return newFile
@@ -166,8 +198,19 @@ async function upsertFileEntry(fileObj) {
         {
           $set: {
             ...fileObj,
-            uuid: existing.uuid,
-            modified: fileObj.modified || new Date(),
+            paths: {
+              local: fileObj.paths.local || existing.paths.local || null,
+              relative:
+                fileObj.paths.relative || existing.paths.relative || null,
+              remote: fileObj.paths.remote || existing.paths.remote || null,
+            },
+            uuid: existing.uuid || uuid.v4() || null,
+            size: fileObj.size || existing.size || 0,
+            type: fileObj.type || existing.type || null,
+            collection: fileObj.collection || existing.collection || null,
+            mime: fileObj.mime || existing.mime || null,
+            modified: fileObj.modified || existing.modified || new Date(),
+            meta: { ...fileObj.meta, ...existing.meta },
           },
         },
         { new: true }
@@ -192,23 +235,19 @@ async function upsertAccessedItem(realPath) {
     const relative = path
       .relative(path.resolve(BASE_DIR), realPath)
       .replace(/\\/g, '/')
-    let remote = safeApiPath(`${BASE_PATH}/api/files`, relative)
-    let local = realPath.replace(/\\\\/g, '/')
-    remote = remote.replace(/([^:])\/\//g, '$1/')
-    if (/\.[a-zA-Z0-9]+\/$/.test(remote)) {
-      remote = remote.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
-    }
-    const paths = {
-      local,
-      relative,
-      remote,
-    }
+    const paths = buildPaths(BASE_DIR, relative, BASE_PATH)
+    let remote = paths.remote
+    let local = paths.local || normalizeLocalPath(realPath)
     let result = null
     if (stats.isDirectory()) {
       try {
         result = await upsertDirectoryEntry({
           name,
-          paths,
+          paths: {
+            local,
+            relative,
+            remote,
+          },
           size: stats.size,
           type: 'directory',
           created: stats.birthtime,
@@ -238,15 +277,18 @@ async function upsertAccessedItem(realPath) {
         const pathParts = relative ? relative.split('/').filter(Boolean) : []
         const collection = pathParts.length > 0 ? pathParts[0] : ''
         const author = pathParts.length > 1 ? pathParts[1] : ''
-        const mime = getFileMime(name) || 'n/a'
         result = await upsertFileEntry({
           name,
-          paths,
-          size: stats.size || 0,
+          paths: {
+            local,
+            relative,
+            remote,
+          },
+          size: stats.size,
           type: 'file',
           collection: collection,
           author: author,
-          mime: mime,
+          mime: getFileMime(name),
           created: stats.birthtime,
           modified: stats.mtime,
           meta,
@@ -265,31 +307,6 @@ async function upsertAccessedItem(realPath) {
       path: realPath,
       error: error.message,
     })
-  }
-}
-function normalizeLocalPath(p) {
-  if (!p) return ''
-  return p.replace(/\\/g, '/')
-}
-function buildPaths(localBase, relative) {
-  const rel = relative || ''
-  const local = normalizeLocalPath(path.join(localBase, rel))
-  let remote = safeApiPath(`${BASE_PATH}/api/files`, rel)
-  remote = remote.replace(/([^:])\/\//g, '$1/')
-  if (/\.[a-zA-Z0-9]+\/$/.test(remote)) {
-    remote = remote.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
-  }
-  return {
-    local,
-    relative: rel,
-    remote,
-  }
-}
-function deriveCollectionAuthor(relative) {
-  const parts = relative ? relative.split('/').filter(Boolean) : []
-  return {
-    collection: parts.length > 0 ? parts[0] : null,
-    author: parts.length > 1 ? parts[1] : null,
   }
 }
 async function maybeUpsertAccessed(realPath) {
@@ -385,7 +402,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         debug(`Error getting stats for ${entryPath}:`, statError)
         continue
       }
-      const paths = buildPaths(dirPath, entryRelativePath)
+      const paths = buildPaths(dirPath, entryRelativePath, BASE_PATH)
       if (entry.isDirectory()) {
         await upsertDirectoryEntry({
           name: entry.name,
@@ -491,12 +508,22 @@ async function formatListingEntry(
       .relative(normalizedDir, entryPath)
       .replace(/\\/g, '/')
     const { collection, author } = deriveCollectionAuthor(relativePath)
-    let fullPath = safeApiPath(`${BASE_PATH}/api/files`, relativePath)
-    fullPath = fullPath.replace(/([^:])\/\//g, '$1/')
-    if (/\.[a-zA-Z0-9]+\/$/.test(fullPath)) {
-      fullPath = fullPath.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
-    }
+    const paths = buildPaths(baseDir, relativePath, BASE_PATH) || {}
+    let fullPath =
+      paths.remote || safeApiPath(`${BASE_PATH}/api/files`, relativePath)
     const url = (await getHostUrl(req)) + fullPath
+    let fileUuid = null
+    if (!entry.isDirectory()) {
+      try {
+        const dbFile = await File.findOne(
+          { 'paths.relative': relativePath },
+          { uuid: 1 }
+        ).lean()
+        fileUuid = dbFile?.uuid || null
+      } catch (error) {
+        debug('Error fetching UUID for file:', relativePath, error)
+      }
+    }
     const result = {
       name: entry.name,
       type: entry.isDirectory() ? 'directory' : 'file',
@@ -507,6 +534,7 @@ async function formatListingEntry(
       url,
       collection,
       author,
+      ...(fileUuid && { uuid: fileUuid }),
     }
     if (includeMime && !entry.isDirectory()) {
       result.mime = await getFileMime(entry.name)
@@ -521,7 +549,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
   try {
     for (const item of items) {
       const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
-      const paths = buildPaths(BASE_DIR, relPath)
+      const paths = buildPaths(BASE_DIR, relPath, BASE_PATH)
       const localPath = paths.local
       let metadata = {}
       if (isImageFile(localPath)) {
@@ -545,6 +573,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
         await upsertFileEntry({
           name: item.name,
           paths,
+          mime: item.mime || null,
           size: item.size || 0,
           type: item.type || null,
           collection: item.collection || null,

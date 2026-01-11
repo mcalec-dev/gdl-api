@@ -9,13 +9,6 @@ const Announcement = require('../../../models/Announcement')
  *     summary: Get all announcements
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)
@@ -48,13 +41,6 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
  *                 enum: [info, warning, error]
  */
 router.post(['', '/'], requireRole('admin'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     const uuid = require('uuid').v4()
     const { title, message, severity } = req.body
@@ -75,7 +61,10 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
     })
     await createdAnncouncement.save()
     debug('Announcement created:', createdAnncouncement)
-    return res.json({ success: true, createdAnncouncement })
+    return res.status(201).json({
+      success: true, 
+      createdAnncouncement
+    })
   } catch (error) {
     debug('Error creating announcement:', error)
     return res.status(500).json({
@@ -126,20 +115,13 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       status: 400,
     })
   }
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     const updatedAnnouncement = await Announcement.findOneAndUpdate(
       { uuid: { $eq: req.params.uuid } },
       {
-        title,
-        message,
-        severity,
+        title: String(title),
+        message: String(message),
+        severity: String(severity),
         author: req.user.username,
         modified: Date.now(),
       },
@@ -152,7 +134,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       })
     }
     debug('Announcement updated:', updatedAnnouncement)
-    return res.json({ success: true, announcement: updatedAnnouncement })
+    return res.status(204).send()
   } catch (error) {
     debug('Error updating announcement:', error)
     return res.status(500).json({
@@ -200,7 +182,7 @@ router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       })
     }
     debug('Announcement deleted:', deletedAnnouncement)
-    return res.json({ success: true })
+    return res.status(204).send()
   } catch (error) {
     debug('Error deleting announcement:', error)
     return res.status(500).json({

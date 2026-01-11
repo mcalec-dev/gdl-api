@@ -184,9 +184,12 @@ async function setupViewerEvents() {
   })
   downloadButton.addEventListener('click', async () => {
     const item = currentItemList[currentItemIndex]
-    const fileUrl = await getMediaUrl(item)
+    if (!item.uuid) {
+      utils.handleError('File UUID not available')
+      return
+    }
     const a = document.createElement('a')
-    a.href = `/api/download/?url="${encodeURIComponent(fileUrl)}"`
+    a.href = `/api/download/?uuid=${item.uuid}`
     a.download = ''
     document.body.appendChild(a)
     a.click()
@@ -314,6 +317,7 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
         let preview = media.querySelector('img, video, audio')
         const mediaPath = media.dataset.path
         const fileType = media.dataset.fileType
+        const uuid = media.dataset.uuid
         const encodedPath = mediaPath
           .split('/')
           .map((part) => encodeURIComponent(part))
@@ -338,6 +342,7 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
           name: mediaPath.split('/').pop(),
           path: mediaPath,
           type: fileType,
+          uuid,
           encodedPath,
           previewSrc,
         }

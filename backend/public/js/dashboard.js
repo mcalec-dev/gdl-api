@@ -105,6 +105,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                           <span class="font-semibold text-gray-300">UUID:</span>
                           <span>${session.uuid}</span>
                         </div>
+                        <div class="flex gap-2 mt-2">
+                          <button id="delete-btn" class="px-2 py-1 bg-red-600 text-white rounded items-center text-center" onclick="deleteSession('${session.uuid}')">Delete</button>
+                        </div>
                       </div>
                     `
                   })
@@ -174,5 +177,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       errorDiv.style.display = 'block'
       errorDiv.textContent = error
     })
+  async function deleteSession(uuid) {
+    if (!uuid) {
+      utils.handleError('No session UUID provided')
+      return
+    }
+    try {
+      const res = await fetch(
+        document.location.origin + `/api/user/session/${uuid}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      )
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Failed to delete session')
+      }
+      window.location.reload()
+    } catch (error) {
+      utils.handleError(error)
+      console.error('Failed to delete session:', error)
+    }
+  }
+  window.deleteSession = deleteSession
   loadingDiv.style.display = 'none'
 })

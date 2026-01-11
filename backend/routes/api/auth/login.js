@@ -84,8 +84,8 @@ router.post(['/', ''], async (req, res) => {
         user.sessions.push({
           uuid,
           modified: new Date(),
-          ip: req.ip || '',
-          useragent: req.headers['user-agent'] || req.get('User-Agent') || '',
+          ip: String(req.ip),
+          useragent: String(req.useragent),
         })
         await user.save()
         req.session.uuid = uuid
@@ -98,9 +98,8 @@ router.post(['/', ''], async (req, res) => {
             })
           }
           debug('User logged in:', user.username)
-          return res.status(200).json({
+          return res.status(201).json({
             success: true,
-            status: 200,
             user,
             session: user.sessions[user.sessions.length - 1],
           })

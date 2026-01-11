@@ -76,49 +76,27 @@ function validatePath(baseDirPath) {
   }
 }
 const NODE_ENV = process.env.NODE_ENV
-debug('Node environment:', NODE_ENV)
 const PORT = process.env.PORT
-debug('Port:', PORT)
 const NAME = process.env.NAME
-debug('Name:', NAME)
 const HOST = getHost()
-debug('Host:', HOST)
 const BASE_PATH = process.env.BASE_PATH
-debug('Base path:', BASE_PATH)
 const BASE_DIR = validatePath(process.env.BASE_DIR)
-debug('Base directory:', BASE_DIR)
 const DISALLOWED_DIRS = JSON.parse(process.env.DISALLOWED_DIRS)
-debug('Disallowed directories:', DISALLOWED_DIRS)
 const DISALLOWED_FILES = JSON.parse(process.env.DISALLOWED_FILES)
-debug('Disallowed files:', DISALLOWED_FILES)
 const DISALLOWED_EXTENSIONS = JSON.parse(process.env.DISALLOWED_EXTENSIONS)
-debug('Disallowed extensions:', DISALLOWED_EXTENSIONS)
 const MONGODB_URL = process.env.MONGODB_URL
-debug('MongoDB URL:', MONGODB_URL)
 const SESSION_SECRET = process.env.SESSION_SECRET
-debug('Session secret:', SESSION_SECRET)
 const JWT_SECRET = process.env.JWT_SECRET
-debug('JWT secret:', JWT_SECRET)
 const COOKIE_MAX_AGE = ms(process.env.COOKIE_MAX_AGE)
-debug('Max cookie age (ms):', COOKIE_MAX_AGE)
 const MAX_DEPTH = process.env.MAX_DEPTH
-debug('Max depth:', MAX_DEPTH)
 const PAGINATION_LIMIT = process.env.PAGINATION_LIMIT
-debug('Pagination limit:', PAGINATION_LIMIT)
 const RATE_LIMIT_WINDOW = ms(process.env.RATE_LIMIT_WINDOW)
-debug('Rate limit window (ms):', RATE_LIMIT_WINDOW)
 const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX
-debug('Rate limit max:', RATE_LIMIT_MAX)
 const TROLLING_CHANCE = parseFloat(process.env.TROLLING_CHANCE)
-debug('Trolling chance:', TROLLING_CHANCE)
 const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
-debug('Trolling terms:', TROLLING_TERMS)
 const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
-debug('Auto scan enabled:', AUTO_SCAN)
 const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
-debug('OAuth Providers:', OAUTH_PROVIDERS)
 const FILE_UPLOAD_LIMIT = process.env.FILE_UPLOAD_LIMIT
-debug('File upload limit:', FILE_UPLOAD_LIMIT)
 module.exports = {
   NODE_ENV,
   PORT,

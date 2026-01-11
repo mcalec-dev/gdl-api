@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin')
 const { requireRole } = require('../../../utils/authUtils')
-const { BASE_PATH } = require('../../../config')
+const { getHostUrl } = require('../../../utils/urlUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {
@@ -27,7 +27,7 @@ const { countActiveSessions } = require('../../../utils/authUtils')
  *     summary: Get admin statistics
  */
 router.get(['/', ''], requireRole('admin'), async (req, res) => {
-  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
+  const baseURL = (await getHostUrl(req)) + '/api'
   if (!req.user || !req.user.roles.includes('admin')) {
     debug('Unauthorized access attempt')
     return res.status(401).json({
@@ -76,7 +76,7 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
 // User actions: ban, mute, suspend, IP actions
 router.post('/user/:id/action', requireRole('admin'), (req, res) => {
   // { action: 'ban'|'mute'|'suspend', ip: optional }
-  res.json({ success: true })
+  res.status(201).json({ success: true })
 })
 
 // User management: view, edit, role change, reset password/email/username
@@ -90,7 +90,7 @@ router.get('/user/:id', requireRole('admin'), (req, res) => {
 })
 router.put('/user/:id', requireRole('admin'), (req, res) => {
   // TODO: update user info
-  res.json({ success: true })
+  res.status(204).send()
 })
 
 // Role permissions management
@@ -105,15 +105,15 @@ router.get(['/tags', '/tags/'], requireRole('admin'), (req, res) => {
 })
 router.post('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: create tag
-  res.json({ success: true })
+  res.status(201).json({ success: true })
 })
 router.put('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: update tag
-  res.json({ success: true })
+  res.status(204).send()
 })
 router.delete('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: delete tag
-  res.json({ success: true })
+  res.status(204).send()
 })
 
 // DMCA/takedown system
@@ -123,11 +123,11 @@ router.get('/dmca', requireRole('admin'), (req, res) => {
 })
 router.post('/dmca', requireRole('admin'), (req, res) => {
   // TODO: create takedown request
-  res.json({ success: true })
+  res.status(201).json({ success: true })
 })
 router.put('/dmca/:id', requireRole('admin'), (req, res) => {
   // TODO: update takedown request
-  res.json({ success: true })
+  res.status(204).send()
 })
 
 // File duplicate checks
@@ -145,6 +145,6 @@ router.get('/file/uri-check', requireRole('admin'), (req, res) => {
 // Cache tools
 router.post('/cache/purge', requireRole('admin'), (req, res) => {
   // TODO: purge caches
-  res.json({ success: true })
+  res.status(201).json({ success: true })
 })
 module.exports = router

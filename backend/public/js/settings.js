@@ -11,6 +11,8 @@ const imageScaleDefaultInput = document.getElementById(
 const imageScaleMaxInput = document.getElementById('image-scale-max-input')
 const paginationToggle = document.getElementById('pagination-toggle')
 const paginationInput = document.getElementById('pagination-items-select')
+const containerWidthInput = document.getElementById('container-width-input')
+const resetSettingsButton = document.getElementById('reset-settings-button')
 const defaults = {
   theme: {
     bg: 'auto',
@@ -28,6 +30,7 @@ const defaults = {
     default: 100,
     min: 50,
   },
+  containerWidth: 65,
 }
 function setCookie(name, value, expires = '') {
   let date = new Date()
@@ -67,6 +70,10 @@ function loadSettings() {
       pagination: { ...defaults.pagination, ...parsed.pagination },
       lang: parsed.lang || defaults.lang,
       imageScale: { ...defaults.imageScale, ...parsed.imageScale },
+      containerWidth:
+        typeof parsed.containerWidth === 'number'
+          ? parsed.containerWidth
+          : defaults.containerWidth,
     }
   } catch (e) {
     console.error('Failed to parse settings:', e)
@@ -111,11 +118,33 @@ export let PAGINATION = {
   enabled: settings.pagination.enabled,
   limit: settings.pagination.limit,
 }
+export let CONTAINER_WIDTH = settings.containerWidth
 function setExportVals(min, def, max) {
   MIN_IMAGE_SCALE = min
   IMAGE_SCALE = def
   MAX_IMAGE_SCALE = max
   return { MIN_IMAGE_SCALE, IMAGE_SCALE, MAX_IMAGE_SCALE }
+}
+function setContainerWidth(width) {
+  CONTAINER_WIDTH = width
+  const container = document.getElementById('container')
+  if (container) {
+    const classArray = Array.from(container.classList)
+    const newClassArray = classArray.filter(
+      (cls) => !cls.match(/^md:max-w-\[\d+%\]$/)
+    )
+    newClassArray.push(`md:max-w-[${width}%]`)
+    container.className = newClassArray.join(' ')
+  }
+  return CONTAINER_WIDTH
+}
+function resetAllSettings() {
+  const defaultSettings = { ...defaults }
+  Object.keys(defaultSettings).forEach((key) => {
+    settings[key] = defaultSettings[key]
+  })
+  saveSettings(settings)
+  window.location.reload()
 }
 async function updateSettings() {
   onekoToggle.addEventListener('change', async (e) => {
@@ -218,6 +247,23 @@ async function updateSettings() {
     }
   } catch {
     window.IMAGE_SCALE = defaults.imageScale.default
+  }
+  if (containerWidthInput) {
+    containerWidthInput.value = String(settings.containerWidth)
+    setContainerWidth(settings.containerWidth)
+    containerWidthInput.addEventListener('change', (e) => {
+      const v = parseInt(e.target.value, 10)
+      settings.containerWidth = isNaN(v) ? defaults.containerWidth : v
+      setContainerWidth(settings.containerWidth)
+      saveSettings(settings)
+    })
+  }
+  if (resetSettingsButton) {
+    resetSettingsButton.addEventListener('click', () => {
+      if (confirm('Reset all settings to defaults?')) {
+        resetAllSettings()
+      }
+    })
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {

@@ -161,6 +161,66 @@ const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
     return ext === normalizedAllowed
   })
 }
+const normalizeLocalPath = (p) => {
+  if (!p || typeof p !== 'string') return ''
+  return p.replace(/\\/g, '/').replace(/\/+/g, '/').trim()
+}
+const buildPaths = (localBase, relativePath, baseApiPath = '') => {
+  try {
+    if (!localBase || typeof localBase !== 'string') {
+      debug('Invalid localBase provided to buildPaths')
+      return null
+    }
+    const rel = relativePath ? normalizePath(relativePath) : ''
+    if (
+      rel &&
+      !rel.split('/').every((seg) => sanitizePathComponent(seg) !== null)
+    ) {
+      debug('Invalid path segments in buildPaths:', rel)
+      return null
+    }
+    const local = normalizeLocalPath(path.join(localBase, rel))
+    let remote = safeApiPath(`${baseApiPath || ''}/api/files`, rel)
+    if (remote) {
+      remote = remote.replace(/([^:])\/\//g, '$1/')
+      if (/\.[a-zA-Z0-9]+\/$/.test(remote)) {
+        remote = remote.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+      }
+    }
+    return {
+      local: local,
+      relative: rel,
+      remote: remote,
+    }
+  } catch (error) {
+    debug('Error in buildPaths:', error)
+    return null
+  }
+}
+const deriveCollectionAuthor = (relativePath) => {
+  try {
+    if (!relativePath || typeof relativePath !== 'string') {
+      return {
+        collection: null,
+        author: null,
+      }
+    }
+    const normalized = normalizePath(relativePath)
+    const parts = normalized.split('/').filter(Boolean)
+    const collection = parts.length > 0 ? sanitizePathComponent(parts[0]) : null
+    const author = parts.length > 1 ? sanitizePathComponent(parts[1]) : null
+    return {
+      collection,
+      author,
+    }
+  } catch (error) {
+    debug('Error in deriveCollectionAuthor:', error)
+    return {
+      collection: null,
+      author: null,
+    }
+  }
+}
 module.exports = {
   normalizeString,
   normalizePath,
@@ -172,4 +232,7 @@ module.exports = {
   validateRequestParams,
   safeApiPath,
   hasAllowedFileExtension,
+  normalizeLocalPath,
+  buildPaths,
+  deriveCollectionAuthor,
 }

@@ -1,7 +1,17 @@
 const { connection } = require('mongoose')
 const debug = require('debug')('gdl:utils:auth')
 function requireRole(role) {
+  if (!role) {
+    throw new Error('Role is required for requireRole middleware')
+  }
   return (req, res, next) => {
+    if (!req.user) {
+      debug('Unauthorized access attempt')
+      return res.status(401).json({
+        message: 'Unauthorized',
+        status: 401,
+      })
+    }
     if (
       req.isAuthenticated() &&
       req.user &&

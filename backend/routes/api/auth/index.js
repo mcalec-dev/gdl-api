@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:auth')
-const { BASE_PATH } = require('../../../config')
+const { getHostUrl } = require('../../../utils/urlUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {
@@ -32,7 +32,7 @@ try {
  *         description: Auth API is working
  */
 router.get(['/', ''], async (req, res) => {
-  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
+  const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     urls: {
       check: baseURL + '/auth/check',

@@ -1,5 +1,5 @@
 'use strict'
-import * as utils from './index.min.js'
+import * as utils from './min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
   const loading = document.getElementById('loading')
   const announcementForm = document.getElementById('announcement-form')

@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:user')
-const { BASE_PATH } = require('../../../config')
+const { getHostUrl } = require('../../../utils/urlUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {
@@ -13,11 +13,13 @@ try {
   router.use('/announcements', require('./announcements'))
   debug('Mounting dashboard route')
   router.use('/dashboard', require('./dashboard'))
+  debug('Mounting session route')
+  router.use('/session', require('./session'))
 } catch (error) {
   debug('Error initializing user routes:', error)
 }
 router.get(['/', ''], async (req, res) => {
-  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
+  const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     user: req.user,
     urls: {

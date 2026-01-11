@@ -29,7 +29,7 @@ router.post(
         contentType: req.file.mimetype,
       })
       debug(`File uploaded: ${req.file.originalname} (ID: ${fileId})`)
-      res.status(200).json({
+      res.status(201).json({
         success: true,
         fileId: fileId.toString(),
         filename: req.file.originalname,

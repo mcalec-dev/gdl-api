@@ -87,6 +87,7 @@ async function searchDatabase({ q, type, basePath, protocol, hostname }) {
         author,
         path: normalizedPath,
         url,
+        uuid: result.uuid,
         relevancy: scoreResult(result, queryStr, type),
       }
     })

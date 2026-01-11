@@ -1,13 +1,13 @@
 'use strict'
 import * as utils from '../min/index.min.js'
 document.addEventListener('DOMContentLoaded', () => {
-  const urlInput = document.getElementById('urlInput')
+  const uuidInput = document.getElementById('uuidInput')
   const downloadButton = document.getElementById('downloadButton')
   const statusMessage = document.getElementById('statusMessage')
   const API_URL = '/api/download'
-  async function performDownload(url) {
-    if (!url.length) {
-      statusMessage.textContent = 'Please enter a URL.'
+  async function performDownload(uuid) {
+    if (!uuid.length) {
+      statusMessage.textContent = 'Please enter a UUID.'
       statusMessage.style.display = 'block'
       return
     }
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     statusMessage.style.display = 'block'
     try {
       const a = document.createElement('a')
-      a.href = `${API_URL}?url="${encodeURIComponent(url)}"`
+      a.href = `${API_URL}?uuid=${uuid}`
       a.download = ''
       a.style.display = 'none'
       document.body.appendChild(a)
@@ -34,8 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   downloadButton.addEventListener('click', () => {
-    const url = urlInput.value.trim()
-    if (url) performDownload(url)
+    const uuid = uuidInput.value.trim()
+    if (uuid) performDownload(uuid)
   })
 })
 async function initDownload(url) {

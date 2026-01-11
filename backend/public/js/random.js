@@ -1,6 +1,7 @@
 'use strict'
 import * as utils from '../min/index.min.js'
 import { IMAGE_SCALE } from '../min/settings.min.js'
+import { setupContextMenu, createContextMenu } from '../min/contextmenu.min.js'
 const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
@@ -10,6 +11,7 @@ const HISTORY_LIMIT = 10
 const imageScale = `?x=${IMAGE_SCALE}`
 let history = []
 let historyIndex = 0
+let currentMediaData = null
 function showMedia(data) {
   if (!data || !data.url) {
     console.error('Invalid media data:', data)
@@ -17,14 +19,17 @@ function showMedia(data) {
     loading.textContent = ''
     loading.hidden = false
     imageInfo.hidden = true
+    currentMediaData = null
     return
   }
   if (history.length === 0) {
     mediaContainer.classList.remove('has-image')
     loading.textContent = 'Click the button to load media'
     loading.hidden = false
+    currentMediaData = null
     return
   }
+  currentMediaData = data
   mediaContainer.classList.remove('has-image')
   loading.textContent = 'Loading...'
   loading.hidden = false
@@ -38,6 +43,7 @@ function showMedia(data) {
   mediaElement.classList =
     'object-contain w-auto h-auto max-w-full max-h-[50vh] overflow-hidden border-none rounded-lg inline-block cursor-pointer'
   mediaElement.hidden = false
+  mediaElement.id = 'random-media-element'
   if (isVideo) {
     mediaElement.controls = true
     mediaElement.muted = false
@@ -180,7 +186,97 @@ async function loadIcons() {
     back: icon.arrow.left,
     shuffle: icon.arrow.shuffle,
     forward: icon.arrow.right,
+    image: icon.file.image,
+    video: icon.file.video,
+    audio: icon.file.audio,
+    text: icon.file.text,
+    other: icon.file.default,
+    nav: {
+      exit: icon.nav.exit,
+      next: icon.nav.next,
+      prev: icon.nav.prev,
+      link: icon.nav.link,
+      copy: icon.nav.copy,
+      download: icon.nav.download,
+    },
   }
+}
+function setupRandomMediaContextMenu() {
+  setupContextMenu('#media-container', () => {
+    if (!currentMediaData) return { items: [] }
+    const menuItems = []
+    const fileUrl = currentMediaData.url
+    menuItems.push({
+      label: 'Copy URL',
+      icon: icons?.nav?.copy || '',
+      handler: () => {
+        navigator.clipboard.writeText(fileUrl)
+      },
+    })
+    menuItems.push({
+      label: 'Open in New Tab',
+      icon: icons?.nav?.link || '',
+      handler: () => {
+        window.open(fileUrl, '_blank')
+      },
+    })
+    const isImage = currentMediaData.file
+      .toLowerCase()
+      .match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+    if (isImage) {
+      menuItems.push({
+        label: 'Copy Image',
+        icon: icons?.nav?.copy || '',
+        handler: async () => {
+          try {
+            const req = await fetch(fileUrl)
+            const blob = await req.blob()
+            const type = blob.type
+            await navigator.clipboard.write([
+              new window.ClipboardItem({ [type]: blob }),
+            ])
+          } catch {
+            utils.handleError('Failed to copy image.')
+          }
+        },
+      })
+    }
+    menuItems.push({
+      label: 'Download',
+      icon: icons?.nav?.download || '',
+      handler: () => {
+        try {
+          const a = document.createElement('a')
+          a.href = `/api/download/?uuid=${currentMediaData.uuid}`
+          a.download = ''
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        } catch {
+          utils.handleError('Failed to initiate download.')
+        }
+      },
+    })
+    const isVideo = currentMediaData.file
+      .toLowerCase()
+      .match(/\.(mp4|webm|mov)$/)
+    const isAudio = currentMediaData.file
+      .toLowerCase()
+      .match(/\.(mp3|wav|ogg|flac)$/i)
+    let mediaTypeIcon = icons?.image || ''
+    if (isVideo) {
+      mediaTypeIcon = icons?.video || ''
+    } else if (isAudio) {
+      mediaTypeIcon = icons?.audio || ''
+    }
+    return {
+      header: {
+        icon: mediaTypeIcon,
+        label: currentMediaData.file,
+      },
+      items: menuItems,
+    }
+  })
 }
 document.addEventListener('DOMContentLoaded', async () => {
   const loadImageBtn = document.getElementById('loadImageBtn')
@@ -209,6 +305,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
   loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`
   forwardImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.forward}</span>`
+  createContextMenu()
+  setupRandomMediaContextMenu()
   window.addEventListener('keydown', (e) => {
     switch (e.key) {
       case 'ArrowLeft':

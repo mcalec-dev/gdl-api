@@ -1,127 +1,79 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:download')
-const { HOST } = require('../../config')
+const { HOST, BASE_PATH } = require('../../config')
 const { requireRole } = require('../../utils/authUtils')
-async function isHostAllowed(hostname) {
-  const cfgHost = await HOST
-  if (!cfgHost || hostname !== cfgHost) {
-    debug('Host mismatch:', { hostname, cfgHost })
-    return false
-  }
-  return true
-}
+const File = require('../../models/File')
+const fs = require('fs').promises
 async function handleDownload(req, res) {
-  let url = req.query.url || req.body?.url
-  if (!url) {
-    debug('Missing url parameter')
+  let uuid = req.query.uuid || req.body?.uuid
+  if (!uuid) {
+    debug('Missing uuid parameter')
     return res.status(400).json({
-      message: 'Bad Request',
+      message: 'Bad Request: Missing uuid parameter',
       status: 400,
     })
   }
-  url = url.trim()
-  if (
-    (url.startsWith('"') && url.endsWith('"')) ||
-    (url.startsWith("'") && url.endsWith("'"))
-  ) {
-    url = url.slice(1, -1)
-  }
-  let parsedUrl
+  uuid = uuid.trim()
   try {
-    parsedUrl = new URL(url)
-  } catch (error) {
-    debug('Malformed URL:', error.message)
-    return res.status(400).json({
-      message: 'Bad Request: Invalid URL format',
-      status: 400,
-    })
-  }
-  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
-    debug('Invalid protocol:', parsedUrl.protocol)
-    return res.status(400).json({
-      message: 'Bad Request: Only HTTP/HTTPS protocols allowed',
-      status: 400,
-    })
-  }
-  if (!(await isHostAllowed(parsedUrl.hostname))) {
-    debug('Host not allowed:', parsedUrl.hostname)
-    return res.status(403).json({
-      message: 'Forbidden',
-      status: 403,
-    })
-  }
-  try {
-    parsedUrl.pathname = (parsedUrl.pathname || '/download')
-      .replace(/\.\./g, '')
-      .replace(/\/+/g, '/')
-      .replace(/^\/+/, '/')
-  } catch (error) {
-    debug('Path validation failed:', error.message)
-    return res.status(400).json({
-      message: 'Bad Request: Invalid file path',
-      status: 400,
-    })
-  }
-  const cleanUrl = parsedUrl.toString()
-  const https = require('https')
-  const http = require('http')
-  const protocol = parsedUrl.protocol === 'https:' ? https : http
-  const request = protocol.get(cleanUrl, (fileRes) => {
-    if (fileRes.statusCode !== 200) {
-      debug('HTTP error:', fileRes.statusCode)
-      return res.status(502).json({
-        message: 'Bad Gateway: Unable to fetch file',
-        status: 502,
+    const file = await File.findOne({ uuid }).lean()
+    if (!file) {
+      debug('File not found for uuid:', uuid)
+      return res.status(404).json({
+        message: 'Not Found: File not found',
+        status: 404,
       })
     }
     const filename = decodeURIComponent(
-      (parsedUrl.pathname || '').split('/').pop() || 'download'
-    ).replace(/[^a-zA-Z0-9.-]/g, '_')
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-    res.setHeader(
-      'Content-Type',
-      fileRes.headers['content-type'] || 'application/octet-stream'
+      (file.name || '').replace(/[^a-zA-Z0-9.-]/g, '_')
     )
-    fileRes.pipe(res)
-  })
-  request.on('timeout', () => {
-    debug('Request timeout')
-    request.destroy()
-    return res.status(408).json({
-      message: 'Request Timeout',
-      status: 408,
+    const filePath = file.paths.local
+    try {
+      await fs.access(filePath)
+    } catch (error) {
+      debug('File not accessible:', filePath, error)
+      return res.status(404).json({
+        message: 'Not Found: File not accessible',
+        status: 404,
+      })
+    }
+    const stat = await fs.stat(filePath)
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Type', file.mime || 'application/octet-stream')
+    res.setHeader('Content-Length', stat.size)
+    const fileStream = require('fs').createReadStream(filePath)
+    fileStream.pipe(res)
+    fileStream.on('error', (error) => {
+      debug('File streaming error:', error)
+      if (!res.headersSent) {
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
+        })
+      }
     })
-  })
-  request.on('error', (error) => {
+  } catch (error) {
     debug('Download error:', error)
     return res.status(500).json({
       message: 'Internal Server Error',
       status: 500,
     })
-  })
+  }
 }
 /**
  * @swagger
  * /api/download/:
  *   get:
- *     summary: Download a file from a specified URL.
- *     description: Downloads a file from the provided URL and serves it to the client.
+ *     summary: Download a file using its UUID.
+ *     description: Downloads a file from the server using the provided UUID.
  *     parameters:
  *       - in: query
- *         name: url
+ *         name: uuid
  *         required: true
  *         schema:
  *           type: string
- *           description: The URL of the file to download.
+ *           description: The UUID of the file to download.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   await handleDownload(req, res)
 })
 module.exports = router

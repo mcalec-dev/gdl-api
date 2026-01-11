@@ -12,13 +12,6 @@ const { BASE_PATH } = require('../../config')
  *    description: Retrieve a random file from the database.
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     const getRandomImage = await File.aggregate([
       { $sample: { size: 1 } },
@@ -41,6 +34,7 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
       created: randomImage.created,
       modified: randomImage.modified,
       type: randomImage.type,
+      uuid: randomImage.uuid,
     })
   } catch (error) {
     debug('Error in random route:', error)
@@ -51,13 +45,6 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
   }
 })
 router.get(['/image/', '/image'], requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
-  }
   try {
     const getRandomImage = await File.aggregate([
       { $sample: { size: 1 } },
