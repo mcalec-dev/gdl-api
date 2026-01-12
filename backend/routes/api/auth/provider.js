@@ -5,12 +5,101 @@ const passport = require('../../../utils/passport')
 const { BASE_PATH, OAUTH_PROVIDERS } = require('../../../config')
 /**
  * @swagger
- * /api/auth/:
+ * /api/auth/provider/:
  *   get:
- *     summary: Get auth API info
+ *     summary: Get OAuth provider endpoints
+ *     description: Get available OAuth provider endpoints for login, link, and unlink operations
  *     responses:
  *       200:
- *         description: Auth API is working
+ *         description: OAuth provider URLs
+ *
+ * /api/auth/provider/login/{provider}:
+ *   get:
+ *     summary: Initiate OAuth login
+ *     description: Start OAuth authentication flow for the specified provider
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [github, discord]
+ *         description: OAuth provider name
+ *     responses:
+ *       302:
+ *         description: Redirect to provider authentication
+ *       400:
+ *         description: Invalid provider
+ *       500:
+ *         description: Authentication error
+ *
+ * /api/auth/provider/callback/{provider}:
+ *   get:
+ *     summary: OAuth callback endpoint
+ *     description: Handle OAuth provider callback after successful authentication
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [github, discord]
+ *         description: OAuth provider name
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authorization code from provider
+ *     responses:
+ *       302:
+ *         description: Redirect to dashboard on success
+ *       400:
+ *         description: Invalid provider or missing code
+ *
+ * /api/auth/provider/link/{provider}:
+ *   get:
+ *     summary: Link OAuth account to existing user
+ *     description: Link an OAuth provider account to the currently authenticated user
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [github, discord]
+ *         description: OAuth provider name
+ *     responses:
+ *       302:
+ *         description: Redirect to provider authentication
+ *       400:
+ *         description: Invalid provider or provider already linked
+ *       401:
+ *         description: User not authenticated
+ *       500:
+ *         description: Link error
+ *
+ * /api/auth/provider/unlink/{provider}:
+ *   get:
+ *     summary: Unlink OAuth account from user
+ *     description: Remove OAuth provider account from the currently authenticated user
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [github, discord]
+ *         description: OAuth provider name
+ *     responses:
+ *       200:
+ *         description: Provider unlinked successfully
+ *       400:
+ *         description: Invalid provider or cannot unlink (no other auth method)
+ *       401:
+ *         description: User not authenticated
+ *       500:
+ *         description: Unlink error
  */
 router.get(['/', ''], async (req, res) => {
   const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'

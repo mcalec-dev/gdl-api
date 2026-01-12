@@ -42,7 +42,55 @@ try {
  * @swagger
  * /api/:
  *   get:
- *     summary: Get API information
+ *     summary: Get API information and available endpoints
+ *     description: Retrieve general API information, version, and list of available endpoints
+ *     responses:
+ *       200:
+ *         description: API information with available endpoint URLs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 api:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 version:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 author:
+ *                   type: string
+ *                 keywords:
+ *                   type: array
+ *                 license:
+ *                   type: string
+ *                 host:
+ *                   type: string
+ *                 basePath:
+ *                   type: string
+ *                 urls:
+ *                   type: object
+ *                   properties:
+ *                     admin:
+ *                       type: string
+ *                     auth:
+ *                       type: string
+ *                     user:
+ *                       type: string
+ *                     download:
+ *                       type: string
+ *                     files:
+ *                       type: string
+ *                     health:
+ *                       type: string
+ *                     random:
+ *                       type: string
+ *                     search:
+ *                       type: string
+ *                     stats:
+ *                       type: string
  */
 router.get(['/', ''], async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'

@@ -1,10 +1,10 @@
 const MongoStore = require('connect-mongo')
-const { MONGODB_URL } = require('../config')
+const { MONGODB_URL, COOKIE_MAX_AGE } = require('../config')
 const ms = require('ms')
 module.exports = () =>
   MongoStore.create({
     mongoUrl: MONGODB_URL,
     collectionName: 'sessions',
-    ttl: ms('30d'),
+    ttl: ms(COOKIE_MAX_AGE),
     autoRemove: 'native',
   })

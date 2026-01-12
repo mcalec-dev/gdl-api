@@ -8,23 +8,36 @@ const validator = require('validator')
  * /api/auth/register/:
  *   post:
  *     summary: User registration
- *     description: Register a new user with username, email, and password.
- *     parameters:
- *      - in: body
- *        name: user
- *        schema:
- *          type: object
- *        properties:
- *          username:
- *            type: string
- *          email:
- *            type: string
- *          password:
- *            type: string
- *   required:
- *     - username
- *     - email
- *     - password
+ *     description: Register a new user with username, email, and password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Unique username for the user
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address of the user
+ *               password:
+ *                 type: string
+ *                 description: Password for the user account
+ *             required:
+ *               - username
+ *               - password
+ *     responses:
+ *       201:
+ *         description: User successfully registered and logged in
+ *       400:
+ *         description: Missing required fields or invalid email format
+ *       409:
+ *         description: Username or email already exists
+ *       500:
+ *         description: Internal server error
  */
 router.post(['', '/'], async (req, res) => {
   const { username, email, password } = req.body

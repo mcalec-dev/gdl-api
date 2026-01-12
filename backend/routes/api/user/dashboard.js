@@ -6,7 +6,41 @@ const debug = require('debug')('gdl-api:api:user:dashboard')
  * /api/user/dashboard/:
  *   get:
  *     summary: Retrieve user dashboard information
- *     description: Retrieve dashboard information for the authenticated user.
+ *     description: Retrieve dashboard information for the authenticated user including profile and sessions
+ *     responses:
+ *       200:
+ *         description: User dashboard data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 roles:
+ *                   type: array
+ *                 id:
+ *                   type: string
+ *                 uuid:
+ *                   type: string
+ *                 created:
+ *                   type: string
+ *                   format: date-time
+ *                 modified:
+ *                   type: string
+ *                   format: date-time
+ *                 oauth:
+ *                   type: object
+ *                 sessions:
+ *                   type: array
+ *       401:
+ *         description: User not authenticated
+ *       500:
+ *         description: Internal server error
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   try {

@@ -50,9 +50,21 @@ async function getHost() {
 function parseBooleanEnv(value) {
   if (value === undefined || value === null) return false
   const v = String(value).trim().toLowerCase()
-  if (v === '1' || v === 'true' || v === 'yes' || v === 'y' || v === 'on')
-    return true
-  else return false
+  switch (v) {
+    case '1':
+    case 'true':
+    case 'yes':
+    case 'y':
+    case 'on':
+      return true
+    case '0':
+    case 'false':
+    case 'no':
+    case 'n':
+    case 'off':
+      return false
+  }
+  throw new Error(`Invalid boolean value: ${value}`)
 }
 function validatePath(baseDirPath) {
   if (!baseDirPath || typeof baseDirPath !== 'string') {
@@ -95,6 +107,7 @@ const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX
 const TROLLING_CHANCE = parseFloat(process.env.TROLLING_CHANCE)
 const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
 const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
+const UPSERT_ON_ACCESS = process.env.UPSERT_ON_ACCESS
 const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
 const FILE_UPLOAD_LIMIT = process.env.FILE_UPLOAD_LIMIT
 module.exports = {
@@ -118,6 +131,7 @@ module.exports = {
   TROLLING_CHANCE,
   TROLLING_TERMS,
   AUTO_SCAN,
+  UPSERT_ON_ACCESS,
   OAUTH_PROVIDERS,
   FILE_UPLOAD_LIMIT,
   debug,

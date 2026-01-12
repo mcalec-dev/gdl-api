@@ -8,6 +8,7 @@ const {
   AUTO_SCAN,
   DISALLOWED_FILES,
   PAGINATION_LIMIT,
+  UPSERT_ON_ACCESS,
 } = require('../../config')
 const {
   isExcluded,
@@ -38,7 +39,94 @@ else debug('AUTO_SCAN config is invalid')
  * @swagger
  * /api/files/:
  *   get:
- *     summary: Get all files
+ *     summary: Get all files and directories from the root
+ *     description: List all files and directories from the BASE_DIR with optional sorting and pagination
+ *     parameters:
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [name, size, date, type]
+ *         description: Field to sort by
+ *       - in: query
+ *         name: direction
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Sort direction
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Maximum number of results (up to PAGINATION_LIMIT)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *     responses:
+ *       200:
+ *         description: List of files and directories
+ *       403:
+ *         description: User not authenticated
+ *       500:
+ *         description: Internal server error
+ * /api/files/{collection}/:
+ *   get:
+ *     summary: Get files from a specific collection
+ *     description: List files and subdirectories within a specific collection
+ *     parameters:
+ *       - in: path
+ *         name: collection
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Collection name
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [name, size, date, type]
+ *         description: Field to sort by
+ *       - in: query
+ *         name: direction
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Sort direction
+ *     responses:
+ *       200:
+ *         description: List of files in collection
+ *       400:
+ *         description: Invalid path parameters
+ *       404:
+ *         description: Collection not found
+ *       500:
+ *         description: Internal server error
+ * /api/files/{collection}/{author}/:
+ *   get:
+ *     summary: Get files from a specific author within a collection
+ *     description: List files from a specific author directory within a collection
+ *     parameters:
+ *       - in: path
+ *         name: collection
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Collection name
+ *       - in: path
+ *         name: author
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Author/subdirectory name
+ *     responses:
+ *       200:
+ *         description: List of files from author directory
+ *       404:
+ *         description: Path not found
+ *       500:
+ *         description: Internal server error
  */
 router.get(['', '/'], requireRole('user'), async (req, res) => {
   if (!req.user) {
@@ -62,7 +150,7 @@ router.get(['', '/'], requireRole('user'), async (req, res) => {
     try {
       entries = await fs.readdir(normalizedDir, { withFileTypes: true })
       debug(`Found ${entries.length} entries in root directory`)
-      await maybeUpsertAccessed(normalizedDir)
+      await maybeUpsertAccessed(normalizedDir, true)
     } catch (error) {
       debug('Failed to read root directory:', error)
       return res.status(500).json({
@@ -193,7 +281,9 @@ router.get(
       try {
         entries = await fs.readdir(realPath, { withFileTypes: true })
         debug(`Found ${entries.length} entries in directory`)
-        await maybeUpsertAccessed(realPath)
+        if (UPSERT_ON_ACCESS !== 'file') {
+          await maybeUpsertAccessed(realPath, true)
+        }
       } catch (error) {
         debug('Failed to read directory:', error)
         return res.status(500).json({
@@ -220,7 +310,7 @@ router.get(
       } else {
         res.json(sorted)
       }
-      if (validContents.length) {
+      if (validContents.length && UPSERT_ON_ACCESS !== 'file') {
         setImmediate(() => {
           createDbEntriesForContents(validContents, relativePath).catch((err) =>
             debug('Background DB sync failed:', err)
@@ -254,7 +344,7 @@ router.get(
           )
           if (transformer) {
             res.type(path.extname(realPath).slice(1))
-            await maybeUpsertAccessed(realPath)
+            await maybeUpsertAccessed(realPath, false)
             transformer.pipe(res)
             return
           }
@@ -278,7 +368,7 @@ router.get(
           debug(
             'Request does not have any range headers - sending file instead'
           )
-          await maybeUpsertAccessed(realPath)
+          await maybeUpsertAccessed(realPath, false)
           return res.sendFile(realPath)
         }
         try {
@@ -295,7 +385,7 @@ router.get(
               start,
               end,
             })
-            await maybeUpsertAccessed(realPath)
+            await maybeUpsertAccessed(realPath, false)
             res.writeHead(206, {
               'Content-Range': `bytes ${start}-${end}/${fileSize}`,
               'Accept-Ranges': 'bytes',
@@ -330,7 +420,7 @@ router.get(
               const html = result.value
               res.set('Content-Type', 'text/html; charset=utf-8')
               res.send(html)
-              await maybeUpsertAccessed(realPath)
+              await maybeUpsertAccessed(realPath, false)
             })
         } catch (error) {
           debug('Error in mammoth doc conversion:', error)
@@ -341,7 +431,7 @@ router.get(
         }
       }
       try {
-        await maybeUpsertAccessed(realPath)
+        await maybeUpsertAccessed(realPath, false)
         res.sendFile(realPath)
       } catch (error) {
         debug('Error in sending file:', error)

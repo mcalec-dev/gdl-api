@@ -10,8 +10,24 @@ const { requireRole } = require('../../utils/authUtils')
  * @swagger
  * /api/stats/:
  *   get:
- *     summary: Retrieve API statistics
- *     description: Retrieve statistics about the API and collections.
+ *     summary: Retrieve API and file statistics
+ *     description: Retrieve statistics about the API, collections, file storage, and file types
+ *     responses:
+ *       200:
+ *         description: API and collection statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 api:
+ *                   type: object
+ *                   description: API statistics
+ *                 collections:
+ *                   type: object
+ *                   description: Collection statistics including totals and file types
+ *       500:
+ *         description: Internal server error
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   try {

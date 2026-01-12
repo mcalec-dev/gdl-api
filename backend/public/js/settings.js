@@ -184,6 +184,12 @@ async function updateSettings() {
       PAGINATION.limit = settings.pagination.limit
       saveSettings(settings)
     })
+    paginationInput.addEventListener('input', (e) => {
+      const v = parseInt(e.target.value, 10)
+      settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
+      PAGINATION.limit = settings.pagination.limit
+      saveSettings(settings)
+    })
   }
   try {
     const minVal = parseInt(settings.imageScale.min, 10)
@@ -192,9 +198,8 @@ async function updateSettings() {
     setExportVals(minVal, defaultVal, maxVal)
     if (imageScaleMinInput) {
       imageScaleMinInput.value = String(minVal)
-      imageScaleMinInput.addEventListener('change', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        settings.imageScale.min = isNaN(v) ? defaults.imageScale.min : v
+      const applyMin = (val) => {
+        settings.imageScale.min = isNaN(val) ? defaults.imageScale.min : val
         saveSettings(settings)
         if (imageScaleDefaultInput)
           imageScaleDefaultInput.min = String(settings.imageScale.min)
@@ -205,6 +210,14 @@ async function updateSettings() {
           settings.imageScale.default,
           settings.imageScale.max
         )
+      }
+      imageScaleMinInput.addEventListener('change', (ev) => {
+        const v = parseInt(ev.target.value, 10)
+        applyMin(v)
+      })
+      imageScaleMinInput.addEventListener('input', (ev) => {
+        const v = parseInt(ev.target.value, 10)
+        if (!isNaN(v)) applyMin(v)
       })
     }
     if (imageScaleDefaultInput) {
@@ -230,9 +243,8 @@ async function updateSettings() {
     }
     if (imageScaleMaxInput) {
       imageScaleMaxInput.value = String(maxVal)
-      imageScaleMaxInput.addEventListener('change', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        settings.imageScale.max = isNaN(v) ? defaults.imageScale.max : v
+      const applyMax = (val) => {
+        settings.imageScale.max = isNaN(val) ? defaults.imageScale.max : val
         saveSettings(settings)
         if (imageScaleDefaultInput)
           imageScaleDefaultInput.max = String(settings.imageScale.max)
@@ -243,6 +255,14 @@ async function updateSettings() {
           settings.imageScale.default,
           settings.imageScale.max
         )
+      }
+      imageScaleMaxInput.addEventListener('change', (ev) => {
+        const v = parseInt(ev.target.value, 10)
+        applyMax(v)
+      })
+      imageScaleMaxInput.addEventListener('input', (ev) => {
+        const v = parseInt(ev.target.value, 10)
+        if (!isNaN(v)) applyMax(v)
       })
     }
   } catch {

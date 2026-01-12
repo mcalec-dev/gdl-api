@@ -1,6 +1,30 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:user')
 const { getHostUrl } = require('../../../utils/urlUtils')
+/**
+ * @swagger
+ * /api/user/:
+ *   get:
+ *     summary: Get user API information
+ *     description: Get current authenticated user information and available user endpoints
+ *     responses:
+ *       200:
+ *         description: User information and available endpoints
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                 urls:
+ *                   type: object
+ *                   properties:
+ *                     announcements:
+ *                       type: string
+ *                     dashboard:
+ *                       type: string
+ */
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {

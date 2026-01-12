@@ -8,8 +8,40 @@ const { BASE_PATH } = require('../../config')
  * @swagger
  * /api/random:
  *   get:
- *    summary: Retrieve a random file
- *    description: Retrieve a random file from the database.
+ *     summary: Retrieve a random file
+ *     description: Retrieve a random file from the database with metadata
+ *     responses:
+ *       200:
+ *         description: Random file metadata
+ *       500:
+ *         description: Internal server error
+ * /api/random/:
+ *   get:
+ *     summary: Retrieve a random file (with trailing slash)
+ *     description: Retrieve a random file from the database with metadata
+ *     responses:
+ *       200:
+ *         description: Random file metadata
+ *       500:
+ *         description: Internal server error
+ * /api/random/image:
+ *   get:
+ *     summary: Retrieve a random image file
+ *     description: Retrieve a random image file and stream it as a file download
+ *     responses:
+ *       200:
+ *         description: Image file binary content
+ *       500:
+ *         description: Internal server error
+ * /api/random/image/:
+ *   get:
+ *     summary: Retrieve a random image file (with trailing slash)
+ *     description: Retrieve a random image file and stream it as a file download
+ *     responses:
+ *       200:
+ *         description: Image file binary content
+ *       500:
+ *         description: Internal server error
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   try {

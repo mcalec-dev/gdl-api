@@ -18,6 +18,7 @@ const {
   BASE_DIR,
   BASE_PATH,
   AUTO_SCAN,
+  UPSERT_ON_ACCESS,
 } = require('../config')
 const { getImageMeta } = require('./imageUtils')
 const Directory = require('../models/Directory')
@@ -123,7 +124,6 @@ async function upsertDirectoryEntry(dirObj) {
     const filter = { 'paths.relative': dirObj.paths.relative }
     let existing = await Directory.findOne(filter)
     if (!existing) {
-      debug('Creating new directory entry:', dirObj.paths.relative)
       const newDirectory = new Directory({
         ...dirObj,
         paths: {
@@ -136,10 +136,10 @@ async function upsertDirectoryEntry(dirObj) {
         created: dirObj.created || new Date(),
         modified: dirObj.modified || new Date(),
       })
+      debug('Upserted new directory entry:', dirObj.paths.relative)
       await newDirectory.save()
       return newDirectory
     } else {
-      debug('Updating existing directory entry:', dirObj.paths.relative)
       existing = await Directory.findOneAndUpdate(
         filter,
         {
@@ -158,6 +158,7 @@ async function upsertDirectoryEntry(dirObj) {
         },
         { new: true }
       )
+      debug('Updated existing directory entry:', dirObj.paths.relative)
       return existing
     }
   } catch (error) {
@@ -189,10 +190,10 @@ async function upsertFileEntry(fileObj) {
         modified: fileObj.modified || new Date(),
         meta: { ...fileObj.meta },
       })
+      debug('Upserted new file entry:', fileObj.paths.relative)
       await newFile.save()
       return newFile
     } else {
-      debug('Updating existing file entry:', fileObj.paths.relative)
       existing = await File.findOneAndUpdate(
         filter,
         {
@@ -215,6 +216,7 @@ async function upsertFileEntry(fileObj) {
         },
         { new: true }
       )
+      debug('Updated existing file entry:', fileObj.paths.relative)
       return existing
     }
   } catch (error) {
@@ -253,7 +255,6 @@ async function upsertAccessedItem(realPath) {
           created: stats.birthtime,
           modified: stats.mtime,
         })
-        debug('Successfully upserted directory:', relative)
       } catch (error) {
         debug('Failed to upsert directory:', {
           path: relative,
@@ -293,7 +294,6 @@ async function upsertAccessedItem(realPath) {
           modified: stats.mtime,
           meta,
         })
-        debug('Successfully upserted file:', relative)
       } catch (error) {
         debug('Failed to upsert file:', {
           path: relative,
@@ -309,10 +309,12 @@ async function upsertAccessedItem(realPath) {
     })
   }
 }
-async function maybeUpsertAccessed(realPath) {
+async function maybeUpsertAccessed(realPath, isDirectory = false) {
+  if (!UPSERT_ON_ACCESS || UPSERT_ON_ACCESS === 'false') return
+  if (UPSERT_ON_ACCESS === 'file' && isDirectory) return
+  if (UPSERT_ON_ACCESS === 'dir' && !isDirectory) return
   if (AUTO_SCAN === false) {
     try {
-      debug('Upserting accessed path:', realPath)
       await upsertAccessedItem(realPath)
     } catch (err) {
       debug('Background upsertAccessedItem failed:', err)

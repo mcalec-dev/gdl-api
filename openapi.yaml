@@ -1,0 +1,1205 @@
+openapi: 3.0.3
+info:
+  title: gdl-api
+  description: gdl-api express api server + frontend + bots
+  version: 0.2.31
+  license:
+    name: MIT
+servers:
+  - url: https://gdl.mcalec.dev/api
+    description: production server
+  - url: http://localhost:3030/api
+    description: local server
+tags:
+  - name: API
+    description: General API information
+  - name: Authentication
+    description: User authentication and OAuth
+  - name: Files
+    description: File and directory operations
+  - name: Downloads
+    description: File downloads
+  - name: Uploads
+    description: File uploads
+  - name: Random
+    description: Random file retrieval
+  - name: Search
+    description: File and directory search
+  - name: Statistics
+    description: API and system statistics
+  - name: Health
+    description: Health check endpoints
+  - name: User
+    description: User profile and settings
+  - name: Admin
+    description: Administrative operations
+paths:
+  /:
+    get:
+      tags:
+        - API
+      summary: Get API information and available endpoints
+      description: Retrieve general API information, version, and list of available endpoints
+      responses:
+        "200":
+          description: API information with available endpoint URLs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    type: string
+                    example: v2
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  description:
+                    type: string
+                  author:
+                    type: string
+                  keywords:
+                    type: array
+                    items:
+                      type: string
+                  license:
+                    type: string
+                  host:
+                    type: string
+                  basePath:
+                    type: string
+                  urls:
+                    type: object
+                    properties:
+                      admin:
+                        type: string
+                      auth:
+                        type: string
+                      user:
+                        type: string
+                      download:
+                        type: string
+                      files:
+                        type: string
+                      health:
+                        type: string
+                      random:
+                        type: string
+                      search:
+                        type: string
+                      stats:
+                        type: string
+  /auth/:
+    get:
+      tags:
+        - Authentication
+      summary: Get auth API information
+      description: Get available authentication endpoints
+      responses:
+        "200":
+          description: Auth endpoints
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  urls:
+                    type: object
+                    properties:
+                      check:
+                        type: string
+                      login:
+                        type: string
+                      logout:
+                        type: string
+                      provider:
+                        type: string
+                      register:
+                        type: string
+  /auth/check/:
+    get:
+      tags:
+        - Authentication
+      summary: Check user authentication status
+      description: Check if the current user is authenticated and retrieve their authentication details
+      responses:
+        "200":
+          description: Authentication status and user information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  user:
+                    type: object
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                  oauth:
+                    type: object
+        "500":
+          description: Internal server error
+  /auth/login/:
+    post:
+      tags:
+        - Authentication
+      summary: User login with username/email and password
+      description: Authenticate a user with their credentials (username or email and password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: Username or email of the user
+                email:
+                  type: string
+                  description: Email address of the user (alternative to username)
+                password:
+                  type: string
+                  description: User password
+              required:
+                - password
+      responses:
+        "200":
+          description: User successfully logged in
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Invalid credentials
+        "403":
+          description: User already logged in
+        "500":
+          description: Internal server error
+  /auth/logout/:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Log out the authenticated user and destroy their session
+      responses:
+        "201":
+          description: User successfully logged out
+        "400":
+          description: User is not logged in
+        "500":
+          description: Internal server error
+  /auth/register/:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      description: Register a new user with username, email, and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: Unique username for the user
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the user
+                password:
+                  type: string
+                  description: Password for the user account
+              required:
+                - username
+                - password
+      responses:
+        "201":
+          description: User successfully registered and logged in
+        "400":
+          description: Missing required fields or invalid email format
+        "409":
+          description: Username or email already exists
+        "500":
+          description: Internal server error
+  /auth/provider/:
+    get:
+      tags:
+        - Authentication
+      summary: Get OAuth provider endpoints
+      description: Get available OAuth provider endpoints for login, link, and unlink operations
+      responses:
+        "200":
+          description: OAuth provider URLs
+  /auth/provider/login/{provider}:
+    get:
+      tags:
+        - Authentication
+      summary: Initiate OAuth login
+      description: Start OAuth authentication flow for the specified provider
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [github, discord]
+          description: OAuth provider name
+      responses:
+        "302":
+          description: Redirect to provider authentication
+        "400":
+          description: Invalid provider
+        "500":
+          description: Authentication error
+  /auth/provider/callback/{provider}:
+    get:
+      tags:
+        - Authentication
+      summary: OAuth callback endpoint
+      description: Handle OAuth provider callback after successful authentication
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [github, discord]
+          description: OAuth provider name
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Authorization code from provider
+      responses:
+        "302":
+          description: Redirect to dashboard on success
+  /auth/provider/link/{provider}:
+    get:
+      tags:
+        - Authentication
+      summary: Link OAuth account to existing user
+      description: Link an OAuth provider account to the currently authenticated user
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [github, discord]
+          description: OAuth provider name
+      responses:
+        "302":
+          description: Redirect to provider authentication
+        "400":
+          description: Invalid provider or provider already linked
+        "401":
+          description: User not authenticated
+  /auth/provider/unlink/{provider}:
+    get:
+      tags:
+        - Authentication
+      summary: Unlink OAuth account from user
+      description: Remove OAuth provider account from the currently authenticated user
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [github, discord]
+          description: OAuth provider name
+      responses:
+        "200":
+          description: Provider unlinked successfully
+        "400":
+          description: Invalid provider or cannot unlink (no other auth method)
+        "401":
+          description: User not authenticated
+  /files/:
+    get:
+      tags:
+        - Files
+      summary: Get all files and directories from the root
+      description: List all files and directories from the BASE_DIR with optional sorting and pagination
+      parameters:
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [name, size, date, type]
+          description: Field to sort by
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: Sort direction
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: Maximum number of results (up to PAGINATION_LIMIT)
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number for pagination
+      responses:
+        "200":
+          description: List of files and directories
+        "403":
+          description: User not authenticated
+        "500":
+          description: Internal server error
+  /files/{collection}/:
+    get:
+      tags:
+        - Files
+      summary: Get files from a specific collection
+      description: List files and subdirectories within a specific collection
+      parameters:
+        - in: path
+          name: collection
+          required: true
+          schema:
+            type: string
+          description: Collection name
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [name, size, date, type]
+          description: Field to sort by
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: Sort direction
+      responses:
+        "200":
+          description: List of files in collection
+        "400":
+          description: Invalid path parameters
+        "404":
+          description: Collection not found
+  /files/{collection}/{author}/:
+    get:
+      tags:
+        - Files
+      summary: Get files from a specific author within a collection
+      description: List files from a specific author directory within a collection
+      parameters:
+        - in: path
+          name: collection
+          required: true
+          schema:
+            type: string
+          description: Collection name
+        - in: path
+          name: author
+          required: true
+          schema:
+            type: string
+          description: Author/subdirectory name
+      responses:
+        "200":
+          description: List of files from author directory
+        "404":
+          description: Path not found
+  /download/:
+    get:
+      tags:
+        - Downloads
+      summary: Download a file using its UUID
+      description: Downloads a file from the server using the provided UUID. Supports both GET and POST methods.
+      parameters:
+        - in: query
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: The UUID of the file to download
+      responses:
+        "200":
+          description: File content as binary data
+        "400":
+          description: Missing or invalid uuid parameter
+        "404":
+          description: File not found or not accessible
+        "500":
+          description: Internal server error
+    post:
+      tags:
+        - Downloads
+      summary: Download a file using its UUID (POST method)
+      description: Downloads a file from the server using the provided UUID via POST body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                  description: The UUID of the file to download
+              required:
+                - uuid
+      responses:
+        "200":
+          description: File content as binary data
+        "400":
+          description: Missing or invalid uuid parameter
+        "404":
+          description: File not found or not accessible
+        "500":
+          description: Internal server error
+
+  /upload/:
+    post:
+      tags:
+        - Uploads
+      summary: Upload a file to the server
+      description: Upload a single file to GridFS storage with size limits
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload
+              required:
+                - file
+      responses:
+        "201":
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  fileId:
+                    type: string
+                    description: The GridFS file ID
+                  filename:
+                    type: string
+                  size:
+                    type: number
+                  uploadDate:
+                    type: string
+                    format: date-time
+        "400":
+          description: No file provided or file too large
+        "500":
+          description: File upload failed
+  /uuid/{uuid}/{type}:
+    get:
+      tags:
+        - Files
+      summary: Retrieve file or directory information by UUID
+      description: Retrieve detailed information about a file or directory using its UUID.
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: The UUID of the file or directory to retrieve
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [file, directory]
+          description: The type of the entry to retrieve (file or directory)
+      responses:
+        "200":
+          description: File or directory information retrieved successfully
+        "400":
+          description: Invalid UUID or type parameter
+        "404":
+          description: File or directory not found
+        "500":
+          description: Internal server error
+  /random:
+    get:
+      tags:
+        - Random
+      summary: Retrieve a random file
+      description: Retrieve a random file from the database with metadata
+      responses:
+        "200":
+          description: Random file metadata
+        "500":
+          description: Internal server error
+  /random/:
+    get:
+      tags:
+        - Random
+      summary: Retrieve a random file (with trailing slash)
+      description: Retrieve a random file from the database with metadata
+      responses:
+        "200":
+          description: Random file metadata
+        "500":
+          description: Internal server error
+  /random/image:
+    get:
+      tags:
+        - Random
+      summary: Retrieve a random image file
+      description: Retrieve a random image file and stream it as a file download
+      responses:
+        "200":
+          description: Image file binary content
+        "500":
+          description: Internal server error
+  /random/image/:
+    get:
+      tags:
+        - Random
+      summary: Retrieve a random image file (with trailing slash)
+      description: Retrieve a random image file and stream it as a file download
+      responses:
+        "200":
+          description: Image file binary content
+        "500":
+          description: Internal server error
+  /search/:
+    get:
+      tags:
+        - Search
+      summary: Search for files and directories with relevancy ranking
+      description: Search the database for files and directories matching the query string
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+          description: Search query string
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [file, directory]
+          description: Filter by type (file or directory)
+      responses:
+        "200":
+          description: Search results with relevancy ranking
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+        "400":
+          description: Empty search query
+        "401":
+          description: User not authenticated
+        "500":
+          description: Internal server error
+  /stats/:
+    get:
+      tags:
+        - Statistics
+      summary: Retrieve API and file statistics
+      description: Retrieve statistics about the API, collections, file storage, and file types
+      responses:
+        "200":
+          description: API and collection statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    type: object
+                    description: API statistics
+                  collections:
+                    type: object
+                    description: Collection statistics including totals and file types
+        "500":
+          description: Internal server error
+  /health/:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Check the health status of the API (future implementation)
+      responses:
+        "501":
+          description: Not Implemented - This endpoint is planned for future implementation
+  /user/:
+    get:
+      tags:
+        - User
+      summary: Get user API information
+      description: Get current authenticated user information and available user endpoints
+      responses:
+        "200":
+          description: User information and available endpoints
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                  urls:
+                    type: object
+                    properties:
+                      announcements:
+                        type: string
+                      dashboard:
+                        type: string
+  /user/dashboard/:
+    get:
+      tags:
+        - User
+      summary: Retrieve user dashboard information
+      description: Retrieve dashboard information for the authenticated user including profile and sessions
+      responses:
+        "200":
+          description: User dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  username:
+                    type: string
+                  email:
+                    type: string
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                  id:
+                    type: string
+                  uuid:
+                    type: string
+                  created:
+                    type: string
+                    format: date-time
+                  modified:
+                    type: string
+                    format: date-time
+                  oauth:
+                    type: object
+                  sessions:
+                    type: array
+        "401":
+          description: User not authenticated
+        "500":
+          description: Internal server error
+  /user/session/:
+    get:
+      tags:
+        - User
+      summary: Retrieve user sessions
+      description: Get a list of all active sessions for the authenticated user
+      responses:
+        "200":
+          description: List of user sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    uuid:
+                      type: string
+                    modified:
+                      type: string
+                      format: date-time
+                    ip:
+                      type: string
+                    useragent:
+                      type: string
+        "401":
+          description: User not authenticated
+        "500":
+          description: Internal server error
+  /user/session/{uuid}:
+    delete:
+      tags:
+        - User
+      summary: Delete a specific user session
+      description: Delete (logout) a specific session by UUID
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Session UUID to delete
+      responses:
+        "204":
+          description: Session deleted successfully
+        "400":
+          description: Missing or invalid UUID
+        "401":
+          description: User not authenticated
+        "500":
+          description: Internal server error
+  /user/announcements:
+    get:
+      tags:
+        - User
+      summary: Retrieve public announcements
+      description: Get a list of announcements for all users, sorted by creation date
+      responses:
+        "200":
+          description: List of announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    title:
+                      type: string
+                    message:
+                      type: string
+                    severity:
+                      type: string
+                      enum: [info, warning, error]
+                    author:
+                      type: string
+                    created:
+                      type: string
+                      format: date-time
+                    modified:
+                      type: string
+                      format: date-time
+                    uuid:
+                      type: string
+        "500":
+          description: Internal server error
+  /admin/:
+    get:
+      tags:
+        - Admin
+      summary: Get admin dashboard statistics
+      description: Retrieve comprehensive admin statistics including uptime, user counts, and storage usage
+      responses:
+        "200":
+          description: Admin statistics
+        "401":
+          description: User not authenticated or not an admin
+        "500":
+          description: Internal server error
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all users
+      description: Get a list of all registered users (TODO - future implementation)
+      responses:
+        "200":
+          description: List of users
+  /admin/user/{id}:
+    get:
+      tags:
+        - Admin
+      summary: Get user information
+      description: Retrieve detailed information about a specific user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: User information
+    put:
+      tags:
+        - Admin
+      summary: Update user information
+      description: Modify user account details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "204":
+          description: User updated successfully
+  /admin/user/{id}/action:
+    post:
+      tags:
+        - Admin
+      summary: Perform user actions (ban, mute, suspend)
+      description: Execute administrative actions on user accounts
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [ban, mute, suspend]
+                ip:
+                  type: string
+                  description: Optional IP address to ban
+      responses:
+        "201":
+          description: Action completed successfully
+        "401":
+          description: User not authorized
+  /admin/roles:
+    get:
+      tags:
+        - Admin
+      summary: List all available roles
+      description: Get a list of all user roles in the system
+      responses:
+        "200":
+          description: List of roles
+  /admin/tags:
+    get:
+      tags:
+        - Admin
+      summary: List all tags
+      description: Get all file/content tags (TODO - future implementation)
+      responses:
+        "200":
+          description: List of tags
+  /admin/tags/{id}:
+    post:
+      tags:
+        - Admin
+      summary: Create a new tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Tag created successfully
+    put:
+      tags:
+        - Admin
+      summary: Update a tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tag updated successfully
+    delete:
+      tags:
+        - Admin
+      summary: Delete a tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tag deleted successfully
+  /admin/dmca:
+    get:
+      tags:
+        - Admin
+      summary: List DMCA/takedown requests
+      description: Get all DMCA and takedown requests (TODO - future implementation)
+      responses:
+        "200":
+          description: List of takedown requests
+    post:
+      tags:
+        - Admin
+      summary: Create a DMCA/takedown request
+      responses:
+        "201":
+          description: Takedown request created
+  /admin/dmca/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update a DMCA/takedown request
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Takedown request updated
+  /admin/file/duplicates:
+    get:
+      tags:
+        - Admin
+      summary: Find duplicate files
+      description: Search for duplicate files in the system (TODO - future implementation)
+      responses:
+        "200":
+          description: List of duplicate files
+  /admin/file/uri-check:
+    get:
+      tags:
+        - Admin
+      summary: Check file URIs
+      description: Validate and check file URIs (TODO - future implementation)
+      responses:
+        "200":
+          description: URI check results
+  /admin/cache/purge:
+    post:
+      tags:
+        - Admin
+      summary: Purge server caches
+      description: Clear all server caches (TODO - future implementation)
+      responses:
+        "201":
+          description: Caches purged successfully
+  /admin/announcements:
+    get:
+      tags:
+        - Admin
+      summary: Get all announcements
+      description: Retrieve all announcements for administrators
+      responses:
+        "200":
+          description: List of announcements
+    post:
+      tags:
+        - Admin
+      summary: Create a new announcement
+      description: Create a new system-wide announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                message:
+                  type: string
+                severity:
+                  type: string
+                  enum: [info, warning, error]
+      responses:
+        "201":
+          description: Announcement created successfully
+  /admin/announcements/{uuid}:
+    put:
+      tags:
+        - Admin
+      summary: Update an announcement
+      description: Update the title, message, or severity of an existing announcement
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Announcement UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                message:
+                  type: string
+                severity:
+                  type: string
+                  enum: [info, warning, error]
+      responses:
+        "204":
+          description: Announcement updated successfully
+        "400":
+          description: Invalid UUID or missing required fields
+        "404":
+          description: Announcement not found
+    delete:
+      tags:
+        - Admin
+      summary: Delete an announcement
+      description: Remove an announcement from the system
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Announcement UUID
+      responses:
+        "204":
+          description: Announcement deleted successfully
+        "400":
+          description: Invalid UUID
+        "401":
+          description: User not authorized as admin
+        "404":
+          description: Announcement not found
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+        oauth:
+          type: object
+        sessions:
+          type: array
+          items:
+            type: object
+    File:
+      type: object
+      properties:
+        _id:
+          type: string
+        uuid:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        size:
+          type: number
+        mime:
+          type: string
+        paths:
+          type: object
+          properties:
+            local:
+              type: string
+            remote:
+              type: string
+            relative:
+              type: string
+        collection:
+          type: string
+        author:
+          type: string
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+    Directory:
+      type: object
+      properties:
+        _id:
+          type: string
+        uuid:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        size:
+          type: number
+        paths:
+          type: object
+        collection:
+          type: string
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+    Announcement:
+      type: object
+      properties:
+        _id:
+          type: string
+        uuid:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
+        author:
+          type: string
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Session cookie for authenticated requests
+security:
+  - cookieAuth: []

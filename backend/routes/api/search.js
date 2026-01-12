@@ -8,13 +8,14 @@ const { requireRole } = require('../../utils/authUtils')
  * /api/search/:
  *   get:
  *     summary: Search for files and directories with relevancy ranking
+ *     description: Search the database for files and directories matching the query string
  *     parameters:
  *       - in: query
  *         name: q
  *         required: true
  *         schema:
  *           type: string
- *         description: Search query
+ *         description: Search query string
  *       - in: query
  *         name: type
  *         required: false
@@ -22,6 +23,26 @@ const { requireRole } = require('../../utils/authUtils')
  *           type: string
  *           enum: [file, directory]
  *         description: Filter by type (file or directory)
+ *     responses:
+ *       200:
+ *         description: Search results with relevancy ranking
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 query:
+ *                   type: string
+ *                 count:
+ *                   type: number
+ *                 results:
+ *                   type: array
+ *       400:
+ *         description: Missing or empty search query
+ *       401:
+ *         description: Unauthorized access
+ *       500:
+ *         description: Internal server error
  */
 router.get(['/', ''], requireRole('user'), async (req, res) => {
   if (!req.user) {

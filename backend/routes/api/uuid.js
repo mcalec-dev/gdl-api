@@ -7,21 +7,31 @@ const debug = require('debug')('gdl-api:api:uuid')
  * @swagger
  * /api/uuid/{uuid}/{type}:
  *   get:
- *    summary: Retrieve file or directory information by UUID
- *   description: Retrieve detailed information about a file or directory using its UUID.
- *   parameters:
- *   - in: path
- *     name: uuid
- *     required: true
- *     schema:
- *       type: string
- *     description: The UUID of the file or directory to retrieve.
- *   - in: path
- *     name: type
- *     required: true
- *     schema:
- *       type: string
- *     description: The type of the entry to retrieve (file or directory).
+ *     summary: Retrieve file or directory information by UUID
+ *     description: Retrieve detailed information about a file or directory using its UUID.
+ *     parameters:
+ *       - in: path
+ *         name: uuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The UUID of the file or directory to retrieve
+ *       - in: path
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [file, directory]
+ *         description: The type of the entry to retrieve (file or directory)
+ *     responses:
+ *       200:
+ *         description: File or directory information retrieved successfully
+ *       400:
+ *         description: Invalid UUID or type parameter
+ *       404:
+ *         description: File or directory not found
+ *       500:
+ *         description: Internal server error
  */
 router.get(
   ['/:uuid/:type', '/:uuid/:type/'],

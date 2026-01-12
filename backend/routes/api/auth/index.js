@@ -26,10 +26,29 @@ try {
  * @swagger
  * /api/auth/:
  *   get:
- *     summary: Get auth API info
+ *     summary: Get auth API information
+ *     description: Get available authentication endpoints
  *     responses:
  *       200:
- *         description: Auth API is working
+ *         description: Auth endpoints
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 urls:
+ *                   type: object
+ *                   properties:
+ *                     check:
+ *                       type: string
+ *                     login:
+ *                       type: string
+ *                     logout:
+ *                       type: string
+ *                     provider:
+ *                       type: string
+ *                     register:
+ *                       type: string
  */
 router.get(['/', ''], async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'

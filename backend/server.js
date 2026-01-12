@@ -1,8 +1,5 @@
 const express = require('express')
 const session = require('express-session')
-const swaggerJsdoc = require('swagger-jsdoc')
-const cors = require('cors')
-const lusca = require('lusca')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
 const { setReqVars } = require('./utils/requestUtils')
@@ -12,13 +9,9 @@ const passport = require('./utils/passport')
 const path = require('path')
 const chalk = require('chalk')
 const server = require('http').createServer(app)
-const figlet = require('figlet')
-const RateLimit = require('express-rate-limit')
 const swaggerUi = require('swagger-ui-express')
 const debug = require('debug')('gdl-api:server')
 const BodyParser = require('body-parser')
-const fs = require('fs').promises
-const morganBody = require('morgan-body')
 const {
   NODE_ENV,
   PORT,
@@ -51,7 +44,7 @@ async function initSwagger() {
     },
     apis: ['./routes/**/*.js'],
   }
-  const swaggerSpec = swaggerJsdoc(swaggerOptions)
+  const swaggerSpec = require('swagger-jsdoc')(swaggerOptions)
   app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 }
 if (BASE_PATH) {
@@ -258,16 +251,16 @@ async function initApp() {
   // set request variables
   app.use(setReqVars)
   // use cors headers
-  app.use(cors())
+  app.use(require('cors')())
   // rate limiting
   app.use(
-    RateLimit({
+    require('express-rate-limit')({
       windowMs: RATE_LIMIT_WINDOW,
       max: RATE_LIMIT_MAX,
     })
   )
   // logging
-  morganBody(app, {
+  require('morgan-body')(app, {
     noColors: false,
     prettify: true,
     includeNewLine: true,
@@ -306,7 +299,7 @@ async function initApp() {
   )
   // security middleware
   app.use(
-    lusca({
+    require('lusca')({
       xframe: 'SAMEORIGIN',
       hsts: {
         maxAge: COOKIE_MAX_AGE,
@@ -480,7 +473,7 @@ process.on('SIGTERM', () => {
 // verify the imported config
 async function verifyConfig() {
   try {
-    await fs.access(BASE_DIR)
+    await require('fs').promises.access(BASE_DIR)
     debug('Base directory accessible:', BASE_DIR)
   } catch (error) {
     debug('Base directory inaccessible:', BASE_DIR)
@@ -497,13 +490,16 @@ async function verifyConfig() {
 }
 // display the startup banner
 const displayBanner = async () => {
-  const banner = figlet.textSync(NAME, {
-    font: 'Standard',
-    horizontalLayout: 'full',
-    verticalLayout: 'default',
-  })
   console.log(chalk.dim('━'.repeat(50)))
-  console.log(chalk.cyan(banner))
+  console.log(
+    chalk.cyan(
+      require('figlet').textSync(NAME, {
+        font: 'Standard',
+        horizontalLayout: 'full',
+        verticalLayout: 'default',
+      })
+    )
+  )
   console.log(chalk.dim('━'.repeat(50)))
   console.log(chalk.gray('⚡ Status:'), chalk.green('Online'))
   console.log(chalk.gray('✨ Mode:'), chalk.green(NODE_ENV))
