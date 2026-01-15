@@ -88,7 +88,17 @@ router.get(['/image/', '/image'], requireRole('user'), async (req, res) => {
       })
     })
     const randomImage = getRandomImage[0]
-    return res.sendFile(BASE_PATH + randomImage.paths.relative)
+    let img = randomImage.paths.local
+    img = img.replace('\\', '/')
+    return res.sendFile(img, { root: BASE_PATH }, (err) => {
+      if (err) {
+        debug('Error sending random image file:', err)
+        return res.status(500).json({
+          message: 'Internal Server Error',
+          status: 500,
+        })
+      }
+    })
   } catch (error) {
     debug('Error in random image route:', error)
     return res.status(500).json({

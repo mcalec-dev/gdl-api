@@ -20,8 +20,8 @@ export function lockScroll() {
   } catch {
     try {
       document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to lock scroll')
+    } catch (error) {
+      utils.handleError(error)
     }
   }
 }
@@ -36,8 +36,8 @@ export function unlockScroll() {
   } catch {
     try {
       document.body.style.removeProperty('overflow')
-    } catch {
-      utils.handleError('Unable to unlock scroll')
+    } catch (error) {
+      utils.handleError(error)
     }
   }
 }
@@ -208,8 +208,8 @@ export function setupFileItemContextMenu() {
               await navigator.clipboard.write([
                 new window.ClipboardItem({ [type]: blob }),
               ])
-            } catch {
-              utils.handleError('Failed to copy image.')
+            } catch (error) {
+              utils.handleError(error)
             }
           },
         })
@@ -226,8 +226,8 @@ export function setupFileItemContextMenu() {
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
-          } catch {
-            utils.handleError('Failed to initiate download.')
+          } catch (error) {
+            utils.handleError(error)
           }
         },
       })

@@ -301,6 +301,11 @@ async function initApp() {
   app.use(
     require('lusca')({
       xframe: 'SAMEORIGIN',
+      // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/nonce
+      csp: {
+        policy: {},
+        reportOnly: true,
+      },
       hsts: {
         maxAge: COOKIE_MAX_AGE,
         includeSubDomains: true,

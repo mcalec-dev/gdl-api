@@ -712,6 +712,18 @@ paths:
                     type: object
                   sessions:
                     type: array
+                    items: 
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        modified:
+                          type: string
+                          format: date-time
+                        ip:
+                          type: string
+                        useragent:
+                          type: string
         "401":
           description: User not authenticated
         "500":

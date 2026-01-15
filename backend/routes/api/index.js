@@ -1,5 +1,5 @@
 const router = require('express').Router()
-require('dotenv').config({ quiet: true })
+const pkg = require('../../package.json')
 const { NAME, BASE_PATH, HOST } = require('../../config')
 const debug = require('debug')('gdl-api:api')
 const pathUtils = require('../../utils/pathUtils')
@@ -96,14 +96,14 @@ router.get(['/', ''], async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     api: 'v2',
-    name: NAME,
-    version: process.env.npm_package_version,
-    description: process.env.npm_package_description,
-    author: process.env.npm_package_author,
-    keywords: process.env.npm_package_keywords,
-    license: process.env.npm_package_license,
-    host: await HOST,
-    basePath: BASE_PATH,
+    name: String(NAME),
+    version: String(pkg.version),
+    description: String(pkg.description),
+    author: String(pkg.author),
+    keywords: pkg.keywords,
+    license: String(pkg.license),
+    host: String(await HOST),
+    basePath: String(BASE_PATH),
     urls: {
       admin: baseURL + '/admin',
       auth: baseURL + '/auth',

@@ -874,9 +874,8 @@ async function init() {
     await setupViewerEvents()
     getSortFromQuery()
     setupFileItemContextMenu()
-  } catch {
-    utils.handleError('Failed to finish initialization')
-    console.error('Failed to finish initialization.')
+  } catch (error) {
+    utils.handleError(error)
     return
   }
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)

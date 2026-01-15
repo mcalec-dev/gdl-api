@@ -1,5 +1,5 @@
-const fs = require('fs')
-const path = require('path')
+import fs from "fs"
+import path from "path"
 
 const excludeDirs = ['node_modules', '.git', '.github', 'min'] // add directories to skip
 const includeExts = ['.js', '.ejs'] // file extensions to include (empty = all)
@@ -9,7 +9,6 @@ function getFiles(dir, fileList = []) {
   for (const file of files) {
     const fullPath = path.join(dir, file)
     const stat = fs.statSync(fullPath)
-
     if (stat.isDirectory()) {
       if (!excludeDirs.includes(file)) {
         getFiles(fullPath, fileList)
@@ -34,7 +33,6 @@ function analyzeFile(filePath) {
   } catch (error) {
     console.warn(`Could not read ${filePath}`, error)
   }
-
   return {
     path: filePath,
     lines: lineCount,

@@ -58,5 +58,5 @@ export async function parseEmojis(text) {
 }
 export function handleError(error) {
   console.error(error)
-  window.alert(`${error.message || error}`)
+  console.log('An error occurred. Please try again later.')
 }

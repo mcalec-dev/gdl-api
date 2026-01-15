@@ -235,8 +235,8 @@ function setupRandomMediaContextMenu() {
             await navigator.clipboard.write([
               new window.ClipboardItem({ [type]: blob }),
             ])
-          } catch {
-            utils.handleError('Failed to copy image.')
+          } catch (error) {
+            utils.handleError(error)
           }
         },
       })
@@ -252,8 +252,8 @@ function setupRandomMediaContextMenu() {
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
-        } catch {
-          utils.handleError('Failed to initiate download.')
+        } catch (error) {
+          utils.handleError(error)
         }
       },
     })

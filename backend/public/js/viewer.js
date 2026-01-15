@@ -23,8 +23,8 @@ function lockScroll() {
   try {
     _prevBodyOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-  } catch {
-    utils.handleError('Unable to lock scroll')
+  } catch (error) {
+    utils.handleError(error)
   }
   document.body.style.removeProperty('overflow')
 }
@@ -36,8 +36,8 @@ function unlockScroll() {
       document.body.style.overflow = _prevBodyOverflow
     }
     _prevBodyOverflow = null
-  } catch {
-    utils.handleError('Unable to unlock scroll')
+  } catch (error) {
+    utils.handleError(error)
   }
   document.body.style.removeProperty('overflow')
 }
