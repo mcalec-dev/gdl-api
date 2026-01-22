@@ -58,7 +58,7 @@ const upload = multer({
  *         description: File upload failed
  */
 router.post(
-  ['/', ''],
+  '',
   requireRole('user'),
   upload.single('file'),
   async (req, res) => {

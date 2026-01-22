@@ -15,7 +15,7 @@ const User = require('../../../models/User')
  *       500:
  *         description: Internal server error
  */
-router.post(['/', ''], async (req, res) => {
+router.post('', async (req, res) => {
   if (!req.user || !req.isAuthenticated()) {
     debug('User is not logged in')
     return res.status(400).json({

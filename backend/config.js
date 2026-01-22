@@ -110,6 +110,7 @@ const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
 const UPSERT_ON_ACCESS = process.env.UPSERT_ON_ACCESS
 const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
 const FILE_UPLOAD_LIMIT = process.env.FILE_UPLOAD_LIMIT
+const HASH_ALGORITHM = process.env.HASH_ALGORITHM
 module.exports = {
   NODE_ENV,
   PORT,
@@ -134,5 +135,6 @@ module.exports = {
   UPSERT_ON_ACCESS,
   OAUTH_PROVIDERS,
   FILE_UPLOAD_LIMIT,
+  HASH_ALGORITHM,
   debug,
 }

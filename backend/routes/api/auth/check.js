@@ -25,7 +25,7 @@ const debug = require('debug')('gdl-api:api:auth:check')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], (req, res) => {
+router.get('', (req, res) => {
   try {
     return res.json({
       authenticated: req.isAuthenticated(),

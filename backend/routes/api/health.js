@@ -12,7 +12,7 @@ const { requireRole } = require('../../utils/authUtils')
  *       501:
  *         description: Not Implemented - This endpoint is planned for future implementation
  */
-router.get(['', '/'], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   debug('Health endpoint is not implemented yet.')
   return res.status(501).json({
     message: 'Not Implemented',

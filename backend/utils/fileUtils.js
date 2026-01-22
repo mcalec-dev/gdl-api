@@ -1,5 +1,6 @@
 const path = require('path')
 const fs = require('fs').promises
+const crypto = require('crypto')
 const debug = require('debug')('gdl-api:utils:file')
 const {
   normalizeString,
@@ -19,6 +20,7 @@ const {
   BASE_PATH,
   AUTO_SCAN,
   UPSERT_ON_ACCESS,
+  HASH_ALGORITHM,
 } = require('../config')
 const { getImageMeta } = require('./imageUtils')
 const Directory = require('../models/Directory')
@@ -119,6 +121,23 @@ function getFileMime(file) {
   }
   return null
 }
+async function calculateFileHash(filePath) {
+  if (!filePath || !HASH_ALGORITHM) return null
+  try {
+    const fileStream = require('fs').createReadStream(filePath)
+    const hash = crypto.createHash(HASH_ALGORITHM)
+    for await (const chunk of fileStream) {
+      hash.update(chunk)
+    }
+    return hash.digest('hex')
+  } catch (error) {
+    debug('Error calculating file hash:', {
+      path: filePath,
+      error: error.message,
+    })
+    return null
+  }
+}
 async function upsertDirectoryEntry(dirObj) {
   try {
     const filter = { 'paths.relative': dirObj.paths.relative }
@@ -172,6 +191,7 @@ async function upsertFileEntry(fileObj) {
   try {
     const filter = { 'paths.relative': fileObj.paths.relative }
     let existing = await File.findOne(filter)
+    const hash = fileObj.hash
     if (!existing) {
       debug('Creating new file entry:', fileObj.paths.relative)
       const newFile = new File({
@@ -186,6 +206,7 @@ async function upsertFileEntry(fileObj) {
         type: fileObj.type || null,
         collection: fileObj.collection || null,
         mime: fileObj.mime || null,
+        hash: hash || null,
         created: fileObj.created || new Date(),
         modified: fileObj.modified || new Date(),
         meta: { ...fileObj.meta },
@@ -210,6 +231,7 @@ async function upsertFileEntry(fileObj) {
             type: fileObj.type || existing.type || null,
             collection: fileObj.collection || existing.collection || null,
             mime: fileObj.mime || existing.mime || null,
+            hash: hash || existing.hash || null,
             modified: fileObj.modified || existing.modified || new Date(),
             meta: { ...fileObj.meta, ...existing.meta },
           },
@@ -274,6 +296,15 @@ async function upsertAccessedItem(realPath) {
           })
         }
       }
+      let hash = null
+      try {
+        hash = await calculateFileHash(realPath)
+      } catch (error) {
+        debug('Error calculating file hash for upsert:', {
+          path: relative,
+          error: error.message,
+        })
+      }
       try {
         const pathParts = relative ? relative.split('/').filter(Boolean) : []
         const collection = pathParts.length > 0 ? pathParts[0] : ''
@@ -292,6 +323,7 @@ async function upsertAccessedItem(realPath) {
           mime: getFileMime(name),
           created: stats.birthtime,
           modified: stats.mtime,
+          hash,
           meta,
         })
       } catch (error) {
@@ -515,15 +547,17 @@ async function formatListingEntry(
       paths.remote || safeApiPath(`${BASE_PATH}/api/files`, relativePath)
     const url = (await getHostUrl(req)) + fullPath
     let fileUuid = null
+    let fileHash = null
     if (!entry.isDirectory()) {
       try {
         const dbFile = await File.findOne(
           { 'paths.relative': relativePath },
-          { uuid: 1 }
+          { uuid: 1, hash: 1 }
         ).lean()
         fileUuid = dbFile?.uuid || null
+        fileHash = dbFile?.hash || null
       } catch (error) {
-        debug('Error fetching UUID for file:', relativePath, error)
+        debug('Error fetching UUID and hash for file:', relativePath, error)
       }
     }
     const result = {
@@ -537,6 +571,7 @@ async function formatListingEntry(
       collection,
       author,
       ...(fileUuid && { uuid: fileUuid }),
+      ...(fileHash && { hash: fileHash }),
     }
     if (includeMime && !entry.isDirectory()) {
       result.mime = await getFileMime(entry.name)
@@ -599,6 +634,7 @@ module.exports = {
   isAudioFile,
   isDisallowedExtension,
   getFileMime,
+  calculateFileHash,
   maybeUpsertAccessed,
   sortContents,
   parseSortQuery,

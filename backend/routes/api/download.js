@@ -105,10 +105,10 @@ async function handleDownload(req, res) {
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   await handleDownload(req, res)
 })
-router.post(['/', ''], requireRole('user'), async (req, res) => {
+router.post('', requireRole('user'), async (req, res) => {
   await handleDownload(req, res)
 })
 module.exports = router

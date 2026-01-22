@@ -50,7 +50,7 @@ try {
  *                     register:
  *                       type: string
  */
-router.get(['/', ''], async (req, res) => {
+router.get('', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     urls: {

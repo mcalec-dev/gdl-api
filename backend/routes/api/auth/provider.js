@@ -101,7 +101,7 @@ const { BASE_PATH, OAUTH_PROVIDERS } = require('../../../config')
  *       500:
  *         description: Unlink error
  */
-router.get(['/', ''], async (req, res) => {
+router.get('', async (req, res) => {
   const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
   return res.json({
     urls: {

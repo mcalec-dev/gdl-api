@@ -39,7 +39,7 @@ const Announcement = require('../../../models/Announcement')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], async (req, res) => {
+router.get('', async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)

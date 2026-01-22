@@ -1,7 +1,7 @@
 function requestLogger(req) {
   const ip =
-    req.headers['X-Forwarded-For']?.split(',')[0] ||
     req.headers['cf-connecting-ip'] ||
+    req.headers['X-Forwarded-For']?.split(',')[0] ||
     req.connection.remoteAddress ||
     req.socket.remoteAddress ||
     req.connection.socket?.remoteAddress ||
@@ -12,8 +12,8 @@ function requestLogger(req) {
 }
 function setReqVars(req, res, next) {
   req.ip =
-    req.headers['X-Forwarded-For']?.split(',')[0] ||
     req.headers['cf-connecting-ip'] ||
+    req.headers['X-Forwarded-For']?.split(',')[0] ||
     req.connection.remoteAddress ||
     req.socket.remoteAddress ||
     req.connection.socket?.remoteAddress ||

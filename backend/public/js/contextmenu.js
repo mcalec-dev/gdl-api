@@ -176,7 +176,11 @@ export function setupFileItemContextMenu() {
       label: 'Copy URL',
       icon: icons?.nav?.copy || '',
       handler: () => {
-        navigator.clipboard.writeText(fileUrl)
+        try {
+          navigator.clipboard.writeText(fileUrl)
+        } catch (error) {
+          utils.handleError(error)
+        }
       },
     })
     if (fileType === 'directory') {
@@ -184,7 +188,11 @@ export function setupFileItemContextMenu() {
         label: 'Open in New Tab',
         icon: icons?.nav?.link || '',
         handler: () => {
-          window.open(dirUrl, '_blank')
+          try {
+            window.open(dirUrl, '_blank')
+          } catch (error) {
+            utils.handleError(error)
+          }
         },
       })
     }
@@ -226,6 +234,30 @@ export function setupFileItemContextMenu() {
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
+          } catch (error) {
+            utils.handleError(error)
+          }
+        },
+      })
+      menuItems.push({
+        label: 'Copy Hash',
+        icon: icons?.nav?.copy || '',
+        handler: () => {
+          const hash = itemElem.dataset.hash
+          try {
+            navigator.clipboard.writeText(hash)
+          } catch (error) {
+            utils.handleError(error)
+          }
+        },
+      })
+      menuItems.push({
+        label: 'Copy UUID',
+        icon: icons?.nav?.copy || '',
+        handler: () => {
+          const uuid = itemElem.dataset.uuid
+          try {
+            navigator.clipboard.writeText(uuid)
           } catch (error) {
             utils.handleError(error)
           }

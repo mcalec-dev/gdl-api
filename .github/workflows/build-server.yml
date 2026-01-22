@@ -1,0 +1,44 @@
+name: Build and Publish Backend Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+        type: string
+      release_name:
+        description: "Release name (optional)"
+        required: false
+        type: string
+      release_body:
+        description: "Release description (optional)"
+        required: false
+        type: string
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          name: ${{ github.event.inputs.release_name }}
+          body: ${{ github.event.inputs.release_body }}
+          files: |
+            dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

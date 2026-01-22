@@ -618,7 +618,7 @@ async function renderDirectory(contents, path) {
     if (itemType === 'directory') {
       if (hasDirectories && !hasFiles) {
         html += `
-        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''}>
+        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''} ${item.hash ? `data-hash="${item.hash}"` : ''}>
           <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
           <div class="flex-1 min-w- overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
@@ -632,7 +632,7 @@ async function renderDirectory(contents, path) {
       `
       } else {
         html += `
-        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''}>
+        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''} ${item.hash ? `data-hash="${item.hash}"` : ''}>
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
             <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
@@ -650,7 +650,7 @@ async function renderDirectory(contents, path) {
       previewUrl
     ) {
       html += `
-        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''}>
+        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''} ${item.hash ? `data-hash="${item.hash}"` : ''}>
           <div class="w-full h-full">
             ${(() => {
               const iconPlaceholder = `<div class="file-icon-placeholder absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${(icons && icons[itemType]) || (icons && icons.other) || ''}</span></div>`
@@ -699,7 +699,7 @@ async function renderDirectory(contents, path) {
       `
     } else {
       html += `
-        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''}>
+        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" ${item.uuid ? `data-uuid="${item.uuid}"` : ''} ${item.hash ? `data-hash="${item.hash}"` : ''}>
           <div class="flex items-center w-full gap-3">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${icons?.[itemType] || icons?.other || ''}</div>
             <div class="file-details flex-1 min-w-0">

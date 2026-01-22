@@ -128,7 +128,7 @@ else debug('AUTO_SCAN config is invalid')
  *       500:
  *         description: Internal server error
  */
-router.get(['', '/'], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   if (!req.user) {
     debug('User not authenticated')
     return res.status(403).json({

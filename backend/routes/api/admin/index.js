@@ -190,7 +190,7 @@ const { countActiveSessions } = require('../../../utils/authUtils')
  *       201:
  *         description: Caches purged successfully
  */
-router.get(['/', ''], requireRole('admin'), async (req, res) => {
+router.get('', requireRole('admin'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   if (!req.user || !req.user.roles.includes('admin')) {
     debug('Unauthorized access attempt')

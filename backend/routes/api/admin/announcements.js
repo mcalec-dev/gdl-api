@@ -8,7 +8,7 @@ const Announcement = require('../../../models/Announcement')
  *   get:
  *     summary: Get all announcements
  */
-router.get(['/', ''], requireRole('admin'), async (req, res) => {
+router.get('', requireRole('admin'), async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)
@@ -40,7 +40,7 @@ router.get(['/', ''], requireRole('admin'), async (req, res) => {
  *                 type: string
  *                 enum: [info, warning, error]
  */
-router.post(['', '/'], requireRole('admin'), async (req, res) => {
+router.post('', requireRole('admin'), async (req, res) => {
   try {
     const uuid = require('uuid').v4()
     const { title, message, severity } = req.body
@@ -62,8 +62,8 @@ router.post(['', '/'], requireRole('admin'), async (req, res) => {
     await createdAnncouncement.save()
     debug('Announcement created:', createdAnncouncement)
     return res.status(201).json({
-      success: true, 
-      createdAnncouncement
+      success: true,
+      createdAnncouncement,
     })
   } catch (error) {
     debug('Error creating announcement:', error)

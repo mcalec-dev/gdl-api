@@ -42,7 +42,7 @@ try {
 } catch (error) {
   debug('Error initializing user routes:', error)
 }
-router.get(['/', ''], async (req, res) => {
+router.get('', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     user: req.user,

@@ -3,7 +3,6 @@ const debug = require('debug')('gdl-api:api:random')
 const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
 const { getHostUrl } = require('../../utils/urlUtils')
-const { BASE_PATH } = require('../../config')
 /**
  * @swagger
  * /api/random:
@@ -43,7 +42,7 @@ const { BASE_PATH } = require('../../config')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   try {
     const getRandomImage = await File.aggregate([
       { $sample: { size: 1 } },
@@ -66,41 +65,11 @@ router.get(['/', ''], requireRole('user'), async (req, res) => {
       created: randomImage.created,
       modified: randomImage.modified,
       type: randomImage.type,
+      hash: randomImage.hash,
       uuid: randomImage.uuid,
     })
   } catch (error) {
     debug('Error in random route:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
-  }
-})
-router.get(['/image/', '/image'], requireRole('user'), async (req, res) => {
-  try {
-    const getRandomImage = await File.aggregate([
-      { $sample: { size: 1 } },
-    ]).catch((error) => {
-      debug('Error getting random file from database:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
-    })
-    const randomImage = getRandomImage[0]
-    let img = randomImage.paths.local
-    img = img.replace('\\', '/')
-    return res.sendFile(img, { root: BASE_PATH }, (err) => {
-      if (err) {
-        debug('Error sending random image file:', err)
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          status: 500,
-        })
-      }
-    })
-  } catch (error) {
-    debug('Error in random image route:', error)
     return res.status(500).json({
       message: 'Internal Server Error',
       status: 500,

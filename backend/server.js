@@ -12,6 +12,7 @@ const server = require('http').createServer(app)
 const swaggerUi = require('swagger-ui-express')
 const debug = require('debug')('gdl-api:server')
 const BodyParser = require('body-parser')
+const rateLimit = require('express-rate-limit')
 const {
   NODE_ENV,
   PORT,
@@ -254,9 +255,14 @@ async function initApp() {
   app.use(require('cors')())
   // rate limiting
   app.use(
-    require('express-rate-limit')({
+    rateLimit({
       windowMs: RATE_LIMIT_WINDOW,
       max: RATE_LIMIT_MAX,
+      keyGenerator: rateLimit.ipKeyGenerator,
+      validate: {
+        trustProxy: false,
+        xForwardedForHeader: false,
+      },
     })
   )
   // logging
@@ -265,7 +271,6 @@ async function initApp() {
     prettify: true,
     includeNewLine: true,
     logReqDateTime: true,
-    timezone: 'America/New_York',
     dateTimeFormat: 'utc',
     logReqUserAgent: true,
     logRequestBody: true,

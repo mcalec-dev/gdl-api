@@ -39,7 +39,7 @@ const validator = require('validator')
  *       500:
  *         description: Internal server error
  */
-router.post(['/', ''], async (req, res) => {
+router.post('', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     debug('User already logged in:', req.user.username || '')
     return res.status(403).json({

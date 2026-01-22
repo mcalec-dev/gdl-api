@@ -44,7 +44,7 @@ const { requireRole } = require('../../utils/authUtils')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   if (!req.user) {
     debug('Unauthorized access attempt')
     return res.status(401).json({ message: 'Unauthorized', status: 401 })

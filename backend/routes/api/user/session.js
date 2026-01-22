@@ -52,7 +52,7 @@ const debug = require('debug')('gdl-api:api:user:session')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   try {
     debug('Getting sessions for:', req.user.username || 'user')
     return res.json(req.user.sessions)

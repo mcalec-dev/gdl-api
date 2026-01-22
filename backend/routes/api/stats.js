@@ -29,7 +29,7 @@ const { requireRole } = require('../../utils/authUtils')
  *       500:
  *         description: Internal server error
  */
-router.get(['/', ''], requireRole('user'), async (req, res) => {
+router.get('', requireRole('user'), async (req, res) => {
   try {
     const stats = {
       api: await getApiStats(),

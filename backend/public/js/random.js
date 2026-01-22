@@ -210,14 +210,22 @@ function setupRandomMediaContextMenu() {
       label: 'Copy URL',
       icon: icons?.nav?.copy || '',
       handler: () => {
-        navigator.clipboard.writeText(fileUrl)
+        try {
+          navigator.clipboard.writeText(fileUrl)
+        } catch (error) {
+          utils.handleError(error)
+        }
       },
     })
     menuItems.push({
       label: 'Open in New Tab',
       icon: icons?.nav?.link || '',
       handler: () => {
-        window.open(fileUrl, '_blank')
+        try {
+          window.open(fileUrl, '_blank')
+        } catch (error) {
+          utils.handleError(error)
+        }
       },
     })
     const isImage = currentMediaData.file
@@ -252,6 +260,28 @@ function setupRandomMediaContextMenu() {
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
+        } catch (error) {
+          utils.handleError(error)
+        }
+      },
+    })
+    menuItems.push({
+      label: 'Copy Hash',
+      icon: icons?.nav?.copy || '',
+      handler: () => {
+        try {
+          navigator.clipboard.writeText(currentMediaData.hash)
+        } catch (error) {
+          utils.handleError(error)
+        }
+      },
+    })
+    menuItems.push({
+      label: 'Copy UUID',
+      icon: icons?.nav?.copy || '',
+      handler: () => {
+        try {
+          navigator.clipboard.writeText(currentMediaData.uuid)
         } catch (error) {
           utils.handleError(error)
         }

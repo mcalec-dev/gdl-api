@@ -10,7 +10,6 @@
 - validator for json api data
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
-- create a wiki to reflect the api endpoints
 - proper MIME setter in `files.js` (for each file)
 - npm packages to utilize; moment, pm2, async, sitemap, glob, express-useragent, rollup
 - app using native frameworks

@@ -92,7 +92,7 @@ try {
  *                     stats:
  *                       type: string
  */
-router.get(['/', ''], async (req, res) => {
+router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     api: 'v2',
