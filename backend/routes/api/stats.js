@@ -6,30 +6,7 @@ const { BASE_DIR } = require('../../config')
 const { aggregateStats, getApiStats } = require('../../utils/statsUtils')
 const debug = require('debug')('gdl-api:api:stats')
 const { requireRole } = require('../../utils/authUtils')
-/**
- * @swagger
- * /api/stats/:
- *   get:
- *     summary: Retrieve API and file statistics
- *     description: Retrieve statistics about the API, collections, file storage, and file types
- *     responses:
- *       200:
- *         description: API and collection statistics
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 api:
- *                   type: object
- *                   description: API statistics
- *                 collections:
- *                   type: object
- *                   description: Collection statistics including totals and file types
- *       500:
- *         description: Internal server error
- */
-router.get('', requireRole('user'), async (req, res) => {
+router.get('/', requireRole('user'), async (req, res) => {
   try {
     const stats = {
       api: await getApiStats(),

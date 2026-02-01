@@ -513,7 +513,8 @@ async function formatListingEntry(
   baseDir,
   normalizedDir,
   req,
-  includeMime = false
+  includeMime = false,
+  fileMetadataMap = null
 ) {
   if (!entry) return null
   try {
@@ -548,17 +549,9 @@ async function formatListingEntry(
     const url = (await getHostUrl(req)) + fullPath
     let fileUuid = null
     let fileHash = null
-    if (!entry.isDirectory()) {
-      try {
-        const dbFile = await File.findOne(
-          { 'paths.relative': relativePath },
-          { uuid: 1, hash: 1 }
-        ).lean()
-        fileUuid = dbFile?.uuid || null
-        fileHash = dbFile?.hash || null
-      } catch (error) {
-        debug('Error fetching UUID and hash for file:', relativePath, error)
-      }
+    if (!entry.isDirectory() && fileMetadataMap) {
+      fileUuid = fileMetadataMap[relativePath]?.uuid || null
+      fileHash = fileMetadataMap[relativePath]?.hash || null
     }
     const result = {
       name: entry.name,
@@ -580,6 +573,31 @@ async function formatListingEntry(
   } catch (error) {
     debug('Error formatting listing entry:', error)
     return null
+  }
+}
+async function batchFetchFileMetadata(relativePaths) {
+  if (!Array.isArray(relativePaths) || relativePaths.length === 0) {
+    return {}
+  }
+  try {
+    debug('Batch fetching file metadata for paths:', relativePaths)
+    const files = await File.find(
+      { 'paths.relative': { $in: relativePaths } },
+      { 'paths.relative': 1, uuid: 1, hash: 1 }
+    ).lean()
+    const metadataMap = {}
+    files.forEach((file) => {
+      if (file.paths.relative) {
+        metadataMap[file.paths.relative] = {
+          uuid: file.uuid,
+          hash: file.hash,
+        }
+      }
+    })
+    return metadataMap
+  } catch (error) {
+    debug('Error batch fetching file metadata:', error)
+    return {}
   }
 }
 async function createDbEntriesForContents(items, parentPath = '') {
@@ -641,4 +659,5 @@ module.exports = {
   formatListingEntry,
   createDbEntriesForContents,
   initializeDatabaseSync,
+  batchFetchFileMetadata,
 }

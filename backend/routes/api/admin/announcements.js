@@ -2,13 +2,7 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin:announcements')
 const { requireRole } = require('../../../utils/authUtils')
 const Announcement = require('../../../models/Announcement')
-/**
- * @swagger
- * /api/admin/announcements:
- *   get:
- *     summary: Get all announcements
- */
-router.get('', requireRole('admin'), async (req, res) => {
+router.get('/', requireRole('admin'), async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)
@@ -20,27 +14,7 @@ router.get('', requireRole('admin'), async (req, res) => {
     })
   }
 })
-/**
- * @swagger
- * /api/admin/announcements:
- *   post:
- *     summary: Create a new announcement
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message:
- *                 type: string
- *               severity:
- *                 type: string
- *                 enum: [info, warning, error]
- */
-router.post('', requireRole('admin'), async (req, res) => {
+router.post('/', requireRole('admin'), async (req, res) => {
   try {
     const uuid = require('uuid').v4()
     const { title, message, severity } = req.body
@@ -73,43 +47,6 @@ router.post('', requireRole('admin'), async (req, res) => {
     })
   }
 })
-/**
- * @swagger
- * /api/admin/announcements/{uuid}:
- *   put:
- *     summary: Update an announcement
- *     description: Update the title, message, or severity of an existing announcement
- *     parameters:
- *       - in: path
- *         name: uuid
- *         required: true
- *         schema:
- *           type: string
- *         description: Announcement UUID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message:
- *                 type: string
- *               severity:
- *                 type: string
- *                 enum: [info, warning, error]
- *     responses:
- *       204:
- *         description: Announcement updated successfully
- *       400:
- *         description: Invalid UUID or missing required fields
- *       404:
- *         description: Announcement not found
- *       500:
- *         description: Internal server error
- */
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { uuid } = req.params
   const { title, message, severity } = req.body
@@ -154,31 +91,6 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
     })
   }
 })
-/**
- * @swagger
- * /api/admin/announcements/{uuid}:
- *   delete:
- *     summary: Delete an announcement
- *     description: Remove an announcement from the system
- *     parameters:
- *       - in: path
- *         name: uuid
- *         required: true
- *         schema:
- *           type: string
- *         description: Announcement UUID
- *     responses:
- *       204:
- *         description: Announcement deleted successfully
- *       400:
- *         description: Invalid UUID
- *       401:
- *         description: User not authorized as admin
- *       404:
- *         description: Announcement not found
- *       500:
- *         description: Internal server error
- */
 router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { uuid } = req.params
   if (!uuid || typeof uuid !== 'string') {

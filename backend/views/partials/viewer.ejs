@@ -1,5 +1,5 @@
-<div id="popup-viewer" class="fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-lg" hidden>
-  <div id="popup-buttons" class="z-50 absolute right-4 top-4 flex flex-row-reverse gap-3 justify-center items-center">
+<div id="file-viewer" class="fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-lg" hidden>
+  <div id="viewer-buttons" class="z-50 absolute right-4 top-4 flex flex-row-reverse gap-3 justify-center items-center">
     <button id="close-popup" class="flex items-center justify-center rounded-full border border-white/20 bg-black/20 p-4 text-white fill-white stroke-white shadow-lg backdrop-blur-md align-middle text-center"></button>
     <button id="open-new-tab" class="flex items-center justify-center rounded-full border border-white/20 bg-black/20 p-3 text-white fill-white stroke-white shadow-lg backdrop-blur-md align-middle text-center"></button>
     <button id="download-file" class="flex items-center justify-center rounded-full border border-white/20 bg-black/20 p-3 text-white fill-white stroke-white shadow-lg backdrop-blur-md align-middle text-center"></button>
@@ -7,14 +7,15 @@
   </div>
   <button id="next-image" class="z-50 absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full border border-white/20 bg-black/20 p-3 text-white fill-white stroke-white shadow-lg backdrop-blur-md align-middle text-center"></button>
   <button id="prev-image" class="z-50 absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full border border-white/20 bg-black/20 p-3 text-white fill-white stroke-white shadow-lg backdrop-blur-md align-middle text-center"></button>
-  <div id="popup-container" class="relative flex h-auto max-h-[95vh] w-auto max-w-[95vw] items-center align-middle justify-center overflow-hidden bg-transparent">
-    <img id="popup-image" class="pointer-events-auto mx-auto block h-auto max-h-[95vh] w-auto max-w-[95vw] cursor-zoom-in select-none border-0 object-contain" src="" alt="" draggable="false" />
-    <video id="popup-video" class="pointer-events-auto mx-auto block h-auto max-h-[95vh] w-auto max-w-[95vw] cursor-default select-none border-none object-contain" src="" alt="" draggable="false" controls autoplay inline></video>
-    <audio id="popup-audio" class="pointer-events-auto cursor-default mx-auto h-auto w-full max-w-[95vw] select-none border-none object-contain" src="" alt="" draggable="false" controls autoplay inline></audio>
-    <iframe id="popup-embed" class="pointer-events-auto mx-auto block h-auto min-h-[95vh] w-auto min-w-[95vw] cursor-default select-none border-0 object-contain bg-white" src="" alt="" draggable="false" frameborder="0" allowfullscreen></iframe>
+  <div id="viewer-container" class="relative flex h-auto max-h-[95vh] w-auto max-w-[95vw] items-center align-middle justify-center overflow-hidden bg-transparent">
+    <img id="viewer-container-image" class="pointer-events-auto mx-auto block h-auto max-h-[95vh] w-auto max-w-[95vw] cursor-zoom-in select-none border-0 object-contain" src="" alt="" draggable="false" />
+    <video id="viewer-container-video" class="pointer-events-auto mx-auto block h-auto max-h-[95vh] w-auto max-w-[95vw] cursor-default select-none border-none object-contain" src="" alt="" draggable="false" controls autoplay inline></video>
+    <audio id="viewer-container-audio" class="pointer-events-auto cursor-default mx-auto h-auto w-full max-w-[95vw] select-none border-none object-contain" src="" alt="" draggable="false" controls autoplay inline></audio>
+    <iframe id="viewer-container-embed" class="pointer-events-auto mx-auto block h-auto min-h-[95vh] w-auto min-w-[95vw] cursor-default select-none border-0 object-contain bg-white" src="" alt="" draggable="false" frameborder="0" allowfullscreen></iframe>
   </div>
-  <div id="popup-info" class="z-50 absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-black/20 p-4 text-center backdrop-blur-md">
-    <div id="image-title" class="truncate text-sm text-white"></div>
-    <div id="image-counter" class="text-xs text-gray-300"></div>
+  <div id="viewer-info" class="z-50 absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-black/20 p-4 text-center backdrop-blur-md">
+    <div id="viewer-info-title" class="truncate text-sm text-white"></div>
+    <div id="viewer-info-size" class="text-xs text-gray-300"></div>
+    <div id="viewer-info-counter" class="text-xs text-gray-300"></div>
   </div>
 </div>

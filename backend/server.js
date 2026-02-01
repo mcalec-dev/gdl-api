@@ -13,6 +13,7 @@ const swaggerUi = require('swagger-ui-express')
 const debug = require('debug')('gdl-api:server')
 const BodyParser = require('body-parser')
 const rateLimit = require('express-rate-limit')
+const ms = require('ms')
 const {
   NODE_ENV,
   PORT,
@@ -30,23 +31,24 @@ const {
 } = require('./config')
 // init swagger docs
 async function initSwagger() {
-  const swaggerOptions = {
-    definition: {
-      openapi: '3.0.3',
-      servers: [
-        {
-          url: `https://${await HOST}${BASE_PATH}`,
-        },
-      ],
-      info: {
-        title: NAME,
-        version: process.env.npm_package_version,
+  try {
+    const yaml = require('js-yaml')
+    const fs = require('fs').promises
+    const swaggerPath = path.join(__dirname, 'openapi.yaml')
+    const swaggerFile = await fs.readFile(swaggerPath, 'utf8')
+    const swaggerSpec = yaml.load(swaggerFile)
+    swaggerSpec.servers = [
+      {
+        url: `https://${await HOST}${BASE_PATH}`,
+        description: 'production server',
       },
-    },
-    apis: ['./routes/**/*.js'],
+    ]
+    swaggerSpec.info.version = process.env.npm_package_version
+    app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+  } catch (error) {
+    debug('Error loading Swagger spec:', error)
+    throw error
   }
-  const swaggerSpec = require('swagger-jsdoc')(swaggerOptions)
-  app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 }
 if (BASE_PATH) {
   app.get('/', (req, res) => {
@@ -59,6 +61,8 @@ if (BASE_PATH) {
 // init mongodb and session store
 async function initDB() {
   const store = sessionStore()
+  const cookieMaxAgeMs =
+    typeof COOKIE_MAX_AGE === 'string' ? ms(COOKIE_MAX_AGE) : COOKIE_MAX_AGE
   try {
     const connection = await require('mongoose').connect(MONGODB_URL)
     debug('MongoDB connected')
@@ -67,8 +71,22 @@ async function initDB() {
     if (store) {
       const db = connection.connection.db
       const sessions = db.collection('sessions')
-      const cutoffDate = new Date(Date.now() - COOKIE_MAX_AGE)
-      const result = await sessions.deleteMany({ expires: { $lt: cutoffDate } })
+      try {
+        await sessions.createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
+        debug('TTL index created on sessions collection')
+      } catch (indexError) {
+        debug(
+          'TTL index already exists or creation failed:',
+          indexError.message
+        )
+      }
+      const cutoffDate = new Date(Date.now() - cookieMaxAgeMs)
+      const result = await sessions.deleteMany({
+        $or: [
+          { expires: { $lt: cutoffDate } },
+          { 'expires.$date': { $lt: cutoffDate } },
+        ],
+      })
       debug(
         `Expired sessions cleaned up (${result.deletedCount} removed, cutoff: ${cutoffDate})`
       )

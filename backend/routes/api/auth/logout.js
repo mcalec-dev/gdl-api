@@ -1,21 +1,7 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:auth:logout')
 const User = require('../../../models/User')
-/**
- * @swagger
- * /api/auth/logout/:
- *   post:
- *     summary: User logout
- *     description: Log out the authenticated user and destroy their session
- *     responses:
- *       201:
- *         description: User successfully logged out
- *       400:
- *         description: User is not logged in
- *       500:
- *         description: Internal server error
- */
-router.post('', async (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.user || !req.isAuthenticated()) {
     debug('User is not logged in')
     return res.status(400).json({

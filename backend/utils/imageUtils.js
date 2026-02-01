@@ -1,15 +1,24 @@
 const sharp = require('sharp')
 const debug = require('debug')('gdl-api:utils:image')
 const { HOST, NAME } = require('../config')
-const { buffer } = require('stream/consumers')
+const fs = require('fs').promises
 const MAX_PIXELS = 10000
 const MAX_SCALE = 1000
-const MAX_BUFFER_SIZE = 1 * 1024 * 1024 * 1024
+const MAX_BUFFER_SIZE = 500 * 1024 * 1024 // 500 mB
 sharp.simd(true)
 sharp.cache(false)
 sharp.concurrency(5)
+const validKernels = [
+  'nearest',
+  'linear',
+  'cubic',
+  'mitchell',
+  'lanczos2',
+  'lanczos3',
+  'mks2013',
+  'mks2021',
+]
 async function getImageMeta(imagePath) {
-  if (buffer.length > MAX_BUFFER_SIZE) return null
   try {
     return await sharp(imagePath, {
       failOnError: false,
@@ -21,10 +30,25 @@ async function getImageMeta(imagePath) {
     return null
   }
 }
-async function resizeImage(imagePath, { width, height, scale }) {
+async function resizeImage(imagePath, { width, height, scale, kernel }) {
+  if (kernel && !validKernels.includes(kernel)) {
+    debug('Invalid kernel provided:', kernel)
+    kernel = undefined
+  }
+  let mtime
+  try {
+    const stat = await fs.stat(imagePath)
+    mtime = stat.mtime
+    if (stat.size > MAX_BUFFER_SIZE) {
+      debug('File size exceeds maximum allowed buffer size')
+      return null
+    }
+  } catch (error) {
+    debug('Failed to read file stats:', error)
+    return null
+  }
   if (scale > MAX_SCALE) return null
-  if (height > MAX_PIXELS || height > MAX_PIXELS) return null
-  if (buffer.length > MAX_BUFFER_SIZE) return null
+  if (height > MAX_PIXELS || width > MAX_PIXELS) return null
   let resizeOptions = {}
   let metadata
   try {
@@ -33,15 +57,13 @@ async function resizeImage(imagePath, { width, height, scale }) {
       useOriginalDate: true,
       limitInputPixels: false,
     }).metadata()
-    if (
-      !metadata ||
-      typeof metadata.width !== 'number' ||
-      typeof metadata.height !== 'number'
-    ) {
+    if (!metadata) {
       debug('Invalid or missing image metadata')
+      return null
     }
   } catch (error) {
     debug('Failed to read image metadata:', error)
+    return null
   }
   if (scale) {
     width = Math.round(metadata.width * (scale / 100))
@@ -49,22 +71,19 @@ async function resizeImage(imagePath, { width, height, scale }) {
     resizeOptions = {
       width,
       height,
-      kernel: scale > 100 ? 'lanczos3' : 'mitchell',
+      kernel: kernel || (scale > 100 ? 'lanczos3' : 'mitchell'),
       fastShrink: scale < 100,
     }
   } else {
     if (width) resizeOptions.width = width
     if (height) resizeOptions.height = height
-    const isUpscaling = width > metadata.width || height > metadata.height
-    resizeOptions.kernel = isUpscaling ? 'lanczos3' : 'mitchell'
+    const isUpscaling =
+      (width && width > metadata.width) || (height && height > metadata.height)
+    if (!kernel) {
+      kernel = isUpscaling ? 'lanczos3' : 'mitchell'
+    }
+    resizeOptions.kernel = kernel || (isUpscaling ? 'lanczos3' : 'mitchell')
     resizeOptions.fastShrink = !isUpscaling
-  }
-  let mtime
-  try {
-    const stat = await require('fs').promises.stat(imagePath)
-    mtime = stat.mtime
-  } catch {
-    mtime = new Date()
   }
   try {
     const transformer = sharp(imagePath, {
@@ -84,49 +103,42 @@ async function resizeImage(imagePath, { width, height, scale }) {
       const seconds = String(d.getSeconds()).padStart(2, '0')
       return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`
     }
-    const metaIFD0 = {
-      Software: 'sharp',
-      ProcessingSoftware: 'sharp',
-      Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      Copyright: 'All Rights Reserved',
-      DateTime: formatExifDateTime(mtime),
-      DateTimeOriginal: formatExifDateTime(mtime),
-      DateTimeDigitized: formatExifDateTime(mtime),
-      ModifyDate: formatExifDateTime(mtime),
-    }
-    const metaExifIFD = {
-      Software: 'sharp',
-      ProcessingSoftware: 'sharp',
-      Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
-      Copyright: 'All Rights Reserved',
-      DateTimeOriginal: formatExifDateTime(mtime),
-      DateTimeDigitized: formatExifDateTime(mtime),
-      ModifyDate: formatExifDateTime(mtime),
-    }
     transformer.withMetadata({
       exif: {
-        IFD0: metaIFD0,
-        ExifIFD: metaExifIFD,
+        IFD0: {
+          Software: 'sharp',
+          ProcessingSoftware: 'sharp',
+          Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          Copyright: 'All Rights Reserved',
+          DateTime: formatExifDateTime(mtime),
+          DateTimeOriginal: formatExifDateTime(mtime),
+          DateTimeDigitized: formatExifDateTime(mtime),
+          ModifyDate: formatExifDateTime(mtime),
+        },
+        ExifIFD: {
+          Software: 'sharp',
+          ProcessingSoftware: 'sharp',
+          Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          Copyright: 'All Rights Reserved',
+          DateTimeOriginal: formatExifDateTime(mtime),
+          DateTimeDigitized: formatExifDateTime(mtime),
+          ModifyDate: formatExifDateTime(mtime),
+        },
       },
     })
-    try {
-      return transformer
-    } catch (error) {
-      debug('Sharp resize error:', error)
-      return null
-    }
+    return transformer
   } catch (error) {
     debug('Sharp resize error:', error)
+    return null
   }
 }
 async function convertImage(imagePath, format, { quality }) {
-  if (buffer.length > MAX_BUFFER_SIZE) return null
   let transformer
   try {
     transformer = sharp(imagePath, {

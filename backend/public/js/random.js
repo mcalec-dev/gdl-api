@@ -1,7 +1,11 @@
 'use strict'
 import * as utils from '../min/index.min.js'
 import { IMAGE_SCALE } from '../min/settings.min.js'
-import { setupContextMenu, createContextMenu } from '../min/contextmenu.min.js'
+import {
+  setupContextMenu,
+  createContextMenu,
+  setContextIcons,
+} from '../min/contextmenu.min.js'
 const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
@@ -205,15 +209,16 @@ function setupRandomMediaContextMenu() {
   setupContextMenu('#media-container', () => {
     if (!currentMediaData) return { items: [] }
     const menuItems = []
-    const fileUrl = currentMediaData.url
     menuItems.push({
       label: 'Copy URL',
       icon: icons?.nav?.copy || '',
       handler: () => {
+        if (!currentMediaData.url) return
         try {
-          navigator.clipboard.writeText(fileUrl)
+          navigator.clipboard.writeText(currentMediaData.url)
         } catch (error) {
           utils.handleError(error)
+          return
         }
       },
     })
@@ -221,10 +226,12 @@ function setupRandomMediaContextMenu() {
       label: 'Open in New Tab',
       icon: icons?.nav?.link || '',
       handler: () => {
+        if (!currentMediaData.url) return
         try {
-          window.open(fileUrl, '_blank')
+          window.open(currentMediaData.url, '_blank')
         } catch (error) {
           utils.handleError(error)
+          return
         }
       },
     })
@@ -236,8 +243,9 @@ function setupRandomMediaContextMenu() {
         label: 'Copy Image',
         icon: icons?.nav?.copy || '',
         handler: async () => {
+          if (!currentMediaData.url) return
           try {
-            const req = await fetch(fileUrl)
+            const req = await fetch(currentMediaData.url)
             const blob = await req.blob()
             const type = blob.type
             await navigator.clipboard.write([
@@ -245,6 +253,7 @@ function setupRandomMediaContextMenu() {
             ])
           } catch (error) {
             utils.handleError(error)
+            return
           }
         },
       })
@@ -253,6 +262,7 @@ function setupRandomMediaContextMenu() {
       label: 'Download',
       icon: icons?.nav?.download || '',
       handler: () => {
+        if (!currentMediaData.uuid) return
         try {
           const a = document.createElement('a')
           a.href = `/api/download/?uuid=${currentMediaData.uuid}`
@@ -262,30 +272,44 @@ function setupRandomMediaContextMenu() {
           document.body.removeChild(a)
         } catch (error) {
           utils.handleError(error)
+          return
         }
       },
     })
     menuItems.push({
-      label: 'Copy Hash',
-      icon: icons?.nav?.copy || '',
-      handler: () => {
-        try {
-          navigator.clipboard.writeText(currentMediaData.hash)
-        } catch (error) {
-          utils.handleError(error)
-        }
-      },
+      divider: true,
     })
     menuItems.push({
-      label: 'Copy UUID',
+      label: 'Copy',
       icon: icons?.nav?.copy || '',
-      handler: () => {
-        try {
-          navigator.clipboard.writeText(currentMediaData.uuid)
-        } catch (error) {
-          utils.handleError(error)
-        }
-      },
+      submenu: [
+        {
+          label: 'Hash',
+          icon: icons?.nav?.copy || '',
+          handler: () => {
+            if (!currentMediaData.hash) return
+            try {
+              navigator.clipboard.writeText(currentMediaData.hash)
+            } catch (error) {
+              utils.handleError(error)
+              return
+            }
+          },
+        },
+        {
+          label: 'UUID',
+          icon: icons?.nav?.copy || '',
+          handler: () => {
+            if (!currentMediaData.uuid) return
+            try {
+              navigator.clipboard.writeText(currentMediaData.uuid)
+            } catch (error) {
+              utils.handleError(error)
+              return
+            }
+          },
+        },
+      ],
     })
     const isVideo = currentMediaData.file
       .toLowerCase()
@@ -332,6 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
   await loadIcons()
+  setContextIcons(icons)
   backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
   loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`
   forwardImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.forward}</span>`

@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const API_URL = '/api/search'
   const imageScale = `?x=${MIN_IMAGE_SCALE}`
   function getSearchType() {
-    return document.querySelector('input[name="searchType"]:checked').value
+    const type = document.querySelector(
+      'input[name="searchType"]:checked'
+    ).value
+    return type === 'Hash' ? 'hash' : type
   }
   function formattedUrl(url, type) {
     if (type === 'file') {
@@ -58,11 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInfo.style.display = 'block'
         const searchType = getSearchType()
         const typeLabel =
-          searchType === 'files'
+          searchType === 'file'
             ? 'files'
-            : searchType === 'directories'
+            : searchType === 'directory'
               ? 'directories'
-              : 'items'
+              : searchType === 'uuid'
+                ? 'files by UUID'
+                : searchType === 'hash'
+                  ? 'files by hash'
+                  : 'items'
         searchInfo.textContent = `Found ${data.count} ${typeLabel} matching "${data.query}"`
         results.style.display = 'grid'
         const fragment = document.createDocumentFragment()

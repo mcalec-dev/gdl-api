@@ -3,43 +3,7 @@ const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:login')
 const validator = require('validator')
-/**
- * @swagger
- * /api/auth/login/:
- *   post:
- *     summary: User login with username/email and password
- *     description: Authenticate a user with their credentials (username or email and password)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 description: Username or email of the user
- *               email:
- *                 type: string
- *                 description: Email address of the user (alternative to username)
- *               password:
- *                 type: string
- *                 description: User password
- *             required:
- *               - password
- *     responses:
- *       200:
- *         description: User successfully logged in
- *       400:
- *         description: Invalid request parameters
- *       401:
- *         description: Invalid credentials
- *       403:
- *         description: User already logged in
- *       500:
- *         description: Internal server error
- */
-router.post('', async (req, res) => {
+router.post('/', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     debug('User already logged in:', req.user.username || '')
     return res.status(403).json({

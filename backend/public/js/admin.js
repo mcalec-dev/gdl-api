@@ -198,7 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
     .then((data) => {
       loading.style.display = 'none'
       if (data.stats) {
-        document.getElementById('stat-uptime').textContent = data.stats.uptime
+        document.getElementById('stat-uptime').textContent =
+          utils.formatMilliseconds(data.stats.uptime)
         document.getElementById('stat-loggedin').textContent =
           data.stats.loggedInUsers
         document.getElementById('stat-toptags').textContent =

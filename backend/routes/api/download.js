@@ -58,57 +58,10 @@ async function handleDownload(req, res) {
     })
   }
 }
-/**
- * @swagger
- * /api/download/:
- *   get:
- *     summary: Download a file using its UUID
- *     description: Downloads a file from the server using the provided UUID. Supports both GET and POST methods.
- *     parameters:
- *       - in: query
- *         name: uuid
- *         required: true
- *         schema:
- *           type: string
- *         description: The UUID of the file to download
- *     responses:
- *       200:
- *         description: File content as binary data
- *       400:
- *         description: Missing or invalid uuid parameter
- *       404:
- *         description: File not found or not accessible
- *       500:
- *         description: Internal server error
- *   post:
- *     summary: Download a file using its UUID (POST method)
- *     description: Downloads a file from the server using the provided UUID via POST body.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               uuid:
- *                 type: string
- *                 description: The UUID of the file to download
- *             required:
- *               - uuid
- *     responses:
- *       200:
- *         description: File content as binary data
- *       400:
- *         description: Missing or invalid uuid parameter
- *       404:
- *         description: File not found or not accessible
- *       500:
- *         description: Internal server error
- */
-router.get('', requireRole('user'), async (req, res) => {
+router.get('/', requireRole('user'), async (req, res) => {
   await handleDownload(req, res)
 })
-router.post('', requireRole('user'), async (req, res) => {
+router.post('/', requireRole('user'), async (req, res) => {
   await handleDownload(req, res)
 })
 module.exports = router

@@ -25,6 +25,7 @@ const {
   formatListingEntry,
   createDbEntriesForContents,
   initializeDatabaseSync,
+  batchFetchFileMetadata,
 } = require('../../utils/fileUtils')
 const {
   safePath,
@@ -33,102 +34,8 @@ const {
 } = require('../../utils/pathUtils')
 const { resizeImage } = require('../../utils/imageUtils')
 if (AUTO_SCAN === true) initializeDatabaseSync()
-else if (AUTO_SCAN === false) debug('Skipping full database sync')
-else debug('AUTO_SCAN config is invalid')
-/**
- * @swagger
- * /api/files/:
- *   get:
- *     summary: Get all files and directories from the root
- *     description: List all files and directories from the BASE_DIR with optional sorting and pagination
- *     parameters:
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [name, size, date, type]
- *         description: Field to sort by
- *       - in: query
- *         name: direction
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *         description: Sort direction
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Maximum number of results (up to PAGINATION_LIMIT)
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Page number for pagination
- *     responses:
- *       200:
- *         description: List of files and directories
- *       403:
- *         description: User not authenticated
- *       500:
- *         description: Internal server error
- * /api/files/{collection}/:
- *   get:
- *     summary: Get files from a specific collection
- *     description: List files and subdirectories within a specific collection
- *     parameters:
- *       - in: path
- *         name: collection
- *         required: true
- *         schema:
- *           type: string
- *         description: Collection name
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [name, size, date, type]
- *         description: Field to sort by
- *       - in: query
- *         name: direction
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *         description: Sort direction
- *     responses:
- *       200:
- *         description: List of files in collection
- *       400:
- *         description: Invalid path parameters
- *       404:
- *         description: Collection not found
- *       500:
- *         description: Internal server error
- * /api/files/{collection}/{author}/:
- *   get:
- *     summary: Get files from a specific author within a collection
- *     description: List files from a specific author directory within a collection
- *     parameters:
- *       - in: path
- *         name: collection
- *         required: true
- *         schema:
- *           type: string
- *         description: Collection name
- *       - in: path
- *         name: author
- *         required: true
- *         schema:
- *           type: string
- *         description: Author/subdirectory name
- *     responses:
- *       200:
- *         description: List of files from author directory
- *       404:
- *         description: Path not found
- *       500:
- *         description: Internal server error
- */
-router.get('', requireRole('user'), async (req, res) => {
+else if (!AUTO_SCAN || AUTO_SCAN === false) debug('Skipping full database sync')
+router.get('/', requireRole('user'), async (req, res) => {
   if (!req.user) {
     debug('User not authenticated')
     return res.status(403).json({
@@ -158,9 +65,26 @@ router.get('', requireRole('user'), async (req, res) => {
         status: 500,
       })
     }
+    const shouldFetchMetadata = req.query.meta === 'true'
+    let metadataMap = {}
+    if (shouldFetchMetadata) {
+      const fileRelativePaths = entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+      if (fileRelativePaths.length > 0) {
+        metadataMap = await batchFetchFileMetadata(fileRelativePaths)
+      }
+    }
     const results = await Promise.all(
       entries.map((entry) =>
-        formatListingEntry(entry, normalizedDir, normalizedDir, req)
+        formatListingEntry(
+          entry,
+          normalizedDir,
+          normalizedDir,
+          req,
+          false,
+          metadataMap
+        )
       )
     )
     const filteredResults = results.filter(Boolean)
@@ -263,7 +187,7 @@ router.get(
     try {
       await fs.access(realPath)
     } catch (error) {
-      debug(`Path not found: ${realPath}`, error)
+      debug(error)
       return res.status(404).json({
         message: 'Not Found',
         status: 404,
@@ -285,15 +209,37 @@ router.get(
           await maybeUpsertAccessed(realPath, true)
         }
       } catch (error) {
-        debug('Failed to read directory:', error)
+        debug(error)
         return res.status(500).json({
           message: 'Internal Server Error',
           status: 500,
         })
       }
+      const shouldFetchMetadata = req.query.includeMetadata === 'true'
+      let metadataMap = {}
+      if (shouldFetchMetadata) {
+        const fileRelativePaths = entries
+          .filter((entry) => entry.isFile())
+          .map((entry) => {
+            const entryRelPath = path
+              .relative(normalizedDir, path.join(realPath, entry.name))
+              .replace(/\\/g, '/')
+            return entryRelPath
+          })
+        if (fileRelativePaths.length > 0) {
+          metadataMap = await batchFetchFileMetadata(fileRelativePaths)
+        }
+      }
       const formattedContents = await Promise.all(
         entries.map((entry) =>
-          formatListingEntry(entry, realPath, normalizedDir, req, true)
+          formatListingEntry(
+            entry,
+            realPath,
+            normalizedDir,
+            req,
+            true,
+            metadataMap
+          )
         )
       )
       const validContents = formattedContents.filter(Boolean)
@@ -329,19 +275,42 @@ router.get(
           status: 404,
         })
       }
-      const scaleMatch = req.url.match(/\?x=(\d+)/)
       if (isImageFile(realPath) === true) {
-        let scale = null
-        if (scaleMatch) {
-          scale = parseInt(scaleMatch[1])
-        }
         try {
-          const transformer = await resizeImage(
-            realPath,
-            !scaleMatch || isNaN(scale) || scale <= 0 || scale === 100
-              ? {}
-              : { scale }
-          )
+          const kernel =
+            typeof req.query.kernel === 'string' ? req.query.kernel : undefined
+          const scale =
+            typeof req.query.x === 'string'
+              ? parseFloat(req.query.x)
+              : undefined
+          const resizeOptions = {}
+          if (!kernel && req.query.kernel) {
+            debug('Invalid kernel parameter provided:', req.query.kernel)
+            res.status(400).json({
+              message: 'Invalid kernel parameter',
+              status: 400,
+            })
+            return
+          }
+          if (!scale && req.query.x) {
+            debug('Invalid scale parameter provided:', req.query.x)
+            res.status(400).json({
+              message: 'Invalid scale parameter',
+              status: 400,
+            })
+            return
+          }
+          if (scale) resizeOptions.scale = scale
+          if (kernel) resizeOptions.kernel = kernel
+          if (!isNaN(scale) && scale > 0 && scale !== 100) {
+            debug('Resizing image with scale:', scale)
+          }
+          const transformer = await resizeImage(realPath, resizeOptions)
+          if (transformer === undefined) {
+            debug('No resizing needed, sending original file')
+            await maybeUpsertAccessed(realPath, false)
+            return res.sendFile(realPath)
+          }
           if (transformer) {
             res.type(path.extname(realPath).slice(1))
             await maybeUpsertAccessed(realPath, false)
@@ -356,7 +325,7 @@ router.get(
             })
           }
         } catch (error) {
-          debug('Error resizing image:', error)
+          debug(error)
           return res.status(500).json({
             message: 'Internal Server Error',
             status: 500,

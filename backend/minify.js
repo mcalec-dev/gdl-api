@@ -2,7 +2,7 @@ const fs = require('fs').promises
 const path = require('path')
 const { minify } = require('terser')
 const CleanCSS = require('clean-css')
-const glob = require('glob')
+const glob = require('fast-glob')
 const chalk = require('chalk')
 const debug = require('debug')('gdl-api:minify')
 const publicDir = path.join(__dirname, 'public')
@@ -64,5 +64,4 @@ async function processFiles() {
     debug(chalk.redBright('Error in file processing:', error))
   }
 }
-processFiles()
 module.exports = { processFiles }

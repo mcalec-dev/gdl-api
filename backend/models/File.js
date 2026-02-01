@@ -22,6 +22,6 @@ module.exports = mongoose.model(
       hash: { type: String, required: true },
       uuid: { type: String, required: true, default: uuid.v4 },
     },
-    { suppressReservedKeysWarning: true }
+    { suppressReservedKeysWarning: true, versionKey: false }
   )
 )

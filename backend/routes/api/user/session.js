@@ -1,58 +1,7 @@
 const router = require('express').Router()
 const { requireRole } = require('../../../utils/authUtils')
 const debug = require('debug')('gdl-api:api:user:session')
-/**
- * @swagger
- * /api/user/session/:
- *   get:
- *     summary: Retrieve user sessions
- *     description: Get a list of all active sessions for the authenticated user
- *     responses:
- *       200:
- *         description: List of user sessions
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   uuid:
- *                     type: string
- *                   modified:
- *                     type: string
- *                     format: date-time
- *                   ip:
- *                     type: string
- *                   useragent:
- *                     type: string
- *       401:
- *         description: User not authenticated
- *       500:
- *         description: Internal server error
- *
- * /api/user/session/{uuid}:
- *   delete:
- *     summary: Delete a specific user session
- *     description: Delete (logout) a specific session by UUID
- *     parameters:
- *       - in: path
- *         name: uuid
- *         required: true
- *         schema:
- *           type: string
- *         description: Session UUID to delete
- *     responses:
- *       204:
- *         description: Session deleted successfully
- *       400:
- *         description: Missing or invalid UUID
- *       401:
- *         description: User not authenticated
- *       500:
- *         description: Internal server error
- */
-router.get('', requireRole('user'), async (req, res) => {
+router.get('/', requireRole('user'), async (req, res) => {
   try {
     debug('Getting sessions for:', req.user.username || 'user')
     return res.json(req.user.sessions)

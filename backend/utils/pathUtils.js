@@ -1,5 +1,6 @@
 const path = require('path')
 const debug = require('debug')('gdl-api:utils:path')
+const sanitizeFilename = require('sanitize-filename')
 const normalizeString = (str) => {
   if (typeof str !== 'string') return ''
   return str.trim().normalize('NFC')
@@ -32,11 +33,9 @@ const sanitizePathComponent = (userInput) => {
   if (!userInput || typeof userInput !== 'string') {
     return null
   }
-  const sanitized = userInput
-    .replace(/\.\./g, '')
-    .replace(/[<>"|?*]/g, '')
-    .replace(/^\.+/, '')
-    .trim()
+  const sanitized = sanitizeFilename(userInput, {
+    replacement: '',
+  }).trim()
   if (!sanitized || /^[.\s]*$/.test(sanitized)) {
     debug(
       'Rejected sanitized path component (empty or dots/spaces):',
@@ -63,9 +62,14 @@ const safePath = (baseDir, ...pathComponents) => {
       debug('Invalid baseDir provided to safePath')
       return null
     }
-    const sanitizedComponents = pathComponents
+    const flattenedComponents = pathComponents
       .filter((component) => component != null && component !== '')
-      .map((component) => sanitizePathComponent(String(component)))
+      .flatMap((component) => {
+        const str = String(component)
+        return str.split('/').filter(Boolean)
+      })
+    const sanitizedComponents = flattenedComponents
+      .map((component) => sanitizePathComponent(component))
       .filter((component) => component !== null)
     if (sanitizedComponents.length === 0) {
       return path.resolve(baseDir)

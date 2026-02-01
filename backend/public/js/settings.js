@@ -12,6 +12,7 @@ const imageScaleMaxInput = document.getElementById('image-scale-max-input')
 const paginationToggle = document.getElementById('pagination-toggle')
 const paginationInput = document.getElementById('pagination-items-select')
 const containerWidthInput = document.getElementById('container-width-input')
+const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
 const resetSettingsButton = document.getElementById('reset-settings-button')
 const defaults = {
   theme: {
@@ -31,6 +32,7 @@ const defaults = {
     min: 50,
   },
   containerWidth: 65,
+  bytesBits: false,
 }
 function setCookie(name, value, expires = '') {
   let date = new Date()
@@ -74,6 +76,10 @@ function loadSettings() {
         typeof parsed.containerWidth === 'number'
           ? parsed.containerWidth
           : defaults.containerWidth,
+      bytesBits:
+        typeof parsed.bytesBits === 'boolean'
+          ? parsed.bytesBits
+          : defaults.bytesBits,
     }
   } catch (e) {
     console.error('Failed to parse settings:', e)
@@ -119,6 +125,7 @@ export let PAGINATION = {
   limit: settings.pagination.limit,
 }
 export let CONTAINER_WIDTH = settings.containerWidth
+export let BYTES_BITS = settings.bytesBits
 function setExportVals(min, def, max) {
   MIN_IMAGE_SCALE = min
   IMAGE_SCALE = def
@@ -275,6 +282,14 @@ async function updateSettings() {
       const v = parseInt(e.target.value, 10)
       settings.containerWidth = isNaN(v) ? defaults.containerWidth : v
       setContainerWidth(settings.containerWidth)
+      saveSettings(settings)
+    })
+  }
+  if (bytesBitsToggle) {
+    bytesBitsToggle.checked = settings.bytesBits
+    bytesBitsToggle.addEventListener('change', (e) => {
+      settings.bytesBits = e.target.checked
+      BYTES_BITS = settings.bytesBits
       saveSettings(settings)
     })
   }

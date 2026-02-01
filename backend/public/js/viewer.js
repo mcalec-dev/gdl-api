@@ -18,29 +18,6 @@ async function loadViewerIcons() {
     download: icon.nav.download,
   }
 }
-let _prevBodyOverflow = null
-function lockScroll() {
-  try {
-    _prevBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-  } catch (error) {
-    utils.handleError(error)
-  }
-  document.body.style.removeProperty('overflow')
-}
-function unlockScroll() {
-  try {
-    if (_prevBodyOverflow === null || _prevBodyOverflow === undefined) {
-      document.body.style.removeProperty('overflow')
-    } else {
-      document.body.style.overflow = _prevBodyOverflow
-    }
-    _prevBodyOverflow = null
-  } catch (error) {
-    utils.handleError(error)
-  }
-  document.body.style.removeProperty('overflow')
-}
 function getMediaUrl(item) {
   return item.previewSrc || `/api/files/${item.encodedPath}`
 }
@@ -53,16 +30,15 @@ function preloadMedia(item) {
       : getMediaUrl(item)
 }
 function showViewer(index) {
-  lockScroll()
-  if (index < 0 || index >= currentItemList.length) return
   const item = currentItemList[index]
-  const popupViewer = document.getElementById('popup-viewer')
-  const popupImage = document.getElementById('popup-image')
-  const popupVideo = document.getElementById('popup-video')
-  const popupAudio = document.getElementById('popup-audio')
-  const popupEmbed = document.getElementById('popup-embed')
-  const imageTitle = document.getElementById('image-title')
-  const imageCounter = document.getElementById('image-counter')
+  const fileViewer = document.getElementById('file-viewer')
+  const viewerImage = document.getElementById('viewer-container-image')
+  const viewerVideo = document.getElementById('viewer-container-video')
+  const viewerAudio = document.getElementById('viewer-container-audio')
+  const viewerEmbed = document.getElementById('viewer-container-embed')
+  const viewerTitle = document.getElementById('viewer-info-title')
+  const viewerSize = document.getElementById('viewer-info-size')
+  const viewerCounter = document.getElementById('viewer-info-counter')
   const prevButton = document.getElementById('prev-image')
   const nextButton = document.getElementById('next-image')
   const closePopup = document.getElementById('close-popup')
@@ -76,51 +52,78 @@ function showViewer(index) {
   copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
   nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
   prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
-  popupImage.style.display = 'none'
-  popupVideo.style.display = 'none'
-  popupAudio.style.display = 'none'
-  popupEmbed.style.display = 'none'
-  popupVideo.pause()
-  popupAudio.pause()
+  viewerImage.style.display = 'none'
+  viewerVideo.style.display = 'none'
+  viewerAudio.style.display = 'none'
+  viewerEmbed.style.display = 'none'
+  viewerVideo.pause()
+  viewerAudio.pause()
   const url = getMediaUrl(item)
   if (item.type === 'audio') {
-    popupAudio.src = url
-    popupAudio.style.display = 'block'
-    popupAudio.controls = true
-    popupAudio.style.width = '85vw'
-    popupAudio.style.maxWidth = '600px'
+    viewerAudio.src = url
+    viewerAudio.style.display = 'block'
+    viewerAudio.controls = true
+    viewerAudio.style.width = '85vw'
+    viewerAudio.style.maxWidth = '600px'
   }
   if (item.type === 'image') {
-    popupImage.src = url + defaultImageSize
-    popupImage.style.display = 'block'
-    popupImage.style.cursor = 'zoom-in'
-    popupImage.style.maxHeight = '85vh'
-    popupImage.style.maxWidth = '85vw'
+    viewerImage.src = url + defaultImageSize
+    viewerImage.style.display = 'block'
+    viewerImage.style.cursor = 'zoom-in'
+    viewerImage.style.maxHeight = '85vh'
+    viewerImage.style.maxWidth = '85vw'
   }
   if (item.type === 'video') {
-    popupVideo.src = url
-    popupVideo.style.display = 'block'
-    popupVideo.controls = true
-    popupVideo.style.maxHeight = '85vh'
-    popupVideo.style.maxWidth = '85vw'
-    popupVideo.style.height = 'auto'
-    popupVideo.style.width = 'auto'
+    viewerVideo.src = url
+    viewerVideo.style.display = 'block'
+    viewerVideo.controls = true
+    viewerVideo.style.maxHeight = '85vh'
+    viewerVideo.style.maxWidth = '85vw'
+    viewerVideo.style.height = 'auto'
+    viewerVideo.style.width = 'auto'
   }
   if (item.type === 'text') {
-    popupEmbed.src = url
-    popupEmbed.style.display = 'block'
-    popupEmbed.style.maxHeight = '85vh'
-    popupEmbed.style.maxWidth = '85vw'
-    popupEmbed.style.width = '85vw'
-    popupEmbed.style.height = '85vh'
-    popupEmbed.style.border = 'none'
+    viewerEmbed.src = url
+    viewerEmbed.style.display = 'block'
+    viewerEmbed.style.maxHeight = '85vh'
+    viewerEmbed.style.maxWidth = '85vw'
+    viewerEmbed.style.width = '85vw'
+    viewerEmbed.style.height = '85vh'
+    viewerEmbed.style.border = 'none'
   }
-  imageTitle.textContent = item.name
-  imageCounter.textContent = `${index + 1} / ${currentItemList.length}`
+  viewerTitle.textContent = item.name
+  viewerSize.textContent = utils.formatSize(item.size) || ''
+  viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
   prevButton.disabled = index === 0
   nextButton.disabled = index === currentItemList.length - 1
-  popupViewer.style.display = 'flex'
-  popupViewer.classList.remove('hidden')
+  if (prevButton.disabled) {
+    prevButton.classList.add(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  } else {
+    prevButton.classList.remove(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  }
+  if (nextButton.disabled) {
+    nextButton.classList.add(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  } else {
+    nextButton.classList.remove(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  }
+  fileViewer.style.display = 'flex'
+  fileViewer.classList.remove('hidden')
   currentItemIndex = index
   if (index > 0) {
     preloadMedia(currentItemList[index - 1])
@@ -130,36 +133,40 @@ function showViewer(index) {
   }
 }
 async function setupViewerEvents() {
-  const popupViewer = document.getElementById('popup-viewer')
+  const fileViewer = document.getElementById('file-viewer')
   const closeButton = document.getElementById('close-popup')
   const newTabButton = document.getElementById('open-new-tab')
   const downloadButton = document.getElementById('download-file')
   const copyLinkButton = document.getElementById('copy-link')
   const prevButton = document.getElementById('prev-image')
   const nextButton = document.getElementById('next-image')
-  const popupImage = document.getElementById('popup-image')
-  const popupVideo = document.getElementById('popup-video')
-  const popupAudio = document.getElementById('popup-audio')
-  const popupEmbed = document.getElementById('popup-embed')
+  const viewerImage = document.getElementById('viewer-container-image')
+  const viewerVideo = document.getElementById('viewer-container-video')
+  const viewerAudio = document.getElementById('viewer-container-audio')
+  const viewerEmbed = document.getElementById('viewer-container-embed')
   let isZoomed = false
   function closeViewer() {
-    if (isZoomed) {
-      handleZoom(0, 0)
+    try {
+      if (isZoomed) {
+        handleZoom(0, 0)
+      }
+      isZoomed = false
+      if (!viewerVideo.paused) {
+        viewerVideo.pause()
+      }
+      if (!viewerAudio.paused) {
+        viewerAudio.pause()
+      }
+      viewerImage.src = ''
+      viewerVideo.src = ''
+      viewerAudio.src = ''
+      viewerEmbed.src = ''
+      fileViewer.hidden = true
+      fileViewer.style.display = 'none'
+    } catch (error) {
+      utils.handleError(error)
+      return
     }
-    isZoomed = false
-    if (!popupVideo.paused) {
-      popupVideo.pause()
-    }
-    if (!popupAudio.paused) {
-      popupAudio.pause()
-    }
-    popupImage.src = ''
-    popupVideo.src = ''
-    popupAudio.src = ''
-    popupEmbed.src = ''
-    popupViewer.hidden = true
-    popupViewer.style.display = 'none'
-    unlockScroll()
   }
   function next() {
     if (currentItemIndex < currentItemList.length - 1) {
@@ -203,20 +210,22 @@ async function setupViewerEvents() {
   closeButton.addEventListener('click', async () => {
     closeViewer()
   })
-  popupViewer.addEventListener('click', async (e) => {
-    if (e.target === popupViewer) {
+  fileViewer.addEventListener('click', async (e) => {
+    if (e.target === fileViewer) {
       closeViewer()
     }
   })
   nextButton.addEventListener('click', next)
   prevButton.addEventListener('click', prev)
-  window.addEventListener('beforeunload', async () => {
-    if (!popupViewer.hidden || popupViewer.style.display !== 'none') {
-      unlockScroll()
-    }
-  })
+  if (typeof window.MutationObserver !== 'undefined') {
+    const observer = new window.MutationObserver(() => {})
+    observer.observe(fileViewer, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+    })
+  }
   document.addEventListener('keydown', async (e) => {
-    if (!popupViewer.hidden || popupViewer.style.display !== 'none') {
+    if (!fileViewer.hidden || fileViewer.style.display !== 'none') {
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
@@ -247,42 +256,42 @@ async function setupViewerEvents() {
   async function handleZoom(x, y) {
     if (isZoomed) {
       const item = currentItemList[currentItemIndex]
-      popupImage.src = getMediaUrl(item) + defaultImageSize
-      popupImage.classList.remove('zoomed')
-      popupImage.style.transform = 'none'
-      popupImage.style.cursor = 'zoom-in'
-      popupImage.style.maxHeight = ''
-      popupImage.style.maxWidth = ''
-      popupImage.style.height = ''
-      popupImage.style.width = ''
-      popupImage.style.objectFit = ''
+      viewerImage.src = getMediaUrl(item) + defaultImageSize
+      viewerImage.classList.remove('zoomed')
+      viewerImage.style.transform = 'none'
+      viewerImage.style.cursor = 'zoom-in'
+      viewerImage.style.maxHeight = ''
+      viewerImage.style.maxWidth = ''
+      viewerImage.style.height = ''
+      viewerImage.style.width = ''
+      viewerImage.style.objectFit = ''
       isZoomed = false
-      popupImage.removeEventListener('mousemove', handleMouseMove)
+      viewerImage.removeEventListener('mousemove', handleMouseMove)
     } else {
       const item = currentItemList[currentItemIndex]
       const zoomedSrc = (await getMediaUrl(item)) + zoomedImageSize
-      popupImage.onload = function () {
-        popupImage.style.maxHeight = '95vh'
-        popupImage.style.maxWidth = '95vw'
-        popupImage.style.height = '95vh'
-        popupImage.style.width = '95vw'
-        popupImage.style.objectFit = 'contain'
-        const rect = popupImage.getBoundingClientRect()
+      viewerImage.onload = function () {
+        viewerImage.style.maxHeight = '95vh'
+        viewerImage.style.maxWidth = '95vw'
+        viewerImage.style.height = '95vh'
+        viewerImage.style.width = '95vw'
+        viewerImage.style.objectFit = 'contain'
+        const rect = viewerImage.getBoundingClientRect()
         const relativeX = (x - rect.left) / rect.width
         const relativeY = (y - rect.top) / rect.height
-        popupImage.classList.add('zoomed')
+        viewerImage.classList.add('zoomed')
         updateZoomPosition(relativeX, relativeY)
-        popupImage.style.cursor = 'zoom-out'
+        viewerImage.style.cursor = 'zoom-out'
         isZoomed = true
-        popupImage.addEventListener('mousemove', handleMouseMove)
-        popupImage.onload = null
+        viewerImage.addEventListener('mousemove', handleMouseMove)
+        viewerImage.onload = null
       }
-      popupImage.src = zoomedSrc
+      viewerImage.src = zoomedSrc
     }
   }
   function handleMouseMove(e) {
     if (!isZoomed) return
-    const rect = popupImage.getBoundingClientRect()
+    const rect = viewerImage.getBoundingClientRect()
     const relativeX = (e.clientX - rect.left) / rect.width
     const relativeY = (e.clientY - rect.top) / rect.height
     updateZoomPosition(relativeX, relativeY)
@@ -290,10 +299,10 @@ async function setupViewerEvents() {
   function updateZoomPosition(relativeX, relativeY) {
     const boundedX = Math.max(0, Math.min(1, relativeX))
     const boundedY = Math.max(0, Math.min(1, relativeY))
-    popupImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
-    popupImage.style.transform = 'scale(2)'
+    viewerImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
+    viewerImage.style.transform = 'scale(2)'
   }
-  popupImage.addEventListener('click', async (e) => {
+  viewerImage.addEventListener('click', async (e) => {
     await handleZoom(e.clientX, e.clientY)
   })
   return {
@@ -318,8 +327,10 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
         const mediaPath = media.dataset.path
         const fileType = media.dataset.fileType
         const uuid = media.dataset.uuid
+        const size = parseInt(media.dataset.size) || 0
         const encodedPath = mediaPath
           .split('/')
+          .filter(Boolean)
           .map((part) => encodeURIComponent(part))
           .join('/')
         let previewSrc = null
@@ -343,6 +354,7 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
           path: mediaPath,
           type: fileType,
           uuid,
+          size,
           encodedPath,
           previewSrc,
         }

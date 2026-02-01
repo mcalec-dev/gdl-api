@@ -22,35 +22,7 @@ try {
 } catch (error) {
   debug('Error mounting auth routes:', error)
 }
-/**
- * @swagger
- * /api/auth/:
- *   get:
- *     summary: Get auth API information
- *     description: Get available authentication endpoints
- *     responses:
- *       200:
- *         description: Auth endpoints
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 urls:
- *                   type: object
- *                   properties:
- *                     check:
- *                       type: string
- *                     login:
- *                       type: string
- *                     logout:
- *                       type: string
- *                     provider:
- *                       type: string
- *                     register:
- *                       type: string
- */
-router.get('', async (req, res) => {
+router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
     urls: {

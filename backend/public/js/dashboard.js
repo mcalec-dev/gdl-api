@@ -45,24 +45,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                   Object.entries(data.oauth).forEach(([name, provider]) => {
                     html += `
-                        <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-auto text-clip">
-                          <div class="flex flex-wrap gap-2 mb-1">
+                        <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-x-auto">
+                          <div class="flex gap-2 mb-1 whitespace-nowrap">
                             <span class="font-semibold text-gray-300">Provider:</span>
                             <span>${name}</span>
                           </div>
-                          <div class="flex flex-wrap gap-2 mb-1">
+                          <div class="flex gap-2 mb-1 whitespace-nowrap">
                             <span class="font-semibold text-gray-300">Username:</span>
                             <span>${provider.username}</span>
                           </div>
-                          <div class="flex flex-wrap gap-2 mb-1">
+                          <div class="flex gap-2 mb-1 whitespace-nowrap">
                             <span class="font-semibold text-gray-300">Email:</span>
                             <span>${provider.email}</span>
                           </div>
-                          <div class="flex flex-wrap gap-2 mb-1">
+                          <div class="flex gap-2 mb-1 whitespace-nowrap">
                             <span class="font-semibold text-gray-300">Avatar:</span>
                             <span>${provider.avatar}</span>
                           </div>
-                          <div class="flex flex-wrap gap-2 mb-1">
+                          <div class="flex gap-2 mb-1 whitespace-nowrap">
                             <span class="font-semibold text-gray-300">ID:</span>
                             <span>${provider.id}</span>
                           </div>
@@ -80,28 +80,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (Array.isArray(data.sessions) && data.sessions.length > 0) {
                   data.sessions.forEach((session) => {
                     html += `
-                      <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-auto text-clip">
-                        <div class="flex flex-wrap gap-2 mb-1">
+                      <div class="rounded-lg w-full border border-gray-700 bg-gray-900/60 p-4 shadow-md text-xs text-gray-200 overflow-x-auto">
+                        <div class="flex gap-2 mb-1 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">First Seen:</span>
                           <span>${session.created ? new Date(session.created).toLocaleString() : 'N/A'}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2 mb-1">
+                        <div class="flex gap-2 mb-1 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">Last Seen:</span>
                           <span>${session.modified ? new Date(session.modified).toLocaleString() : 'N/A'}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2 mb-1">
+                        <div class="flex gap-2 mb-1 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">Expires:</span>
                           <span>${session.expires ? new Date(session.expires).toLocaleString() : 'N/A'}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2 mb-1">
+                        <div class="flex gap-2 mb-1 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">IP:</span>
                           <span>${session.ip}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2 mb-1">
+                        <div class="flex gap-2 mb-1 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">User Agent:</span>
                           <span>${session.useragent}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex gap-2 whitespace-nowrap">
                           <span class="font-semibold text-gray-300">UUID:</span>
                           <span>${session.uuid}</span>
                         </div>
