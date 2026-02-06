@@ -44,7 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       mobileMenu.hidden = true
     }
   })
-  const loginRegisterButtons = document.querySelectorAll('#login-register')
+  const loginRegisterButtons = document.querySelectorAll(
+    '#login-register, #mobile-login-register'
+  )
   let checkAuthStatus = null
   try {
     const req = await fetch('/api/auth/check')

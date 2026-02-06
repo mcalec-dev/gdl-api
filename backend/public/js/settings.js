@@ -14,6 +14,7 @@ const paginationInput = document.getElementById('pagination-items-select')
 const containerWidthInput = document.getElementById('container-width-input')
 const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
 const resetSettingsButton = document.getElementById('reset-settings-button')
+const imageKernelSelect = document.getElementById('image-kernel-select')
 const defaults = {
   theme: {
     bg: 'auto',
@@ -32,6 +33,7 @@ const defaults = {
     min: 50,
   },
   containerWidth: 65,
+  imageKernel: 'lanczos3',
   bytesBits: false,
 }
 function setCookie(name, value, expires = '') {
@@ -80,6 +82,10 @@ function loadSettings() {
         typeof parsed.bytesBits === 'boolean'
           ? parsed.bytesBits
           : defaults.bytesBits,
+      imageKernel:
+        typeof parsed.imageKernel === 'string'
+          ? parsed.imageKernel
+          : defaults.imageKernel,
     }
   } catch (e) {
     console.error('Failed to parse settings:', e)
@@ -126,6 +132,7 @@ export let PAGINATION = {
 }
 export let CONTAINER_WIDTH = settings.containerWidth
 export let BYTES_BITS = settings.bytesBits
+export let IMAGE_KERNEL = settings.imageKernel
 function setExportVals(min, def, max) {
   MIN_IMAGE_SCALE = min
   IMAGE_SCALE = def
@@ -159,7 +166,6 @@ async function updateSettings() {
     saveSettings(settings)
     toggleOneko(settings.oneko)
   })
-
   if (settings.oneko) {
     onekoToggle.checked = true
     toggleOneko(true)
@@ -195,6 +201,14 @@ async function updateSettings() {
       const v = parseInt(e.target.value, 10)
       settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
       PAGINATION.limit = settings.pagination.limit
+      saveSettings(settings)
+    })
+  }
+  if (imageKernelSelect) {
+    imageKernelSelect.value = settings.imageKernel
+    imageKernelSelect.addEventListener('change', (e) => {
+      settings.imageKernel = e.target.value
+      IMAGE_KERNEL = settings.imageKernel
       saveSettings(settings)
     })
   }

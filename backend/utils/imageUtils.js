@@ -31,6 +31,18 @@ async function getImageMeta(imagePath) {
   }
 }
 async function resizeImage(imagePath, { width, height, scale, kernel }) {
+  if (!imagePath) {
+    debug('No image path provided for resizing')
+    return null
+  }
+  if (!width && !height && !scale) {
+    debug('No resize parameters provided')
+    return undefined
+  }
+  if (scale === 100) {
+    debug('Scale is 100%, no resize needed')
+    return undefined
+  }
   if (kernel && !validKernels.includes(kernel)) {
     debug('Invalid kernel provided:', kernel)
     kernel = undefined

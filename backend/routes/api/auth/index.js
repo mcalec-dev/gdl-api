@@ -1,13 +1,6 @@
 const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:auth')
 const { getHostUrl } = require('../../../utils/urlUtils')
-router.use((req, res, next) => {
-  res.set('Cache-Control', 'no-cache')
-  req.utils = {
-    ...req.utils,
-  }
-  next()
-})
 try {
   debug('Mounting check route')
   router.use('/check', require('./check'))

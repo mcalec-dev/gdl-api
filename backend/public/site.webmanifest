@@ -1,4 +1,5 @@
 {
+  "name": "gdl-api",
   "icons": [
     {
       "src": "/icons/web-app-manifest-192x192.png",
@@ -18,7 +19,6 @@
   "shortcuts": [
     {
       "name": "Files",
-      "short_name": "Files",
       "url": "/files/",
       "icons": [
         { "src": "/icons/web-app-manifest-192x192.png", "sizes": "192x192" }

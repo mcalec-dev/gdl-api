@@ -2,13 +2,6 @@ const router = require('express').Router()
 const debug = require('debug')('gdl-api:api:admin')
 const { requireRole } = require('../../../utils/authUtils')
 const { getHostUrl } = require('../../../utils/urlUtils')
-router.use((req, res, next) => {
-  res.set('Cache-Control', 'no-cache')
-  req.utils = {
-    ...req.utils,
-  }
-  next()
-})
 try {
   debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))

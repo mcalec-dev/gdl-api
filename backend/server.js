@@ -294,13 +294,15 @@ async function initApp() {
     logRequestBody: true,
     logResponseBody: false,
     logIP: true,
-    theme: 'dimmed',
+    theme: 'defaultTheme',
     immediateReqLog: true,
   })
   // trust proxy
   app.set('trust proxy', true)
   // parse cookies
   //app.use(cookieParser())
+  // express useragent
+  app.use(require('express-useragent').express())
   // parse body
   app.use(BodyParser.urlencoded({ extended: true }))
   app.use(BodyParser.json())
@@ -354,7 +356,7 @@ async function initApp() {
   )
   // security headers
   app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'public, max-age=180')
+    res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('X-Content-Type-Options', 'nosniff')
     next()
   })
@@ -367,7 +369,7 @@ async function initApp() {
       maxAge: '1d',
       redirect: true,
       headers: {
-        'Cache-Control': 'public, max-age=180',
+        'Cache-Control': 'no-cache',
       },
     })
   )
@@ -532,7 +534,7 @@ const displayBanner = async () => {
   console.log(chalk.gray('⚡ Status:'), chalk.green('Online'))
   console.log(chalk.gray('✨ Mode:'), chalk.green(NODE_ENV))
   console.log(chalk.gray('🔗 URL:'), chalk.green((await HOST) + BASE_PATH))
-  console.log(chalk.gray('⚙️  Port:'), chalk.green(PORT))
+  console.log(chalk.gray('⚙️ Port:'), chalk.green(PORT))
   console.log(chalk.gray('📂 Directory:'), chalk.green(BASE_DIR))
   console.log(chalk.dim('━'.repeat(50)))
 }

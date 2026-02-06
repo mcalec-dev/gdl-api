@@ -1,6 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import { IMAGE_SCALE } from '../min/settings.min.js'
+import { IMAGE_SCALE, IMAGE_KERNEL } from '../min/settings.min.js'
 import {
   setupContextMenu,
   createContextMenu,
@@ -12,7 +12,6 @@ const loading = document.getElementById('loading')
 const imageInfo = document.getElementById('item-info')
 const HISTORY_KEY = 'randomMediaHistory'
 const HISTORY_LIMIT = 10
-const imageScale = `?x=${IMAGE_SCALE}`
 let history = []
 let historyIndex = 0
 let currentMediaData = null
@@ -39,7 +38,8 @@ function showMedia(data) {
   loading.hidden = false
   loading.classList.remove('error')
   mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
-  const mediaUrl = data.url + imageScale
+  const mediaUrl =
+    utils.upscaleImage(data.url, IMAGE_SCALE, IMAGE_KERNEL) || data.url
   const isVideo = data.file.toLowerCase().match(/\.(mp4|webm|mov)$/)
   const mediaElement = isVideo
     ? document.createElement('video')

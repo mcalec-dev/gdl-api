@@ -100,6 +100,12 @@ function isAudioFile(filename) {
   if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
   else return false
 }
+function isSwfFile(filename) {
+  if (!filename) return false
+  const ext = ['.swf']
+  if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
+  else return false
+}
 function isDisallowedExtension(filename) {
   if (!filename) return false
   const ext = path.extname(filename).toLowerCase()
@@ -112,9 +118,8 @@ function isDisallowedExtension(filename) {
 function getFileMime(file) {
   if (!file) return null
   const ext = path.extname(file).toLowerCase()
-  if (!ext) return null
   let type = require('mime-types').lookup(ext)
-  if (type === false) type = null
+  if (type === false) return null
   if (type) {
     type = type.replace('application/mp4', 'video/mp4')
     return type
@@ -342,7 +347,7 @@ async function upsertAccessedItem(realPath) {
   }
 }
 async function maybeUpsertAccessed(realPath, isDirectory = false) {
-  if (!UPSERT_ON_ACCESS || UPSERT_ON_ACCESS === 'false') return
+  if (!UPSERT_ON_ACCESS) return
   if (UPSERT_ON_ACCESS === 'file' && isDirectory) return
   if (UPSERT_ON_ACCESS === 'dir' && !isDirectory) return
   if (AUTO_SCAN === false) {
@@ -650,6 +655,7 @@ module.exports = {
   isImageFile,
   isVideoFile,
   isAudioFile,
+  isSwfFile,
   isDisallowedExtension,
   getFileMime,
   calculateFileHash,

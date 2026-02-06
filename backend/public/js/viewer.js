@@ -1,11 +1,13 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import { IMAGE_SCALE, MAX_IMAGE_SCALE } from '../min/settings.min.js'
+import {
+  IMAGE_SCALE,
+  MAX_IMAGE_SCALE,
+  IMAGE_KERNEL,
+} from '../min/settings.min.js'
 let currentItemIndex = 0
 let currentItemList = []
 let itemLoadControllers = new Map()
-const zoomedImageSize = `?x=${MAX_IMAGE_SCALE}`
-const defaultImageSize = `?x=${IMAGE_SCALE}`
 let icons
 async function loadViewerIcons() {
   const icon = await utils.getIcons()
@@ -26,7 +28,7 @@ function preloadMedia(item) {
   const preloadImg = document.createElement('img')
   preloadImg.src =
     item.type === 'image'
-      ? getMediaUrl(item) + defaultImageSize
+      ? utils.upscaleImage(getMediaUrl(item), IMAGE_SCALE, IMAGE_KERNEL)
       : getMediaUrl(item)
 }
 function showViewer(index) {
@@ -67,7 +69,7 @@ function showViewer(index) {
     viewerAudio.style.maxWidth = '600px'
   }
   if (item.type === 'image') {
-    viewerImage.src = url + defaultImageSize
+    viewerImage.src = utils.upscaleImage(url, IMAGE_SCALE, IMAGE_KERNEL) || url
     viewerImage.style.display = 'block'
     viewerImage.style.cursor = 'zoom-in'
     viewerImage.style.maxHeight = '85vh'
@@ -256,7 +258,12 @@ async function setupViewerEvents() {
   async function handleZoom(x, y) {
     if (isZoomed) {
       const item = currentItemList[currentItemIndex]
-      viewerImage.src = getMediaUrl(item) + defaultImageSize
+      viewerImage.src =
+        utils.upscaleImage(
+          await getMediaUrl(item),
+          IMAGE_SCALE,
+          IMAGE_KERNEL
+        ) || getMediaUrl(item)
       viewerImage.classList.remove('zoomed')
       viewerImage.style.transform = 'none'
       viewerImage.style.cursor = 'zoom-in'
@@ -269,7 +276,12 @@ async function setupViewerEvents() {
       viewerImage.removeEventListener('mousemove', handleMouseMove)
     } else {
       const item = currentItemList[currentItemIndex]
-      const zoomedSrc = (await getMediaUrl(item)) + zoomedImageSize
+      const zoomedSrc =
+        utils.upscaleImage(
+          await getMediaUrl(item),
+          MAX_IMAGE_SCALE,
+          IMAGE_KERNEL
+        ) || getMediaUrl(item)
       viewerImage.onload = function () {
         viewerImage.style.maxHeight = '95vh'
         viewerImage.style.maxWidth = '95vw'

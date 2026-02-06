@@ -17,6 +17,7 @@ const {
   isImageFile,
   isVideoFile,
   isAudioFile,
+  isSwfFile,
   isDisallowedExtension,
   getFileMime,
   maybeUpsertAccessed,
@@ -279,10 +280,9 @@ router.get(
         try {
           const kernel =
             typeof req.query.kernel === 'string' ? req.query.kernel : undefined
+          const scaleParam = req.query.scale || req.query.x
           const scale =
-            typeof req.query.x === 'string'
-              ? parseFloat(req.query.x)
-              : undefined
+            typeof scaleParam === 'string' ? parseFloat(scaleParam) : undefined
           const resizeOptions = {}
           if (!kernel && req.query.kernel) {
             debug('Invalid kernel parameter provided:', req.query.kernel)
@@ -292,8 +292,8 @@ router.get(
             })
             return
           }
-          if (!scale && req.query.x) {
-            debug('Invalid scale parameter provided:', req.query.x)
+          if (!scale && scaleParam) {
+            debug('Invalid scale parameter provided:', scaleParam)
             res.status(400).json({
               message: 'Invalid scale parameter',
               status: 400,
@@ -398,6 +398,12 @@ router.get(
             status: 500,
           })
         }
+      }
+      if (isSwfFile(realPath)) {
+        return res.status(415).json({
+          message: 'Unsupported Media Type',
+          status: 415,
+        })
       }
       try {
         await maybeUpsertAccessed(realPath, false)

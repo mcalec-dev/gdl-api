@@ -27,9 +27,9 @@ function checkHostOnline(host) {
 async function getHost() {
   const host = process.env.HOST
   const altHost = process.env.ALT_HOST
-  if (!host) return null
+  if (!host) return undefined
   if (!altHost) return host
-  if (!host && !altHost) return null
+  if (!host && !altHost) return undefined
   if (host === altHost) return host
   const hostOnline = await checkHostOnline(host)
   const altHostOnline = await checkHostOnline(altHost)
@@ -44,7 +44,7 @@ async function getHost() {
     }
   } catch (error) {
     debug('Both hosts are offline:', error)
-    return null
+    return undefined
   }
 }
 function parseBooleanEnv(value) {

@@ -1,6 +1,10 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import { MIN_IMAGE_SCALE, PAGINATION } from '../min/settings.min.js'
+import {
+  MIN_IMAGE_SCALE,
+  PAGINATION,
+  IMAGE_KERNEL,
+} from '../min/settings.min.js'
 import {
   setupViewerEvents,
   setupFileClickHandlers,
@@ -58,7 +62,6 @@ function constructApiPath(path) {
   const cleanPath = path.replace(/^\/|\/$/g, '').replace(/^files\/?/, '')
   return cleanPath ? `${apiBasePath}/${cleanPath}` : apiBasePath
 }
-const previewSize = `?x=${MIN_IMAGE_SCALE}`
 const fileList = document.getElementById('file-list')
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -606,7 +609,11 @@ async function renderDirectory(contents, path) {
         .join('/')
       previewUrl = item.url || `${apiBasePath}/${encodedPath}`
       if (itemType === 'image') {
-        previewUrl += previewSize
+        previewUrl = utils.upscaleImage(
+          previewUrl,
+          MIN_IMAGE_SCALE,
+          IMAGE_KERNEL
+        )
       }
     }
     let cursorClass = ''

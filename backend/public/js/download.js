@@ -5,9 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const downloadButton = document.getElementById('downloadButton')
   const statusMessage = document.getElementById('statusMessage')
   const API_URL = '/api/download'
-  async function performDownload(uuid) {
-    if (!uuid.length) {
+  downloadButton.addEventListener('click', async () => {
+    const uuid = uuidInput.value.trim()
+    if (!uuid) {
       statusMessage.textContent = 'Please enter a UUID.'
+      statusMessage.style.display = 'block'
+      return
+    }
+    if (uuid.length !== 36) {
+      statusMessage.textContent = 'Invalid UUID length.'
       statusMessage.style.display = 'block'
       return
     }
@@ -32,10 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
       statusMessage.textContent = error.message
       statusMessage.style.display = 'block'
     }
-  }
-  downloadButton.addEventListener('click', () => {
-    const uuid = uuidInput.value.trim()
-    if (uuid) performDownload(uuid)
   })
 })
 async function initDownload(url) {

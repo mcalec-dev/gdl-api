@@ -1,5 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import scroll from '../min/scroll.min.js'
 let contextMenu = null
 let _contextOutsideHandler = null
 let icons = null
@@ -40,7 +41,7 @@ export function createContextMenu() {
  * Also removes any open submenu containers and resets the outside click handler
  */
 function hideContextMenu() {
-  utils.scroll(true)
+  scroll.unlock()
   if (!contextMenu) return
   contextMenu.style.display = 'none'
   contextMenu.hidden = true
@@ -80,7 +81,7 @@ export function setupContextMenu(selector, menuItemsCallback) {
  * @param {Function} menuItemsCallback - Callback to generate menu structure
  */
 function showGenericContextMenu(e, itemElem, menuItemsCallback) {
-  utils.scroll(false)
+  scroll.lock()
   if (!contextMenu) createContextMenu()
   contextMenu.innerHTML = ''
   const menuData = menuItemsCallback(itemElem, e)

@@ -3,61 +3,6 @@ import prettyBytes from 'https://cdn.jsdelivr.net/npm/pretty-bytes/+esm'
 import prettyMs from 'https://cdn.jsdelivr.net/npm/pretty-ms/+esm'
 import { BYTES_BITS } from '../min/settings.min.js'
 /**
- * Global scroll lock state tracking
- * @private
- */
-let _scrollLockCount = 0
-let _prevBodyOverflow = null
-/**
- * Controls body scrolling with reference counting for multiple modules
- * Supports multiple input formats: boolean, strings, or defaults to toggle
- * @param {boolean|string} [action='toggle'] - true/false for enable/disable, 'lock'/'unlock', 'on'/'off', or omit to toggle
- * @returns {boolean} Current scroll state (true = enabled, false = disabled)
- * @function
- * @example
- * scroll(true)        // Enable scroll
- * scroll(false)       // Disable scroll
- * scroll('unlock')    // Enable scroll
- * scroll('lock')      // Disable scroll
- * scroll()            // Toggle scroll state
- */
-export function scroll(action = 'toggle') {
-  try {
-    let shouldEnable
-    if (typeof action === 'boolean') {
-      shouldEnable = action
-    } else if (typeof action === 'string') {
-      shouldEnable = action === 'unlock' || action === 'off' || action === '0'
-    } else {
-      shouldEnable = _scrollLockCount > 0
-    }
-    if (shouldEnable) {
-      if (_scrollLockCount > 0) {
-        _scrollLockCount--
-        if (_scrollLockCount === 0) {
-          if (_prevBodyOverflow === null || _prevBodyOverflow === undefined) {
-            document.body.style.removeProperty('overflow')
-          } else {
-            document.body.style.overflow = _prevBodyOverflow
-          }
-          _prevBodyOverflow = null
-        }
-      }
-      return true
-    } else {
-      if (_scrollLockCount === 0) {
-        _prevBodyOverflow = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
-      }
-      _scrollLockCount++
-      return false
-    }
-  } catch (error) {
-    handleError(error)
-    return _scrollLockCount === 0
-  }
-}
-/**
  * Formats bytes into a human-readable file size string
  * Respects the BYTES_BITS setting to show sizes in bits or bytes
  * @param {number} bytes - The number of bytes to format
@@ -68,11 +13,9 @@ export function scroll(action = 'toggle') {
  */
 export function formatSize(
   bytes,
-  { minDecimalPlaces, maxDecimalPlaces } = {
-    minDecimalPlaces: 0,
-    maxDecimalPlaces: 2,
-  }
+  { minDecimalPlaces = 0, maxDecimalPlaces = 2 } = {}
 ) {
+  if (!bytes) return null
   if (typeof bytes !== 'number' || isNaN(bytes) || bytes < 0) {
     return null
   }
@@ -114,6 +57,7 @@ export function formatSize(
  * @returns {string|null} Formatted duration string or null if invalid input
  */
 export function formatMilliseconds(ms) {
+  if (!ms) return null
   if (typeof ms !== 'number' || isNaN(ms) || ms < 0) {
     return null
   }
@@ -217,4 +161,40 @@ export async function getIcons() {
 export function handleError(error) {
   console.error(error)
   console.log('An error occurred. Please try again later.')
+}
+/**
+ * Displays a status message in the UI
+ * @param {string} mesg 
+ * @param {boolean} isError 
+ */
+export function statusMessage(mesg, isError = false) {
+  const statusMessageElement = document.getElementById('statusMessage')
+  if (statusMessageElement) {
+    statusMessageElement.textContent = mesg
+    statusMessageElement.style.display = 'block'
+    statusMessageElement.style.color = isError ? 'red' : 'black'
+  }
+}
+export function upscaleImage(url, scale, kernel = 'lanczos3') {
+  if (!url || !scale) return null
+  try {
+    const urlObj = new URL(url)
+    urlObj.searchParams.set('scale', scale)
+    if (kernel) urlObj.searchParams.set('kernel', kernel)
+    return urlObj.toString()
+  } catch (error) {
+    handleError(error)
+    return null
+  }
+}
+// Export all utilities as default
+export default {
+  formatSize,
+  formatMilliseconds,
+  formatDate,
+  getName,
+  parseEmojis,
+  getIcons,
+  handleError,
+  statusMessage,
 }

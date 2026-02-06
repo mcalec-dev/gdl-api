@@ -1,6 +1,6 @@
 <div id="settings" class="fixed z-50">
   <div class="fixed bottom-4 left-4 z-50 rounded-xl border border-white/20 p-0 shadow-lg backdrop-blur-md items-center justify-center align-middle">
-    <button id="settings-button" class="flex items-center justify-center rounded border-white/20 p-4 font-semibold text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition">
+    <button id="settings-button" class="flex items-center justify-center rounded border-white/20 p-4 font-semibold text-white fill-white stroke-white shadow-2xl backdrop-blur-md transition" title="Settings">
       <span class="w-6 h-6 items-center">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9h.01" /><path d="M11 12h1v4h1" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
       </span>
@@ -40,6 +40,21 @@
         <option value="250">250</option>
         <option value="500">500</option>
         <option value="1000">1000</option>
+      </select>
+    </div>
+    <div id="image-kernel_container" class="gap-2 flex-col flex items-center justify-center">
+      <span class="text-white">
+        Image Rendering Kernel:
+      </span>
+      <select id="image-kernel-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
+        <option value="nearest">nearest</option>
+        <option value="linear">linear</option>
+        <option value="cubic">cubic</option>
+        <option value="mitchell">mitchell</option>
+        <option value="lanczos2">lanczos2</option>
+        <option value="lanczos3">lanczos3</option>
+        <option value="mks2013">mks2013</option>
+        <option value="mks2021">mks2021</option>
       </select>
     </div>
     <div id="image-scale-container" class="gap-2 flex-col flex items-center justify-center">
