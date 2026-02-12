@@ -1,4 +1,5 @@
 const ms = require('ms')
+const bytes = require('bytes')
 const dotenv = require('dotenv')
 const debug = require('debug')('gdl-api:config')
 const https = require('https')
@@ -109,8 +110,11 @@ const TROLLING_TERMS = JSON.parse(process.env.TROLLING_TERMS)
 const AUTO_SCAN = parseBooleanEnv(process.env.AUTO_SCAN)
 const UPSERT_ON_ACCESS = process.env.UPSERT_ON_ACCESS
 const OAUTH_PROVIDERS = JSON.parse(process.env.OAUTH_PROVIDERS)
-const FILE_UPLOAD_LIMIT = process.env.FILE_UPLOAD_LIMIT
+const FILE_UPLOAD_LIMIT = bytes(process.env.FILE_UPLOAD_LIMIT)
 const HASH_ALGORITHM = process.env.HASH_ALGORITHM
+const MAX_PIXELS = parseInt(process.env.MAX_PIXELS, 10)
+const MAX_SCALE = parseInt(process.env.MAX_SCALE, 10)
+const MAX_BUFFER_SIZE = bytes(process.env.MAX_BUFFER_SIZE)
 module.exports = {
   NODE_ENV,
   PORT,
@@ -136,5 +140,8 @@ module.exports = {
   OAUTH_PROVIDERS,
   FILE_UPLOAD_LIMIT,
   HASH_ALGORITHM,
+  MAX_PIXELS,
+  MAX_SCALE,
+  MAX_BUFFER_SIZE,
   debug,
 }

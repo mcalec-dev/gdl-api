@@ -41,7 +41,7 @@ try {
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
-    api: 'v2',
+    api: String('v2'),
     name: String(NAME),
     version: String(pkg.version),
     description: String(pkg.description),
@@ -51,15 +51,15 @@ router.get('/', async (req, res) => {
     host: String(await HOST),
     basePath: String(BASE_PATH),
     urls: {
-      admin: baseURL + '/admin',
-      auth: baseURL + '/auth',
-      user: baseURL + '/user',
-      download: baseURL + '/download',
-      files: baseURL + '/files',
-      health: baseURL + '/health',
-      random: baseURL + '/random',
-      search: baseURL + '/search',
-      stats: baseURL + '/stats',
+      admin: String(baseURL + '/admin'),
+      auth: String(baseURL + '/auth'),
+      user: String(baseURL + '/user'),
+      download: String(baseURL + '/download'),
+      files: String(baseURL + '/files'),
+      health: String(baseURL + '/health'),
+      random: String(baseURL + '/random'),
+      search: String(baseURL + '/search'),
+      stats: String(baseURL + '/stats'),
     },
   })
 })

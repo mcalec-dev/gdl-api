@@ -1,6 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import scroll from '../min/scroll.min.js'
+import scroll from 'https://cdn.mcalec.dev/scroll.js/scroll.min.js'
 let contextMenu = null
 let _contextOutsideHandler = null
 let icons = null

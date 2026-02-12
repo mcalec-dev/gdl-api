@@ -1,6 +1,5 @@
 const express = require('express')
 const multer = require('multer')
-const bytes = require('bytes')
 const { uploadFile } = require('../../utils/gridfsUtils')
 const { requireRole } = require('../../utils/authUtils')
 const { FILE_UPLOAD_LIMIT } = require('../../config')
@@ -10,7 +9,7 @@ const storage = multer.memoryStorage()
 const upload = multer({
   storage,
   limits: {
-    fileSize: bytes(FILE_UPLOAD_LIMIT),
+    fileSize: FILE_UPLOAD_LIMIT,
   },
 })
 router.post(

@@ -15,19 +15,18 @@ router.get('/', requireRole('user'), async (req, res) => {
       })
     })
     const randomImage = getRandomImage[0]
-    const url = (await getHostUrl(req)) + randomImage.paths.remote
     return res.json({
-      file: randomImage.name || null,
-      path: randomImage.paths.remote || null,
-      collection: randomImage.collection || null,
-      author: randomImage.author || null,
-      size: randomImage.size || 0,
-      url: url || null,
-      created: randomImage.created || null,
-      modified: randomImage.modified || null,
-      type: randomImage.type || 'unknown',
-      hash: randomImage.hash || null,
-      uuid: randomImage.uuid || null,
+      file: String(randomImage.name),
+      path: String(randomImage.paths.remote),
+      collection: String(randomImage.collection),
+      author: String(randomImage.author),
+      size: Number(randomImage.size),
+      url: String((await getHostUrl(req)) + randomImage.paths.remote),
+      created: randomImage.created,
+      modified: randomImage.modified,
+      type: String(randomImage.type),
+      hash: String(randomImage.hash),
+      uuid: String(randomImage.uuid),
     })
   } catch (error) {
     debug('Error in random route:', error)

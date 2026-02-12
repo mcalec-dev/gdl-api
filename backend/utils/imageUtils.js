@@ -1,10 +1,13 @@
 const sharp = require('sharp')
 const debug = require('debug')('gdl-api:utils:image')
-const { HOST, NAME } = require('../config')
+const {
+  HOST,
+  NAME,
+  MAX_PIXELS,
+  MAX_SCALE,
+  MAX_BUFFER_SIZE,
+} = require('../config')
 const fs = require('fs').promises
-const MAX_PIXELS = 10000
-const MAX_SCALE = 1000
-const MAX_BUFFER_SIZE = 500 * 1024 * 1024 // 500 mB
 sharp.simd(true)
 sharp.cache(false)
 sharp.concurrency(5)
@@ -45,9 +48,9 @@ async function resizeImage(imagePath, { width, height, scale, kernel }) {
   }
   if (kernel && !validKernels.includes(kernel)) {
     debug('Invalid kernel provided:', kernel)
-    kernel = undefined
+    kernel = scale > 100 ? 'lanczos3' : 'mitchell'
   }
-  let mtime
+  let mtime = new Date()
   try {
     const stat = await fs.stat(imagePath)
     mtime = stat.mtime
