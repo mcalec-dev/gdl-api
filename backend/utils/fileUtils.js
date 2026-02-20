@@ -196,7 +196,18 @@ async function upsertFileEntry(fileObj) {
   try {
     const filter = { 'paths.relative': fileObj.paths.relative }
     let existing = await File.findOne(filter)
-    const hash = fileObj.hash
+    let hash = fileObj.hash
+    if (!hash) {
+      try {
+        hash = await calculateFileHash(fileObj.paths.local)
+      } catch (error) {
+        debug('Failed to generate hash for file:', {
+          path: fileObj.paths?.relative,
+          error: error.message,
+        })
+        hash = null
+      }
+    }
     if (!existing) {
       debug('Creating new file entry:', fileObj.paths.relative)
       const newFile = new File({
@@ -212,8 +223,8 @@ async function upsertFileEntry(fileObj) {
         collection: fileObj.collection || null,
         mime: fileObj.mime || null,
         hash: hash || null,
-        created: fileObj.created || new Date(),
-        modified: fileObj.modified || new Date(),
+        created: fileObj.created || null,
+        modified: fileObj.modified || null,
         meta: { ...fileObj.meta },
       })
       debug('Upserted new file entry:', fileObj.paths.relative)
@@ -237,7 +248,7 @@ async function upsertFileEntry(fileObj) {
             collection: fileObj.collection || existing.collection || null,
             mime: fileObj.mime || existing.mime || null,
             hash: hash || existing.hash || null,
-            modified: fileObj.modified || existing.modified || new Date(),
+            modified: fileObj.modified || existing.modified || null,
             meta: { ...fileObj.meta, ...existing.meta },
           },
         },
@@ -270,6 +281,7 @@ async function upsertAccessedItem(realPath) {
     let result = null
     if (stats.isDirectory()) {
       try {
+        const { collection, author } = deriveCollectionAuthor(relative)
         result = await upsertDirectoryEntry({
           name,
           paths: {
@@ -279,6 +291,9 @@ async function upsertAccessedItem(realPath) {
           },
           size: stats.size,
           type: 'directory',
+          collection,
+          author,
+          tags: [],
           created: stats.birthtime,
           modified: stats.mtime,
         })
@@ -443,10 +458,14 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
       }
       const paths = buildPaths(dirPath, entryRelativePath, BASE_PATH)
       if (entry.isDirectory()) {
+        const { collection, author } = deriveCollectionAuthor(entryRelativePath)
         await upsertDirectoryEntry({
           name: entry.name,
           paths,
           size: size,
+          collection,
+          author,
+          tags: [],
           created: ctime,
           modified: mtime,
         })
@@ -463,6 +482,15 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         } else {
           metadata = {}
         }
+        let hash = null
+        try {
+          hash = await calculateFileHash(entryPath)
+        } catch (error) {
+          debug('Error calculating file hash in scanAndSyncDirectory:', {
+            path: entryRelativePath,
+            error: error.message,
+          })
+        }
         const { collection, author } = deriveCollectionAuthor(entryRelativePath)
         const mime = await getFileMime(entry.name)
         await upsertFileEntry({
@@ -476,6 +504,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           modified: mtime,
           mime,
           meta: metadata,
+          hash,
         })
       }
     }
@@ -568,8 +597,7 @@ async function formatListingEntry(
       url,
       collection,
       author,
-      ...(fileUuid && { uuid: fileUuid }),
-      ...(fileHash && { hash: fileHash }),
+      ...(entry.isDirectory() ? {} : { uuid: fileUuid, hash: fileHash }),
     }
     if (includeMime && !entry.isDirectory()) {
       result.mime = await getFileMime(entry.name)
@@ -618,10 +646,14 @@ async function createDbEntriesForContents(items, parentPath = '') {
         metadata = {}
       }
       if (item.type === 'directory') {
+        const { collection, author } = deriveCollectionAuthor(relPath)
         await upsertDirectoryEntry({
           name: item.name,
           paths,
           size: item.size || 0,
+          collection: item.collection || collection,
+          author: item.author || author,
+          tags: item.tags || [],
           created: item.created || null,
           modified: item.modified || null,
         })
@@ -630,6 +662,15 @@ async function createDbEntriesForContents(items, parentPath = '') {
         }
       }
       if (item.type === 'file') {
+        let hash = null
+        try {
+          hash = await calculateFileHash(localPath)
+        } catch (error) {
+          debug('Error calculating file hash in createDbEntriesForContents:', {
+            path: relPath,
+            error: error.message,
+          })
+        }
         await upsertFileEntry({
           name: item.name,
           paths,
@@ -640,6 +681,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
           author: item.author || null,
           created: item.created || null,
           modified: item.modified || null,
+          hash,
           meta: { ...metadata },
         })
       }

@@ -373,7 +373,6 @@ export function setupFileItemContextMenu() {
           navigator.clipboard.writeText(fileUrl)
         } catch (error) {
           utils.handleError(error)
-          return
         }
       },
     })
@@ -386,7 +385,6 @@ export function setupFileItemContextMenu() {
             window.open(dirUrl, '_blank')
           } catch (error) {
             utils.handleError(error)
-            return
           }
         },
       })
@@ -401,7 +399,6 @@ export function setupFileItemContextMenu() {
             window.open(fileUrl, '_blank')
           } catch (error) {
             utils.handleError(error)
-            return
           }
         },
       })
@@ -412,15 +409,9 @@ export function setupFileItemContextMenu() {
           handler: async () => {
             if (!fileUrl) return
             try {
-              const req = await fetch(fileUrl)
-              const blob = await req.blob()
-              const type = blob.type
-              await navigator.clipboard.write([
-                new window.ClipboardItem({ [type]: blob }),
-              ])
+              await utils.copyImage(fileUrl)
             } catch (error) {
               utils.handleError(error)
-              return
             }
           },
         })
@@ -440,7 +431,6 @@ export function setupFileItemContextMenu() {
             document.body.removeChild(a)
           } catch (error) {
             utils.handleError(error)
-            return
           }
         },
       })
@@ -461,7 +451,6 @@ export function setupFileItemContextMenu() {
                 navigator.clipboard.writeText(hash)
               } catch (error) {
                 utils.handleError(error)
-                return
               }
             },
           },
@@ -475,7 +464,6 @@ export function setupFileItemContextMenu() {
                 navigator.clipboard.writeText(uuid)
               } catch (error) {
                 utils.handleError(error)
-                return
               }
             },
           },

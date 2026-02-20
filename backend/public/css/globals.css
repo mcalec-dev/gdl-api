@@ -11,6 +11,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-family: lexend;
   src: url("/font/Lexend.ttf") format('truetype');
   font-style: normal;
+  font-display: swap;
 }
 
 /* montserrat */
@@ -18,11 +19,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-family: montserrat;
   src: url("/font/Montserrat.ttf") format('truetype');
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: montserrat;
   src: url("/font/Montserrat-Italic.ttf") format('truetype');
   font-style: italic;
+  font-display: swap;
 }
 
 /* OpenSans */
@@ -30,11 +33,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-family: opensans;
   src: url("/font/OpenSans.ttf") format('truetype');
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: opensans;
   src: url("/font/OpenSans-Italic.ttf") format('truetype');
   font-style: italic;
+  font-display: swap;
 }
 
 /* Roboto */
@@ -42,11 +47,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-family: roboto;
   src: url("/font/roboto.ttf") format('truetype');
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: roboto;
   src: url("/font/Roboto-Italic.ttf") format('truetype');
   font-style: italic;
+  font-display: swap;
 }
 
 /* UbuntuSans */
@@ -54,9 +61,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-family: ubuntusans;
   src: url("/font/Roboto.ttf") format('truetype');
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: ubuntusans;
   src: url("/font/Roboto-Italic.ttf") format('truetype');
   font-style: italic;
+  font-display: swap;
 }

@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.37",
+  "version": "0.2.38",
   "description": "gdl-api express api server + frontend + bots",
   "author": "McAlec",
   "keywords": [
@@ -17,7 +17,7 @@
     "server": "set DEBUG=gdl-api:* && node server.js",
     "lint": "eslint .",
     "format": "prettier . --write",
-    "minify": "set DEBUG=gdl-api:* && node minify.js",
+    "minify": "set DEBUG=gdl-api:* && node -e 'import('./minify.js').processFiles'",
     "rollup": "set DEBUG=gdl-api:* && node rollup.js",
     "build": "npm run lint && npm run format && npm run minify"
   },

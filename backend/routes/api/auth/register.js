@@ -28,14 +28,17 @@ router.post('/', async (req, res) => {
     })
   }
   const hash = await bcrypt.hash(password, 10)
+  const uuid = require('uuid').v4()
   const user = await User.create({
     username,
     email,
     password: hash,
+    uuid,
+    created: new Date(),
     roles: ['user'],
   })
   try {
-    const uuid = require('uuid').v4()
+    const sessionUuid = require('uuid').v4()
     req.login(user, async (err) => {
       if (err) {
         debug('Error during req.login after registration:', err)
@@ -45,14 +48,18 @@ router.post('/', async (req, res) => {
       }
       try {
         user.sessions = user.sessions || []
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
         user.sessions.push({
-          uuid,
-          modified: new Date(),
+          uuid: sessionUuid,
+          created: now,
+          modified: now,
+          expires: expiresAt,
           ip: String(req.ip),
           useragent: String(req.useragent),
         })
         await user.save()
-        req.session.uuid = uuid
+        req.session.uuid = sessionUuid
         req.session.save((saveErr) => {
           if (saveErr) {
             debug('Error saving session after registration login:', saveErr)

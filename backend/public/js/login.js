@@ -43,7 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   function showError(error) {
-    errorDiv.textContent = error.message
+    errorDiv.textContent =
+      typeof error === 'string' ? error : error?.message || 'An error occurred'
     errorDiv.hidden = false
   }
   function hideError() {

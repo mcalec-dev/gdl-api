@@ -17,7 +17,7 @@ function setReqVars(req, res, next) {
     req.connection.remoteAddress ||
     req.socket.remoteAddress ||
     req.connection.socket?.remoteAddress ||
-    'unknown'
+    ''
   req.useragent = req.headers['user-agent'] || req.get('User-Agent') || ''
   next()
 }

@@ -1,7 +1,11 @@
 const File = require('../models/File')
 const Directory = require('../models/Directory')
+const { MAX_SEARCH_RESULTS } = require('../config')
 const { normalizePath } = require('./pathUtils')
-const MAX_SEARCH_RESULTS = 2000
+function escapeRegexString(str) {
+  if (typeof str !== 'string') return ''
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 function scoreResult(result, queryStr, type, searchType) {
   let score = 0
   const nameLower = (result.name || '').toLowerCase()
@@ -39,23 +43,27 @@ function scoreResult(result, queryStr, type, searchType) {
 }
 async function searchDatabase({ q, type, basePath, protocol, hostname }) {
   const queryStr = q.toLowerCase()
+  const escapedQuery = escapeRegexString(q)
   let dbResults = []
   const fileQuery =
     type === 'directory'
       ? null
       : type === 'uuid'
-        ? { uuid: q }
+        ? { uuid: { $eq: q } }
         : type === 'hash'
-          ? { hash: { $regex: q, $options: 'i' } }
+          ? { hash: { $regex: escapedQuery, $options: 'i' } }
           : {
               $or: [
-                { name: { $regex: q, $options: 'i' } },
-                { 'paths.relative': { $regex: q, $options: 'i' } },
-                { collection: { $regex: q, $options: 'i' } },
-                { author: { $regex: q, $options: 'i' } },
-                { tags: { $regex: q, $options: 'i' } },
+                { name: { $regex: escapedQuery, $options: 'i' } },
+                { 'paths.relative': { $regex: escapedQuery, $options: 'i' } },
+                { collection: { $regex: escapedQuery, $options: 'i' } },
+                { author: { $regex: escapedQuery, $options: 'i' } },
+                { tags: { $regex: escapedQuery, $options: 'i' } },
                 ...(type === 'all'
-                  ? [{ uuid: q }, { hash: { $regex: q, $options: 'i' } }]
+                  ? [
+                      { uuid: { $eq: q } },
+                      { hash: { $regex: escapedQuery, $options: 'i' } },
+                    ]
                   : []),
               ],
             }
@@ -64,9 +72,9 @@ async function searchDatabase({ q, type, basePath, protocol, hostname }) {
       ? null
       : {
           $or: [
-            { name: { $regex: q, $options: 'i' } },
-            { 'paths.relative': { $regex: q, $options: 'i' } },
-            { tags: { $regex: q, $options: 'i' } },
+            { name: { $regex: escapedQuery, $options: 'i' } },
+            { 'paths.relative': { $regex: escapedQuery, $options: 'i' } },
+            { tags: { $regex: escapedQuery, $options: 'i' } },
           ],
         }
   if (type === 'file') {

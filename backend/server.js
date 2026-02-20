@@ -87,8 +87,20 @@ async function initDB() {
           { 'expires.$date': { $lt: cutoffDate } },
         ],
       })
+      debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
+      const User = require('./models/User')
+      const userResult = await User.updateMany(
+        {},
+        {
+          $pull: {
+            sessions: {
+              expires: { $lt: cutoffDate },
+            },
+          },
+        }
+      )
       debug(
-        `Expired sessions cleaned up (${result.deletedCount} removed, cutoff: ${cutoffDate})`
+        `User sessions cleaned up (${userResult.modifiedCount} users updated)`
       )
     }
   } catch (error) {
@@ -356,7 +368,13 @@ async function initApp() {
   )
   // security headers
   app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'no-cache')
+    if (
+      !req.path.match(
+        /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|mp4|webm)$/i
+      )
+    ) {
+      res.setHeader('Cache-Control', 'no-cache')
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff')
     next()
   })
@@ -366,20 +384,17 @@ async function initApp() {
     express.static(path.join(__dirname, 'public'), {
       etag: true,
       lastModified: true,
-      maxAge: '1d',
+      maxAge: '1y',
       redirect: true,
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
   )
   // special static files
-  app.get('/robots.txt', (req, res) => {
-    res.setHeader('Content-Type', 'text/plain')
-    res.sendFile(path.join(__dirname, 'public', 'robots.txt'))
-  })
   app.get(`/favicon.ico`, (req, res) => {
     res.setHeader('Content-Type', 'image/x-icon')
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     res.sendFile(path.join(__dirname, 'public', 'favicon.ico'))
   })
   // trolling middleware

@@ -71,9 +71,11 @@ passport.use(
             }
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
+            const now = new Date()
             user.sessions.push({
               uuid,
-              created: new Date(),
+              created: now,
+              modified: now,
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
               useragent:
@@ -99,9 +101,11 @@ passport.use(
           }
           if (!user.email) user.email = email
           user.sessions = user.sessions || []
+          const now = new Date()
           user.sessions.push({
             uuid,
-            created: new Date(),
+            created: now,
+            modified: now,
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
             useragent:
@@ -112,18 +116,22 @@ passport.use(
           debug('GitHub user authenticated successfully:', user.username)
           return done(null, user)
         } else {
+          const userUuid = require('uuid').v4()
+          const now = new Date()
           user = await User.create({
             username,
             email,
+            uuid: userUuid,
+            created: now,
             roles: ['user'],
             sessions: [
               {
                 uuid,
-                created: new Date(),
+                created: now,
+                modified: now,
                 expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 ip: req?.ip,
-                useragent:
-                  req?.headers['user-agent'] || req.get('User-Agent') || '',
+                useragent: req?.useragent,
               },
             ],
             oauth: {
@@ -179,9 +187,11 @@ passport.use(
             }
             if (!user.email) user.email = email
             user.sessions = user.sessions || []
+            const now = new Date()
             user.sessions.push({
               uuid,
-              created: new Date(),
+              created: now,
+              modified: now,
               expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               ip: req?.ip,
               useragent:
@@ -210,9 +220,11 @@ passport.use(
           }
           if (!user.email) user.email = email
           user.sessions = user.sessions || []
+          const now = new Date()
           user.sessions.push({
             uuid,
-            created: new Date(),
+            created: now,
+            modified: now,
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             ip: req?.ip,
             useragent:
@@ -223,14 +235,19 @@ passport.use(
           debug('Discord user authenticated successfully:', user.username)
           return done(null, user)
         } else {
+          const userUuid = require('uuid').v4()
+          const now = new Date()
           user = await User.create({
             username,
             email,
+            uuid: userUuid,
+            created: now,
             roles: ['user'],
             sessions: [
               {
                 uuid,
-                created: new Date(),
+                created: now,
+                modified: now,
                 expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 ip: req?.ip,
                 useragent:

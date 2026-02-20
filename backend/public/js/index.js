@@ -164,8 +164,8 @@ export function handleError(error) {
 }
 /**
  * Displays a status message in the UI
- * @param {string} mesg 
- * @param {boolean} isError 
+ * @param {string} mesg
+ * @param {boolean} isError
  */
 export function statusMessage(mesg, isError = false) {
   const statusMessageElement = document.getElementById('statusMessage')
@@ -175,7 +175,7 @@ export function statusMessage(mesg, isError = false) {
     statusMessageElement.style.color = isError ? 'red' : 'black'
   }
 }
-export function upscaleImage(url, scale, kernel = 'lanczos3') {
+export function upscaleImage(url, scale = '100', kernel = 'lanczos3') {
   if (!url || !scale) return null
   try {
     const urlObj = new URL(url)
@@ -187,7 +187,61 @@ export function upscaleImage(url, scale, kernel = 'lanczos3') {
     return null
   }
 }
-// Export all utilities as default
+export function getByUUID(uuid, type = 'file') {
+  if (!uuid || !type) return null
+  const typeEnum = ['file', 'directory']
+  if (!typeEnum.includes(type)) {
+    handleError('Invalid type parameter: ' + type)
+    return null
+  }
+  return fetch(`/api/uuid/${uuid}/${type}`)
+    .then((response) => {
+      if (!response.ok) {
+        handleError('Failed to fetch info: ' + response.statusText)
+        return null
+      }
+      return response.json()
+    })
+    .catch((error) => {
+      handleError(error)
+      return null
+    })
+}
+export async function copyImage(url) {
+  if (!url) return
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      throw new Error('Failed to fetch image: ' + res.statusText)
+    }
+    const blob = await res.blob()
+    const type = blob.type
+    if (!navigator.clipboard) {
+      throw new Error('Clipboard API not supported in this browser')
+    }
+    if (navigator.clipboard.write) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ [type]: blob })])
+        return
+      } catch (err) {
+        console.warn('Clipboard write failed, trying alternative methods:', err)
+      }
+    }
+    if (navigator.clipboard.writeBlob) {
+      await navigator.clipboard.writeBlob(blob)
+      return
+    }
+    throw new Error('No compatible clipboard method available')
+  } catch (error) {
+    handleError(`Failed to copy image: ${error.message}`)
+  }
+}
+export function escapeHtml(text) {
+  if (typeof text !== 'string') return ''
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
 export default {
   formatSize,
   formatMilliseconds,
@@ -197,4 +251,8 @@ export default {
   getIcons,
   handleError,
   statusMessage,
+  upscaleImage,
+  getByUUID,
+  copyImage,
+  escapeHtml,
 }

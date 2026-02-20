@@ -56,9 +56,9 @@ function showMedia(data) {
     mediaElement.playsInline = true
   }
   imageInfo.innerHTML = `
-    <span id="image-author" class="font-medium text-gray-300">${data.author}</span>
+    <span id="image-author" class="font-medium text-gray-300">${utils.escapeHtml(data.author)}</span>
     <span class="text-gray-500 text-light"> on </span>
-    <span id="image-collection" class="font-medium text-gray-300">${data.collection}</span><br>
+    <span id="image-collection" class="font-medium text-gray-300">${utils.escapeHtml(data.collection)}</span><br>
     <span id="image-size" class="text-gray-500 text-light">${utils.formatSize(data.size)}</span>
   `
   const loadHandler = () => {
@@ -218,7 +218,6 @@ function setupRandomMediaContextMenu() {
           navigator.clipboard.writeText(currentMediaData.url)
         } catch (error) {
           utils.handleError(error)
-          return
         }
       },
     })
@@ -231,7 +230,6 @@ function setupRandomMediaContextMenu() {
           window.open(currentMediaData.url, '_blank')
         } catch (error) {
           utils.handleError(error)
-          return
         }
       },
     })
@@ -245,15 +243,9 @@ function setupRandomMediaContextMenu() {
         handler: async () => {
           if (!currentMediaData.url) return
           try {
-            const req = await fetch(currentMediaData.url)
-            const blob = await req.blob()
-            const type = blob.type
-            await navigator.clipboard.write([
-              new window.ClipboardItem({ [type]: blob }),
-            ])
+            await utils.copyImage(currentMediaData.url)
           } catch (error) {
             utils.handleError(error)
-            return
           }
         },
       })
@@ -272,7 +264,6 @@ function setupRandomMediaContextMenu() {
           document.body.removeChild(a)
         } catch (error) {
           utils.handleError(error)
-          return
         }
       },
     })
@@ -292,7 +283,6 @@ function setupRandomMediaContextMenu() {
               navigator.clipboard.writeText(currentMediaData.hash)
             } catch (error) {
               utils.handleError(error)
-              return
             }
           },
         },
@@ -305,7 +295,6 @@ function setupRandomMediaContextMenu() {
               navigator.clipboard.writeText(currentMediaData.uuid)
             } catch (error) {
               utils.handleError(error)
-              return
             }
           },
         },

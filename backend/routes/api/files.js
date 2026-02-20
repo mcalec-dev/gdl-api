@@ -104,21 +104,43 @@ router.get('/', requireRole('user'), async (req, res) => {
       paginatedFiltered = sortedFiltered.slice(start, start + limit)
       paginatedFiles = sortedFiles.slice(start, start + limit)
     }
-    if (req.user) {
-      res.json(paginatedFiltered)
-      setImmediate(() => {
-        createDbEntriesForContents(filteredResults, '').catch((err) =>
-          debug('Background DB sync failed:', err)
-        )
-      })
-    } else {
-      res.json(paginatedFiles)
-      if (sortedFiles.length) {
-        setImmediate(() => {
-          createDbEntriesForContents(sortedFiles, '').catch((err) =>
-            debug('Background DB sync failed:', err)
-          )
+    const entriesToSync = req.user ? filteredResults : sortedFiles
+    try {
+      await createDbEntriesForContents(entriesToSync, '')
+      const fileRelativePaths = entriesToSync
+        .filter((entry) => entry.type === 'file')
+        .map((entry) => entry.name)
+      const updatedMetadataMap =
+        fileRelativePaths.length > 0
+          ? await batchFetchFileMetadata(fileRelativePaths)
+          : {}
+      const updateEntriesWithDbValues = (entries) => {
+        return entries.map((entry) => {
+          if (entry.type === 'file') {
+            const dbMeta = updatedMetadataMap[entry.name]
+            return {
+              ...entry,
+              uuid: dbMeta?.uuid || null,
+              hash: dbMeta?.hash || null,
+            }
+          }
+          return entry
         })
+      }
+      const updatedPaginatedFiltered =
+        updateEntriesWithDbValues(paginatedFiltered)
+      const updatedPaginatedFiles = updateEntriesWithDbValues(paginatedFiles)
+      if (req.user) {
+        res.json(updatedPaginatedFiltered)
+      } else {
+        res.json(updatedPaginatedFiles)
+      }
+    } catch (syncError) {
+      debug('Error syncing entries to database:', syncError)
+      if (req.user) {
+        res.json(paginatedFiltered)
+      } else {
+        res.json(paginatedFiles)
       }
     }
   } catch (error) {
@@ -247,23 +269,46 @@ router.get(
       const { sortBy, direction } = parseSortQuery(req.query)
       const sorted = sortContents(validContents, sortBy, direction)
       const limitRawDir = parseInt(req.query.limit, 10)
+      let paginated = sorted
       if (!isNaN(limitRawDir) && limitRawDir > 0) {
         const limit = Math.min(limitRawDir, PAGINATION_LIMIT)
         const pageRaw = parseInt(req.query.page, 10)
         const page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw
         const start = (page - 1) * limit
-        const paginated = sorted.slice(start, start + limit)
-        res.json(paginated)
-      } else {
-        res.json(sorted)
+        paginated = sorted.slice(start, start + limit)
       }
-      if (validContents.length && UPSERT_ON_ACCESS !== 'file') {
-        setImmediate(() => {
-          createDbEntriesForContents(validContents, relativePath).catch((err) =>
-            debug('Background DB sync failed:', err)
-          )
-        })
+      try {
+        if (validContents.length && UPSERT_ON_ACCESS !== 'file') {
+          await createDbEntriesForContents(validContents, relativePath)
+          const fileRelativePaths = validContents
+            .filter((entry) => entry.type === 'file')
+            .map((entry) => {
+              return `${relativePath}/${entry.name}`.replace(/^\/?/, '')
+            })
+          const updatedMetadataMap =
+            fileRelativePaths.length > 0
+              ? await batchFetchFileMetadata(fileRelativePaths)
+              : {}
+          paginated = paginated.map((entry) => {
+            const entryRelPath = `${relativePath}/${entry.name}`.replace(
+              /^\/?/,
+              ''
+            )
+            if (entry.type === 'file') {
+              const dbMeta = updatedMetadataMap[entryRelPath]
+              return {
+                ...entry,
+                uuid: dbMeta?.uuid || null,
+                hash: dbMeta?.hash || null,
+              }
+            }
+            return entry
+          })
+        }
+      } catch (syncError) {
+        debug('Error syncing directory entries to database:', syncError)
       }
+      res.json(paginated)
     } else {
       if (
         !hasAllowedExtension(realPath) ||

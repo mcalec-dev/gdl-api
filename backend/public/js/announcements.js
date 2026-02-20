@@ -23,11 +23,13 @@ async function fetchAnnouncements() {
         container.classList.add('bg-red-600')
     }
     container.hidden = false
-    const title = (await utils.parseEmojis(announcement.title))
+    const titleEscaped = utils.escapeHtml(announcement.title)
+    const title = (await utils.parseEmojis(titleEscaped))
       .trim()
       .replace(/\n/g, '<br />')
     document.getElementById('announcement-title').innerHTML = title
-    const message = (await utils.parseEmojis(announcement.message))
+    const messageEscaped = utils.escapeHtml(announcement.message)
+    const message = (await utils.parseEmojis(messageEscaped))
       .trim()
       .replace(/\n/g, '<br />')
       .replace(/\s{2,}/g, ' ')

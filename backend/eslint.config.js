@@ -56,6 +56,7 @@ module.exports = defineConfig([
         CustomEvent: 'readonly',
         Event: 'readonly',
         HTMLElement: 'readonly',
+        ClipboardItem: 'readonly',
       },
     },
   },

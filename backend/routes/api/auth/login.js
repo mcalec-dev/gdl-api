@@ -3,6 +3,7 @@ const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const debug = require('debug')('gdl-api:api:auth:login')
 const validator = require('validator')
+const { COOKIE_MAX_AGE } = require('../../../config')
 router.post('/', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     debug('User already logged in:', req.user.username || '')
@@ -36,17 +37,17 @@ router.post('/', async (req, res) => {
   }
   if (!user) {
     debug('User not found:', username, email)
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
+    return res.status(400).json({
+      message: 'Bad request',
+      status: 400,
     })
   }
   const match = await bcrypt.compare(password, user.password)
   if (!match) {
     debug('Password mismatch:', username, email)
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
+    return res.status(400).json({
+      message: 'Bad request',
+      status: 400,
     })
   }
   try {
@@ -61,9 +62,12 @@ router.post('/', async (req, res) => {
       }
       try {
         user.sessions = user.sessions || []
+        const now = new Date()
         user.sessions.push({
           uuid,
-          modified: new Date(),
+          created: now,
+          modified: now,
+          expires: new Date(now.getTime() + COOKIE_MAX_AGE),
           ip: String(req.ip),
           useragent: String(req.useragent),
         })
@@ -81,7 +85,6 @@ router.post('/', async (req, res) => {
           return res.status(201).json({
             success: true,
             user,
-            session: user.sessions[user.sessions.length - 1],
           })
         })
       } catch (error) {

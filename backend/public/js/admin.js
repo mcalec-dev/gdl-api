@@ -22,11 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="announcement-${announcement.uuid}" class="rounded-lg border border-gray-700 p-4 shadow-md text-xs text-gray-200">
                       <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300 text-center">Title:</span>
-                        <span id="announcement-title">${announcement.title}</span>
+                        <span id="announcement-title">${utils.escapeHtml(announcement.title)}</span>
                       </div>
                       <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300 text-center">Message:</span>
-                        <span id="announcement-message">${announcement.message}</span>
+                        <span id="announcement-message">${utils.escapeHtml(announcement.message)}</span>
                       </div>
                       <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300 text-center">Severity:</span>
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       </div>
                       <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300">Created By:</span>
-                        <span class="select-all">${announcement.author}</span>
+                        <span class="select-all">${utils.escapeHtml(announcement.author)}</span>
                       </div>
                       <div class="flex flex-wrap gap-1 mb-1 items-center">
                         <span class="font-semibold text-gray-300">Created At:</span>
@@ -103,8 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const severityEl = announcementDiv.querySelector('#announcement-severity')
     const deleteBtn = announcementDiv.querySelector('#delete-btn')
     const editBtn = announcementDiv.querySelector('#edit-btn')
-    titleEl.innerHTML = `<input type="text" id="edit-title-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" value="${title}"></input>`
-    messageEl.innerHTML = `<textarea id="edit-message-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" rows="2" value="${message}">${message}</textarea>`
+    const escapedTitle = utils.escapeHtml(title)
+    const escapedMessage = utils.escapeHtml(message)
+    titleEl.innerHTML = `<input type="text" id="edit-title-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" value="${escapedTitle}"></input>`
+    messageEl.innerHTML = `<textarea id="edit-message-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" rows="2" value="${escapedMessage}">${escapedMessage}</textarea>`
     severityEl.innerHTML = `
       <select id="edit-severity-input-${uuid}" class="flex px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded">
         <option value="info" ${severity === 'info' ? 'selected' : ''}>Info</option>

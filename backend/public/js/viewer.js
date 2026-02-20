@@ -1,5 +1,6 @@
 'use strict'
 import * as utils from '../min/index.min.js'
+import scroll from 'https://cdn.mcalec.dev/scroll.js/scroll.min.js'
 import {
   IMAGE_SCALE,
   MAX_IMAGE_SCALE,
@@ -9,6 +10,7 @@ let currentItemIndex = 0
 let currentItemList = []
 let itemLoadControllers = new Map()
 let icons
+let isViewerOpen = false
 async function loadViewerIcons() {
   const icon = await utils.getIcons()
   icons = {
@@ -21,7 +23,12 @@ async function loadViewerIcons() {
   }
 }
 function getMediaUrl(item) {
-  return item.previewSrc || `/api/files/${item.encodedPath}`
+  if (item.previewSrc) {
+    return item.previewSrc.startsWith('http')
+      ? item.previewSrc
+      : `${document.location.origin}${item.previewSrc.startsWith('/') ? '' : '/'}${item.previewSrc}`
+  }
+  return `${document.location.origin}/api/files/${item.encodedPath}`
 }
 function preloadMedia(item) {
   if (!item || item.type === 'video') return
@@ -32,6 +39,10 @@ function preloadMedia(item) {
       : getMediaUrl(item)
 }
 function showViewer(index) {
+  if (!isViewerOpen) {
+    scroll.lock()
+    isViewerOpen = true
+  }
   const item = currentItemList[index]
   const fileViewer = document.getElementById('file-viewer')
   const viewerImage = document.getElementById('viewer-container-image')
@@ -39,6 +50,7 @@ function showViewer(index) {
   const viewerAudio = document.getElementById('viewer-container-audio')
   const viewerEmbed = document.getElementById('viewer-container-embed')
   const viewerTitle = document.getElementById('viewer-info-title')
+  const viewerModified = document.getElementById('viewer-info-modified')
   const viewerSize = document.getElementById('viewer-info-size')
   const viewerCounter = document.getElementById('viewer-info-counter')
   const prevButton = document.getElementById('prev-image')
@@ -94,6 +106,9 @@ function showViewer(index) {
     viewerEmbed.style.border = 'none'
   }
   viewerTitle.textContent = item.name
+  viewerModified.textContent = item.modified
+    ? `Modified: ${utils.formatDate(item.modified)}`
+    : ''
   viewerSize.textContent = utils.formatSize(item.size) || ''
   viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
   prevButton.disabled = index === 0
@@ -167,7 +182,11 @@ async function setupViewerEvents() {
       fileViewer.style.display = 'none'
     } catch (error) {
       utils.handleError(error)
-      return
+    } finally {
+      if (isViewerOpen) {
+        scroll.unlock()
+        isViewerOpen = false
+      }
     }
   }
   function next() {
@@ -186,27 +205,27 @@ async function setupViewerEvents() {
       showViewer(currentItemIndex - 1)
     }
   }
-  newTabButton.addEventListener('click', async () => {
+  newTabButton.addEventListener('click', () => {
     const item = currentItemList[currentItemIndex]
-    const fullUrl = await getMediaUrl(item)
+    const fullUrl = getMediaUrl(item)
     window.open(fullUrl, '_blank')
   })
-  downloadButton.addEventListener('click', async () => {
+  downloadButton.addEventListener('click', () => {
     const item = currentItemList[currentItemIndex]
     if (!item.uuid) {
       utils.handleError('File UUID not available')
       return
     }
     const a = document.createElement('a')
-    a.href = `/api/download/?uuid=${item.uuid}`
+    a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
     a.download = ''
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
   })
-  copyLinkButton.addEventListener('click', async () => {
+  copyLinkButton.addEventListener('click', () => {
     const item = currentItemList[currentItemIndex]
-    const fileUrl = await getMediaUrl(item)
+    const fileUrl = getMediaUrl(item)
     navigator.clipboard.writeText(fileUrl)
   })
   closeButton.addEventListener('click', async () => {
@@ -317,6 +336,22 @@ async function setupViewerEvents() {
   viewerImage.addEventListener('click', async (e) => {
     await handleZoom(e.clientX, e.clientY)
   })
+  window.addEventListener('beforeunload', () => {
+    if (isViewerOpen) {
+      scroll.unlock()
+      isViewerOpen = false
+    }
+  })
+  document.addEventListener('visibilitychange', () => {
+    if (
+      document.hidden &&
+      fileViewer.style.display === 'flex' &&
+      isViewerOpen
+    ) {
+      scroll.unlock()
+      isViewerOpen = false
+    }
+  })
   return {
     closeViewer,
     next,
@@ -340,6 +375,7 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
         const fileType = media.dataset.fileType
         const uuid = media.dataset.uuid
         const size = parseInt(media.dataset.size) || 0
+        const modified = media.dataset.modified || null
         const encodedPath = mediaPath
           .split('/')
           .filter(Boolean)
@@ -351,14 +387,14 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
             previewSrc =
               preview?.dataset?.src ||
               preview?.src ||
-              `/api/files/${encodedPath}`
+              `${document.location.origin}/api/files/${encodedPath}`
           } else if (fileType === 'text') {
-            previewSrc = `/api/files/${encodedPath}`
+            previewSrc = `${document.location.origin}/api/files/${encodedPath}`
           } else {
             previewSrc =
               preview?.dataset?.src?.split('?')[0] ||
               preview?.src ||
-              `/api/files/${encodedPath}`
+              `${document.location.origin}/api/files/${encodedPath}`
           }
         }
         return {
@@ -367,6 +403,7 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
           type: fileType,
           uuid,
           size,
+          modified,
           encodedPath,
           previewSrc,
         }

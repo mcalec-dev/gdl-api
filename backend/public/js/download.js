@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 1200)
     } catch (error) {
       utils.handleError(error)
-      statusMessage.textContent = error.message
+      const errorMsg = error.message
+      statusMessage.textContent = errorMsg
       statusMessage.style.display = 'block'
     }
   })
