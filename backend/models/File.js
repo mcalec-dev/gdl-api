@@ -3,7 +3,7 @@ module.exports = mongoose.model(
   'File',
   new mongoose.Schema(
     {
-      name: { type: String, required: true, unique: true, index: true },
+      name: { type: String, required: true, index: true },
       paths: {
         local: { type: String, required: true, index: true },
         relative: { type: String, required: true, index: true },

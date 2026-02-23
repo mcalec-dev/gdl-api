@@ -4,8 +4,9 @@ const path = require('path')
 const { isExcluded } = require('../../utils/fileUtils')
 const { BASE_DIR } = require('../../config')
 const { aggregateStats, getApiStats } = require('../../utils/statsUtils')
-const debug = require('debug')('gdl-api:api:stats')
+const log = require('../../utils/logHandler')
 const { requireRole } = require('../../utils/authUtils')
+const sendResponse = require('../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
   try {
     const stats = {
@@ -73,7 +74,7 @@ router.get('/', requireRole('user'), async (req, res) => {
       heapUsed: stats.api.memory.heapUsed,
       rss: stats.api.memory.rss,
     }
-    debug('Stats refresh complete:', {
+    log.debug('Stats refresh complete:', {
       collections: stats.collections.total,
       files: stats.collections.totalFiles,
       size: stats.collections.size,
@@ -82,11 +83,8 @@ router.get('/', requireRole('user'), async (req, res) => {
     })
     res.json(stats)
   } catch (error) {
-    debug('Error generating stats:', error)
-    res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error generating stats:', error)
+    return sendResponse(res, 500)
   }
 })
 function sortFileTypes(fileTypes) {

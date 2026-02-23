@@ -1,26 +1,21 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:download')
+const log = require('../../utils/logHandler')
 const { requireRole } = require('../../utils/authUtils')
 const File = require('../../models/File')
 const fs = require('fs').promises
+const sendResponse = require('../../utils/resUtils')
 async function handleDownload(req, res) {
   let uuid = req.query.uuid || req.body?.uuid
   if (!uuid) {
-    debug('Missing uuid parameter')
-    return res.status(400).json({
-      message: 'Bad Request: Missing uuid parameter',
-      status: 400,
-    })
+    log.debug('Missing uuid parameter')
+    return sendResponse(res, 400, 'Missing uuid parameter')
   }
   uuid = uuid.trim()
   try {
     const file = await File.findOne({ uuid }).lean()
     if (!file) {
-      debug('File not found for uuid:', uuid)
-      return res.status(404).json({
-        message: 'Not Found: File not found',
-        status: 404,
-      })
+      log.debug('File not found for uuid:', uuid)
+      return sendResponse(res, 404)
     }
     const filename = decodeURIComponent(
       (file.name || '').replace(/[^a-zA-Z0-9.-]/g, '_')
@@ -29,11 +24,8 @@ async function handleDownload(req, res) {
     try {
       await fs.access(filePath)
     } catch (error) {
-      debug('File not accessible:', filePath, error)
-      return res.status(404).json({
-        message: 'Not Found: File not accessible',
-        status: 404,
-      })
+      log.error('File not accessible:', filePath, error)
+      return sendResponse(res, 404)
     }
     const stat = await fs.stat(filePath)
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
@@ -42,20 +34,14 @@ async function handleDownload(req, res) {
     const fileStream = require('fs').createReadStream(filePath)
     fileStream.pipe(res)
     fileStream.on('error', (error) => {
-      debug('File streaming error:', error)
+      log.error('File streaming error:', error)
       if (!res.headersSent) {
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          status: 500,
-        })
+        return sendResponse(res, 500)
       }
     })
   } catch (error) {
-    debug('Download error:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Download error:', error)
+    return sendResponse(res, 500)
   }
 }
 router.get('/', requireRole('user'), async (req, res) => {

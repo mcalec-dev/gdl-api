@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const pkg = require('../../package.json')
 const { NAME, BASE_PATH, HOST } = require('../../config')
-const debug = require('debug')('gdl-api:api')
+const log = require('../../utils/logHandler')
 const pathUtils = require('../../utils/pathUtils')
 const { getHostUrl } = require('../../utils/urlUtils')
 router.use((req, res, next) => {
@@ -13,35 +13,34 @@ router.use((req, res, next) => {
   next()
 })
 try {
-  debug('Mounting admin route')
+  log.debug('Mounting admin route')
   router.use('/admin', require('./admin/index'))
-  debug('Mounting auth route')
+  log.debug('Mounting auth route')
   router.use('/auth', require('./auth/index'))
-  debug('Mounting user route')
+  log.debug('Mounting user route')
   router.use('/user', require('./user/index'))
-  debug('Mounting download route')
+  log.debug('Mounting download route')
   router.use('/download', require('./download'))
-  debug('Mounting files route')
+  log.debug('Mounting files route')
   router.use('/files', require('./files'))
-  debug('Mounting health route')
+  log.debug('Mounting health route')
   router.use('/health', require('./health'))
-  debug('Mounting random route')
+  log.debug('Mounting random route')
   router.use('/random', require('./random'))
-  debug('Mounting search route')
+  log.debug('Mounting search route')
   router.use('/search', require('./search'))
-  debug('Mounting stats route')
+  log.debug('Mounting stats route')
   router.use('/stats', require('./stats'))
-  debug('Mounting upload route')
+  log.debug('Mounting upload route')
   router.use('/upload', require('./upload'))
-  debug('Mounting uuid route')
+  log.debug('Mounting uuid route')
   router.use('/uuid', require('./uuid'))
 } catch (error) {
-  debug('Error mounting routes:', error)
+  log.error('Error mounting routes:', error)
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return res.json({
-    api: String('v2'),
     name: String(NAME),
     version: String(pkg.version),
     description: String(pkg.description),

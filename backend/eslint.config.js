@@ -64,5 +64,13 @@ module.exports = defineConfig([
     ...json.configs.recommended,
     files: ['**/*.json'],
   },
-  { ignores: ['node_modules/**', '**/*.min.js'] },
+  {
+    files: ['public/**/*.css'],
+    languageOptions: {
+      globals: {
+        css: 'readonly',
+      },
+    },
+  },
+  { ignores: ['node_modules/**', '**/*.min.js', '**/*.min.css'] },
 ])

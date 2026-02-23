@@ -2,60 +2,43 @@ const router = require('express').Router()
 const { requireRole } = require('../../utils/authUtils')
 const File = require('../../models/File')
 const Directory = require('../../models/Directory')
-const debug = require('debug')('gdl-api:api:uuid')
+const log = require('../../utils/logHandler')
+const sendResponse = require('../../utils/resUtils')
 router.get(
   ['/:uuid/:type', '/:uuid/:type/'],
   requireRole('user'),
   async (req, res) => {
     const { uuid, type } = req.params
     if (!uuid || typeof uuid !== 'string') {
-      debug('Invalid UUID parameter:', uuid)
-      return res.status(400).json({
-        message: 'Bad Request',
-        status: 400,
-      })
+      log.debug('Invalid UUID parameter:', uuid)
+      return sendResponse(res, 400, 'Invalid UUID parameter')
     }
     if (!type || typeof type !== 'string') {
-      debug('Invalid type parameter:', type)
-      return res.status(400).json({
-        message: 'Bad Request',
-        status: 400,
-      })
+      log.debug('Invalid type parameter:', type)
+      return sendResponse(res, 400, 'Invalid type parameter')
     }
     try {
       const directoryEntry = await Directory.findOne({ uuid: { $eq: uuid } })
       const fileEntry = await File.findOne({ uuid: { $eq: uuid } })
       if (type === 'file') {
         if (!fileEntry) {
-          debug('File not found for UUID:', uuid)
-          return res.status(404).json({
-            message: 'Not Found',
-            status: 404,
-          })
+          log.debug('File not found for UUID:', uuid)
+          return sendResponse(res, 404)
         }
         return res.json(fileEntry)
       } else if (type === 'directory') {
         if (!directoryEntry) {
-          debug('Directory not found for UUID:', uuid)
-          return res.status(404).json({
-            message: 'Not Found',
-            status: 404,
-          })
+          log.debug('Directory not found for UUID:', uuid)
+          return sendResponse(res, 404)
         }
         return res.json(directoryEntry)
       } else {
-        debug('Invalid type parameter value:', type)
-        return res.status(400).json({
-          message: 'Bad Request',
-          status: 400,
-        })
+        log.debug('Invalid type parameter value:', type)
+        return sendResponse(res, 400, 'Invalid type parameter value')
       }
     } catch (error) {
-      debug('Error retrieving file by UUID:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.error('Error retrieving file by UUID:', error)
+      return sendResponse(res, 500)
     }
   }
 )

@@ -1,17 +1,15 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:admin:announcements')
+const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
 const Announcement = require('../../../models/Announcement')
+const sendResponse = require('../../../utils/resUtils')
 router.get('/', requireRole('admin'), async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)
   } catch (error) {
-    debug('Error fetching announcements:', error)
-    return res.status(500).json({
-      error: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error fetching announcements:', error)
+    return sendResponse(res, 500)
   }
 })
 router.post('/', requireRole('admin'), async (req, res) => {
@@ -19,10 +17,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
     const uuid = require('uuid').v4()
     const { title, message, severity } = req.body
     if (!title) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        status: 400,
-      })
+      return sendResponse(res, 400, 'Title is required')
     }
     const createdAnncouncement = new Announcement({
       title,
@@ -34,34 +29,23 @@ router.post('/', requireRole('admin'), async (req, res) => {
       uuid,
     })
     await createdAnncouncement.save()
-    debug('Announcement created:', createdAnncouncement)
-    return res.status(201).json({
-      success: true,
-      createdAnncouncement,
-    })
+    log.debug('Announcement created:', createdAnncouncement)
+    return sendResponse(res, 201, 'Announcement created successfully')
   } catch (error) {
-    debug('Error creating announcement:', error)
-    return res.status(500).json({
-      error: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error creating announcement:', error)
+    return sendResponse(res, 500, 'Internal Server Error')
   }
 })
 router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { uuid } = req.params
   const { title, message, severity } = req.body
   if (!uuid || typeof uuid !== 'string') {
-    debug('Invalid UUID parameter:', uuid)
-    return res.status(400).json({
-      error: 'Bad Request',
-      status: 400,
-    })
+    log.debug('Invalid UUID parameter:', uuid)
+    return sendResponse(res, 400, 'Invalid UUID parameter')
   }
   if (!severity) {
-    return res.status(400).json({
-      error: 'Bad Request',
-      status: 400,
-    })
+    log.debug('Severity not provided')
+    return sendResponse(res, 400, 'Severity is required')
   }
   try {
     const updatedAnnouncement = await Announcement.findOneAndUpdate(
@@ -76,55 +60,38 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       { new: true }
     )
     if (!updatedAnnouncement) {
-      return res.status(404).json({
-        error: 'Announcement not found',
-        status: 404,
-      })
+      return sendResponse(res, 404, 'Announcement not found')
     }
-    debug('Announcement updated:', updatedAnnouncement)
-    return res.status(204).send()
+    log.debug('Announcement updated:', updatedAnnouncement)
+    return sendResponse(res, 204, 'Announcement updated successfully')
   } catch (error) {
-    debug('Error updating announcement:', error)
-    return res.status(500).json({
-      error: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error updating announcement:', error)
+    return sendResponse(res, 500)
   }
 })
 router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
   const { uuid } = req.params
   if (!uuid || typeof uuid !== 'string') {
-    debug('Invalid UUID parameter:', uuid)
-    return res.status(400).json({
-      error: 'Bad Request',
-      status: 400,
-    })
+    log.debug('Invalid UUID parameter:', uuid)
+    return sendResponse(res, 400, 'Invalid UUID parameter')
   }
   if (!req.user || !req.user.roles.includes('admin')) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    log.debug('Unauthorized access attempt')
+    return sendResponse(res, 401)
   }
   try {
     const deletedAnnouncement = await Announcement.findOneAndDelete({
       uuid: { $eq: req.params.uuid },
     })
     if (!deletedAnnouncement) {
-      return res.status(404).json({
-        error: 'Announcement not found',
-        status: 404,
-      })
+      log.debug('Announcement not found for deletion:', uuid)
+      return sendResponse(res, 404)
     }
-    debug('Announcement deleted:', deletedAnnouncement)
-    return res.status(204).send()
+    log.debug('Announcement deleted:', deletedAnnouncement)
+    return sendResponse(res, 204, 'Announcement deleted successfully')
   } catch (error) {
-    debug('Error deleting announcement:', error)
-    return res.status(500).json({
-      error: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error deleting announcement:', error)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

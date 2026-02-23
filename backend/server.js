@@ -10,7 +10,7 @@ const path = require('path')
 const chalk = require('chalk')
 const server = require('http').createServer(app)
 const swaggerUi = require('swagger-ui-express')
-const debug = require('debug')('gdl-api:server')
+const log = require('./utils/logHandler')
 const BodyParser = require('body-parser')
 const rateLimit = require('express-rate-limit')
 const ms = require('ms')
@@ -46,7 +46,7 @@ async function initSwagger() {
     swaggerSpec.info.version = process.env.npm_package_version
     app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
   } catch (error) {
-    debug('Error loading Swagger spec:', error)
+    log.error('Error loading Swagger spec:', error)
     throw error
   }
 }
@@ -65,7 +65,7 @@ async function initDB() {
     typeof COOKIE_MAX_AGE === 'string' ? ms(COOKIE_MAX_AGE) : COOKIE_MAX_AGE
   try {
     const connection = await require('mongoose').connect(MONGODB_URL)
-    debug('MongoDB connected')
+    log.debug('MongoDB connected')
     const gridfsUtils = require('./utils/gridfsUtils')
     gridfsUtils.initGridFS()
     if (store) {
@@ -73,9 +73,9 @@ async function initDB() {
       const sessions = db.collection('sessions')
       try {
         await sessions.createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
-        debug('TTL index created on sessions collection')
+        log.debug('TTL index created on sessions collection')
       } catch (indexError) {
-        debug(
+        log.debug(
           'TTL index already exists or creation failed:',
           indexError.message
         )
@@ -87,7 +87,7 @@ async function initDB() {
           { 'expires.$date': { $lt: cutoffDate } },
         ],
       })
-      debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
+      log.debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
       const User = require('./models/User')
       const userResult = await User.updateMany(
         {},
@@ -99,12 +99,12 @@ async function initDB() {
           },
         }
       )
-      debug(
+      log.debug(
         `User sessions cleaned up (${userResult.modifiedCount} users updated)`
       )
     }
   } catch (error) {
-    console.error('Database initialization failed:', error)
+    log.error('Database initialization failed:', error)
   }
 }
 // common template variables
@@ -129,7 +129,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering home page:', error)
+      log.error('Error rendering home page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -142,7 +142,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering random page:', error)
+      log.error('Error rendering random page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -155,7 +155,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering stats page:', error)
+      log.error('Error rendering stats page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -168,7 +168,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering search page:', error)
+      log.error('Error rendering search page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -181,7 +181,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering files page:', error)
+      log.error('Error rendering files page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -194,7 +194,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering files page:', error)
+      log.error('Error rendering files page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -207,7 +207,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering login page:', error)
+      log.error('Error rendering login page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -220,7 +220,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering register page:', error)
+      log.error('Error rendering register page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -233,7 +233,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering download page:', error)
+      log.error('Error rendering download page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -246,7 +246,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering dashboard page:', error)
+      log.error('Error rendering dashboard page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -259,7 +259,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering admin page:', error)
+      log.error('Error rendering admin page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -272,7 +272,7 @@ async function renderApp() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering 404 page:', error)
+      log.error('Error rendering 404 page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
@@ -315,6 +315,13 @@ async function initApp() {
   //app.use(cookieParser())
   // express useragent
   app.use(require('express-useragent').express())
+  // robots.txt
+  app.use(
+    require('express-robots-txt')({
+      UserAgent: '*',
+      Disallow: '/',
+    })
+  )
   // parse body
   app.use(BodyParser.urlencoded({ extended: true }))
   app.use(BodyParser.json())
@@ -406,10 +413,10 @@ async function initApp() {
     const uriRickroll = uri.toLowerCase().includes('rickroll')
     if (Math.random() < chance || uriRickroll) {
       if (isbot(ua)) {
-        debug('Bot detected:', ua)
+        log.debug('Bot detected:', ua)
         return res.send('Bot detected!')
       }
-      debug('Sending troll to:', req.ip, ua)
+      log.debug('Sending troll to:', req.ip, ua)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
@@ -418,7 +425,7 @@ async function initApp() {
       uri.toLowerCase().includes(term.toLowerCase())
     )
     if (containsBlockedTerm) {
-      debug('Sending troll to:', req.ip, ua)
+      log.debug('Sending troll to:', req.ip, ua)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'so-you-found-it.mp4')
       )
@@ -429,7 +436,7 @@ async function initApp() {
   app.use((req, res, next) => {
     const ua = req.headers['user-agent'] || req.get('User-Agent')
     if (isbot(ua)) {
-      debug('Bot detected:', ua)
+      log.debug('Bot detected:', ua)
       if (res.headersSent) {
         return next()
       }
@@ -440,15 +447,15 @@ async function initApp() {
 async function setupRoutes() {
   try {
     app.use(`${BASE_PATH}`, require('./routes'))
-    debug('API routes mounted successfully')
+    console.log(chalk.green('✓ API routes mounted'))
   } catch (error) {
-    debug('Error mounting API routes:', error)
+    log.error('Error mounting API routes:', error)
     throw error
   }
   await renderApp()
   console.log(chalk.green('✓ Frontend routes mounted'))
   app.use(async (req, res) => {
-    debug('Not found:', req.path)
+    log.debug('Page not found:', req.path)
     try {
       var vars = await webVars()
       res.status(404).render('404', {
@@ -457,13 +464,13 @@ async function setupRoutes() {
         ...vars,
       })
     } catch (error) {
-      debug('Error rendering 404 page:', error)
+      log.error('Error rendering 404 page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
   app.use((error, req, res, next) => {
-    debug('An error occured:', error.message)
-    debug(error.stack)
+    log.error('An error occured:', error.message)
+    log.error(error.stack)
     if (res.headersSent) {
       return next(error)
     }
@@ -484,11 +491,11 @@ async function setupRoutes() {
 }
 // process handlers
 process.on('uncaughtException', (error) => {
-  debug('Uncaught Exception:', error)
+  log.error('Uncaught Exception:', error)
   process.exit(1)
 })
 process.on('unhandledRejection', (reason, promise) => {
-  debug('Unhandled Rejection at:', promise, 'reason:', reason)
+  log.error('Unhandled Rejection at:', promise, 'reason:', reason)
   process.exit(1)
 })
 // gracefully shutdown
@@ -504,7 +511,7 @@ process.on('SIGTERM', () => {
         })
       })
       .catch((err) => {
-        console.error('Failed to clear sessions:', err)
+        log.error('Failed to clear sessions:', err)
         server.close(() => {
           console.log('Process terminated')
         })
@@ -519,18 +526,18 @@ process.on('SIGTERM', () => {
 async function verifyConfig() {
   try {
     await require('fs').promises.access(BASE_DIR)
-    debug('Base directory accessible:', BASE_DIR)
+    log.debug('Base directory accessible:', BASE_DIR)
   } catch (error) {
-    debug('Base directory inaccessible:', BASE_DIR)
-    debug(error.stack)
+    log.error('Base directory inaccessible:', BASE_DIR)
+    log.error(error.stack)
     process.exit(1)
   }
   try {
     await HOST
-    debug('Host available:', HOST)
+    log.debug('Host available:', HOST)
   } catch (error) {
-    debug('Host unavailable', HOST)
-    debug(error.stack)
+    log.error('Host unavailable', HOST)
+    log.error(error.stack)
   }
 }
 // display the startup banner
@@ -569,12 +576,12 @@ async function initServer() {
     await setupRoutes()
     console.log(chalk.green('✓ Routes setup complete'))
     app.listen(PORT, () => {
-      debug(`Server is listening on port ${PORT}`)
-      debug(`Server is running in ${NODE_ENV} mode`)
+      log.info(`Server is listening on port ${PORT}`)
+      log.info(`Server is running in ${NODE_ENV} mode`)
       displayBanner()
     })
   } catch (error) {
-    debug('Failed to start server:', error)
+    log.error('Failed to start server:', error)
     process.exit(1)
   }
 }

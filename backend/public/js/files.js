@@ -886,7 +886,12 @@ async function init() {
     getSortFromQuery()
     setupFileItemContextMenu()
   } catch (error) {
-    utils.handleError(error)
+    console.warn('Files page initialization failed:', error)
+    try {
+      utils.handleError(error)
+    } catch (e) {
+      console.warn('Error handler failed:', e)
+    }
     return
   }
   const frontendBasePathEscaped = escapeRegExp(frontendBasePath)

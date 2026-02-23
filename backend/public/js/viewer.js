@@ -59,13 +59,29 @@ function showViewer(index) {
   const openNewTab = document.getElementById('open-new-tab')
   const downloadFile = document.getElementById('download-file')
   const copyLink = document.getElementById('copy-link')
+  if (
+    !fileViewer ||
+    !viewerImage ||
+    !viewerVideo ||
+    !viewerAudio ||
+    !viewerEmbed
+  ) {
+    console.error('Viewer HTML elements not found in DOM')
+    return
+  }
   const btnStyle = 'w-5 h-5 m-0 items-center'
-  closePopup.innerHTML = `<span class="${btnStyle}">${icons.exit}</span>`
-  openNewTab.innerHTML = `<span class="${btnStyle}">${icons.link}</span>`
-  downloadFile.innerHTML = `<span class="${btnStyle}">${icons.download}</span>`
-  copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
-  nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
-  prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
+  if (closePopup)
+    closePopup.innerHTML = `<span class="${btnStyle}">${icons.exit}</span>`
+  if (openNewTab)
+    openNewTab.innerHTML = `<span class="${btnStyle}">${icons.link}</span>`
+  if (downloadFile)
+    downloadFile.innerHTML = `<span class="${btnStyle}">${icons.download}</span>`
+  if (copyLink)
+    copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
+  if (nextButton)
+    nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
+  if (prevButton)
+    prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
   viewerImage.style.display = 'none'
   viewerVideo.style.display = 'none'
   viewerAudio.style.display = 'none'
@@ -105,39 +121,47 @@ function showViewer(index) {
     viewerEmbed.style.height = '85vh'
     viewerEmbed.style.border = 'none'
   }
-  viewerTitle.textContent = item.name
-  viewerModified.textContent = item.modified
-    ? `Modified: ${utils.formatDate(item.modified)}`
-    : ''
-  viewerSize.textContent = utils.formatSize(item.size) || ''
-  viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
-  prevButton.disabled = index === 0
-  nextButton.disabled = index === currentItemList.length - 1
-  if (prevButton.disabled) {
-    prevButton.classList.add(
-      'opacity-50',
-      'cursor-not-allowed',
-      'pointer-events-none'
-    )
-  } else {
-    prevButton.classList.remove(
-      'opacity-50',
-      'cursor-not-allowed',
-      'pointer-events-none'
-    )
+  if (viewerTitle) viewerTitle.textContent = item.name
+  if (viewerModified)
+    viewerModified.textContent = item.modified
+      ? `Modified: ${utils.formatDate(item.modified)}`
+      : ''
+  if (viewerSize) viewerSize.textContent = utils.formatSize(item.size) || ''
+  if (viewerCounter)
+    viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
+
+  if (prevButton) {
+    prevButton.disabled = index === 0
+    if (prevButton.disabled) {
+      prevButton.classList.add(
+        'opacity-50',
+        'cursor-not-allowed',
+        'pointer-events-none'
+      )
+    } else {
+      prevButton.classList.remove(
+        'opacity-50',
+        'cursor-not-allowed',
+        'pointer-events-none'
+      )
+    }
   }
-  if (nextButton.disabled) {
-    nextButton.classList.add(
-      'opacity-50',
-      'cursor-not-allowed',
-      'pointer-events-none'
-    )
-  } else {
-    nextButton.classList.remove(
-      'opacity-50',
-      'cursor-not-allowed',
-      'pointer-events-none'
-    )
+
+  if (nextButton) {
+    nextButton.disabled = index === currentItemList.length - 1
+    if (nextButton.disabled) {
+      nextButton.classList.add(
+        'opacity-50',
+        'cursor-not-allowed',
+        'pointer-events-none'
+      )
+    } else {
+      nextButton.classList.remove(
+        'opacity-50',
+        'cursor-not-allowed',
+        'pointer-events-none'
+      )
+    }
   }
   fileViewer.style.display = 'flex'
   fileViewer.classList.remove('hidden')
@@ -161,6 +185,21 @@ async function setupViewerEvents() {
   const viewerVideo = document.getElementById('viewer-container-video')
   const viewerAudio = document.getElementById('viewer-container-audio')
   const viewerEmbed = document.getElementById('viewer-container-embed')
+  if (
+    !fileViewer ||
+    !viewerImage ||
+    !viewerVideo ||
+    !viewerAudio ||
+    !viewerEmbed
+  ) {
+    console.warn('Viewer elements not found - skipping event setup')
+    return {
+      closeViewer: () => {},
+      next: () => {},
+      prev: () => {},
+      isZoomed: () => false,
+    }
+  }
   let isZoomed = false
   function closeViewer() {
     try {
@@ -205,39 +244,53 @@ async function setupViewerEvents() {
       showViewer(currentItemIndex - 1)
     }
   }
-  newTabButton.addEventListener('click', () => {
-    const item = currentItemList[currentItemIndex]
-    const fullUrl = getMediaUrl(item)
-    window.open(fullUrl, '_blank')
-  })
-  downloadButton.addEventListener('click', () => {
-    const item = currentItemList[currentItemIndex]
-    if (!item.uuid) {
-      utils.handleError('File UUID not available')
-      return
-    }
-    const a = document.createElement('a')
-    a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
-    a.download = ''
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  })
-  copyLinkButton.addEventListener('click', () => {
-    const item = currentItemList[currentItemIndex]
-    const fileUrl = getMediaUrl(item)
-    navigator.clipboard.writeText(fileUrl)
-  })
-  closeButton.addEventListener('click', async () => {
-    closeViewer()
-  })
-  fileViewer.addEventListener('click', async (e) => {
-    if (e.target === fileViewer) {
+  if (newTabButton) {
+    newTabButton.addEventListener('click', () => {
+      const item = currentItemList[currentItemIndex]
+      const fullUrl = getMediaUrl(item)
+      window.open(fullUrl, '_blank')
+    })
+  }
+  if (downloadButton) {
+    downloadButton.addEventListener('click', () => {
+      const item = currentItemList[currentItemIndex]
+      if (!item.uuid) {
+        utils.handleError('File UUID not available')
+        return
+      }
+      const a = document.createElement('a')
+      a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    })
+  }
+  if (copyLinkButton) {
+    copyLinkButton.addEventListener('click', () => {
+      const item = currentItemList[currentItemIndex]
+      const fileUrl = getMediaUrl(item)
+      navigator.clipboard.writeText(fileUrl)
+    })
+  }
+  if (closeButton) {
+    closeButton.addEventListener('click', async () => {
       closeViewer()
-    }
-  })
-  nextButton.addEventListener('click', next)
-  prevButton.addEventListener('click', prev)
+    })
+  }
+  if (fileViewer) {
+    fileViewer.addEventListener('click', async (e) => {
+      if (e.target === fileViewer) {
+        closeViewer()
+      }
+    })
+  }
+  if (nextButton) {
+    nextButton.addEventListener('click', next)
+  }
+  if (prevButton) {
+    prevButton.addEventListener('click', prev)
+  }
   if (typeof window.MutationObserver !== 'undefined') {
     const observer = new window.MutationObserver(() => {})
     observer.observe(fileViewer, {
@@ -333,9 +386,11 @@ async function setupViewerEvents() {
     viewerImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
     viewerImage.style.transform = 'scale(2)'
   }
-  viewerImage.addEventListener('click', async (e) => {
-    await handleZoom(e.clientX, e.clientY)
-  })
+  if (viewerImage) {
+    viewerImage.addEventListener('click', async (e) => {
+      await handleZoom(e.clientX, e.clientY)
+    })
+  }
   window.addEventListener('beforeunload', () => {
     if (isViewerOpen) {
       scroll.unlock()
@@ -415,6 +470,25 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
     }
   })
 }
+async function initViewer({ fileListSelector } = {}) {
+  await loadViewerIcons()
+  const events = await setupViewerEvents()
+  await setupFileClickHandlers(fileListSelector)
+  return {
+    showViewer,
+    closeViewer: events?.closeViewer,
+    next: events?.next,
+    prev: events?.prev,
+    isZoomed: events?.isZoomed,
+    setupFileClickHandlers,
+    setItemList,
+    getCurrentItemList,
+    getCurrentItemIndex,
+    preloadMedia,
+    getMediaUrl,
+    loadViewerIcons,
+  }
+}
 function cancelImageLoads() {
   itemLoadControllers.forEach((controller, element) => {
     controller.abort()
@@ -446,4 +520,5 @@ export {
   preloadMedia,
   getMediaUrl,
   loadViewerIcons,
+  initViewer,
 }

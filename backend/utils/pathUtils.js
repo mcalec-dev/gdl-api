@@ -1,5 +1,5 @@
 const path = require('path')
-const debug = require('debug')('gdl-api:utils:path')
+const log = require('./logHandler')
 const sanitizeFilename = require('sanitize-filename')
 const normalizeString = (str) => {
   if (typeof str !== 'string') return ''
@@ -12,7 +12,7 @@ const normalizePath = (pathStr) => {
 const normalizeAndEncodePath = (pathStr) => {
   if (typeof pathStr !== 'string') return ''
   const normalized = normalizePath(pathStr)
-  debug('Normalized path:', normalized)
+  log.debug('Normalized path:', normalized)
   return normalized
     .split('/')
     .map((segment) => encodeURIComponent(segment))
@@ -37,7 +37,7 @@ const sanitizePathComponent = (userInput) => {
     replacement: '',
   }).trim()
   if (!sanitized || /^[.\s]*$/.test(sanitized)) {
-    debug(
+    log.debug(
       'Rejected sanitized path component (empty or dots/spaces):',
       userInput
     )
@@ -50,7 +50,7 @@ const sanitizePathComponent = (userInput) => {
   ]
   for (const pattern of dangerousPatterns) {
     if (pattern.test(sanitized)) {
-      debug('Rejected path component due to dangerous pattern:', sanitized)
+      log.debug('Rejected path component due to dangerous pattern:', sanitized)
       return null
     }
   }
@@ -59,7 +59,7 @@ const sanitizePathComponent = (userInput) => {
 const safePath = (baseDir, ...pathComponents) => {
   try {
     if (!baseDir || typeof baseDir !== 'string') {
-      debug('Invalid baseDir provided to safePath')
+      log.debug('Invalid baseDir provided to safePath')
       return null
     }
     const flattenedComponents = pathComponents
@@ -78,7 +78,7 @@ const safePath = (baseDir, ...pathComponents) => {
     const resolvedPath = path.resolve(constructedPath)
     const resolvedBase = path.resolve(baseDir)
     if (!isSubPath(resolvedPath, resolvedBase)) {
-      debug(
+      log.debug(
         'Path traversal attempt detected:',
         constructedPath,
         '->',
@@ -88,7 +88,7 @@ const safePath = (baseDir, ...pathComponents) => {
     }
     return resolvedPath
   } catch (error) {
-    debug('Error in safePath construction:', error)
+    log.error('Error in safePath construction:', error)
     return null
   }
 }
@@ -106,7 +106,7 @@ const isPathSafe = (targetPath, baseDir) => {
     const resolvedBase = path.resolve(baseDir)
     return isSubPath(resolvedTarget, resolvedBase)
   } catch (error) {
-    debug('Error in isPathSafe:', error)
+    log.error('Error in isPathSafe:', error)
     return false
   }
 }
@@ -172,7 +172,7 @@ const normalizeLocalPath = (p) => {
 const buildPaths = (localBase, relativePath, baseApiPath = '') => {
   try {
     if (!localBase || typeof localBase !== 'string') {
-      debug('Invalid localBase provided to buildPaths')
+      log.debug('Invalid localBase provided to buildPaths')
       return null
     }
     const rel = relativePath ? normalizePath(relativePath) : ''
@@ -180,7 +180,7 @@ const buildPaths = (localBase, relativePath, baseApiPath = '') => {
       rel &&
       !rel.split('/').every((seg) => sanitizePathComponent(seg) !== null)
     ) {
-      debug('Invalid path segments in buildPaths:', rel)
+      log.debug('Invalid path segments in buildPaths:', rel)
       return null
     }
     const local = normalizeLocalPath(path.join(localBase, rel))
@@ -197,7 +197,7 @@ const buildPaths = (localBase, relativePath, baseApiPath = '') => {
       remote: remote,
     }
   } catch (error) {
-    debug('Error in buildPaths:', error)
+    log.error('Error in buildPaths:', error)
     return null
   }
 }
@@ -218,7 +218,7 @@ const deriveCollectionAuthor = (relativePath) => {
       author,
     }
   } catch (error) {
-    debug('Error in deriveCollectionAuthor:', error)
+    log.error('Error in deriveCollectionAuthor:', error)
     return {
       collection: null,
       author: null,

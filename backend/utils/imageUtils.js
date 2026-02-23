@@ -1,5 +1,5 @@
 const sharp = require('sharp')
-const debug = require('debug')('gdl-api:utils:image')
+const log = require('./logHandler')
 const {
   HOST,
   NAME,
@@ -29,25 +29,92 @@ async function getImageMeta(imagePath) {
       limitInputPixels: false,
     }).metadata()
   } catch (error) {
-    debug('Failed to read image metadata', error)
+    log.error('Failed to read image metadata', error)
+    return null
+  }
+}
+async function applyMetadata(imagePath) {
+  if (!imagePath) {
+    log.debug('No image path provided for metadata')
+    return null
+  }
+  let mtime = new Date()
+  try {
+    const stat = await fs.stat(imagePath)
+    mtime = stat.mtime
+    if (stat.size > MAX_BUFFER_SIZE) {
+      log.debug('File size exceeds maximum allowed buffer size')
+      return null
+    }
+  } catch (error) {
+    log.error('Failed to read file stats:', error)
+    return null
+  }
+  try {
+    function formatExifDateTime(date) {
+      const d = new Date(date)
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      const seconds = String(d.getSeconds()).padStart(2, '0')
+      return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`
+    }
+    const transformer = sharp(imagePath, {
+      failOnError: false,
+      useOriginalDate: true,
+      limitInputPixels: false,
+    }).withMetadata({
+      exif: {
+        IFD0: {
+          Software: 'sharp',
+          ProcessingSoftware: 'sharp',
+          Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          Copyright: 'All Rights Reserved',
+          DateTime: formatExifDateTime(mtime),
+          DateTimeOriginal: formatExifDateTime(mtime),
+          DateTimeDigitized: formatExifDateTime(mtime),
+          ModifyDate: formatExifDateTime(mtime),
+        },
+        ExifIFD: {
+          Software: 'sharp',
+          ProcessingSoftware: 'sharp',
+          Description: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          ImageDescription: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          XPComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          UserComment: `Downloaded from: ${NAME} on ${await HOST}\nDate Processed: ${new Date().toISOString()}`,
+          Copyright: 'All Rights Reserved',
+          DateTimeOriginal: formatExifDateTime(mtime),
+          DateTimeDigitized: formatExifDateTime(mtime),
+          ModifyDate: formatExifDateTime(mtime),
+        },
+      },
+    })
+    return transformer
+  } catch (error) {
+    log.error('Sharp metadata error:', error)
     return null
   }
 }
 async function resizeImage(imagePath, { width, height, scale, kernel }) {
   if (!imagePath) {
-    debug('No image path provided for resizing')
+    log.debug('No image path provided for resizing')
     return null
   }
   if (!width && !height && !scale) {
-    debug('No resize parameters provided')
+    log.debug('No resize parameters provided')
     return undefined
   }
   if (scale === 100) {
-    debug('Scale is 100%, no resize needed')
+    log.info('Scale is 100, no resizing needed')
     return undefined
   }
   if (kernel && !validKernels.includes(kernel)) {
-    debug('Invalid kernel provided:', kernel)
+    log.debug('Invalid kernel provided:', kernel)
     kernel = scale > 100 ? 'lanczos3' : 'mitchell'
   }
   let mtime = new Date()
@@ -55,11 +122,11 @@ async function resizeImage(imagePath, { width, height, scale, kernel }) {
     const stat = await fs.stat(imagePath)
     mtime = stat.mtime
     if (stat.size > MAX_BUFFER_SIZE) {
-      debug('File size exceeds maximum allowed buffer size')
+      log.debug('File size exceeds maximum allowed buffer size')
       return null
     }
   } catch (error) {
-    debug('Failed to read file stats:', error)
+    log.error('Failed to read file stats:', error)
     return null
   }
   if (scale > MAX_SCALE) return null
@@ -73,11 +140,11 @@ async function resizeImage(imagePath, { width, height, scale, kernel }) {
       limitInputPixels: false,
     }).metadata()
     if (!metadata) {
-      debug('Invalid or missing image metadata')
+      log.debug('Invalid or missing image metadata')
       return null
     }
   } catch (error) {
-    debug('Failed to read image metadata:', error)
+    log.error('Failed to read image metadata:', error)
     return null
   }
   if (scale) {
@@ -149,7 +216,7 @@ async function resizeImage(imagePath, { width, height, scale, kernel }) {
     })
     return transformer
   } catch (error) {
-    debug('Sharp resize error:', error)
+    log.error('Sharp resize error:', error)
     return null
   }
 }
@@ -194,7 +261,7 @@ async function convertImage(imagePath, format, { quality }) {
     }
     return transformer
   } catch (error) {
-    debug('Sharp convert error:', error)
+    log.error('Sharp convert error:', error)
     return null
   }
 }
@@ -202,4 +269,5 @@ module.exports = {
   resizeImage,
   getImageMeta,
   convertImage,
+  applyMetadata,
 }

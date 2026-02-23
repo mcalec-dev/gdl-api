@@ -1,12 +1,10 @@
 /* future health endpoint */
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:health')
+const log = require('../../utils/logHandler')
 const { requireRole } = require('../../utils/authUtils')
+const sendResponse = require('../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
-  debug('Health endpoint is not implemented yet.')
-  return res.status(501).json({
-    message: 'Not Implemented',
-    status: 501,
-  })
+  log.debug('Health endpoint is not implemented yet.')
+  return sendResponse(res, 501, 'Health endpoint is not implemented yet.')
 })
 module.exports = router

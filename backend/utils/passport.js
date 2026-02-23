@@ -1,14 +1,14 @@
 const bcrypt = require('bcrypt')
 const passport = require('passport')
 const User = require('../models/User')
-const debug = require('debug')('gdl-api:utils:passport')
+const log = require('./logHandler')
 const { BASE_PATH } = require('../config')
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const DiscordStrategy = require('passport-discord-auth').Strategy
 require('dotenv').config({ quiet: true })
 passport.serializeUser((user, done) => {
-  debug('Serializing user:', user.username)
+  log.debug('Serializing user:', user.username)
   return done(null, user.id)
 })
 passport.deserializeUser(async (id, done) => {
@@ -16,7 +16,7 @@ passport.deserializeUser(async (id, done) => {
     const user = await User.findById(id)
     return done(null, user)
   } catch (error) {
-    debug('Error deserializing user:', error)
+    log.error('Error deserializing user:', error)
     return done(error)
   }
 })
@@ -25,22 +25,22 @@ passport.use(
     try {
       const user = await User.findOne({ username })
       if (!user) {
-        debug('User not found:', username)
+        log.debug('User not found:', username)
         return done(null, false, { message: 'Incorrect username.' })
       }
       if (!user.password) {
-        debug('User has no password set:', username)
+        log.debug('User has no password set:', username)
         return done(null, false, { message: 'No password set.' })
       }
       const match = await bcrypt.compare(password, user.password)
       if (!match) {
-        debug('Incorrect password for user:', username)
+        log.debug('Incorrect password for user:', username)
         return done(null, false, { message: 'Incorrect password.' })
       }
-      debug('Local user authenticated successfully:', user.username)
+      log.debug('Local user authenticated successfully:', user.username)
       return done(null, user)
     } catch (error) {
-      debug('Error in local strategy:', error)
+      log.error('Error in local strategy:', error)
       return done(error)
     }
   })
@@ -83,7 +83,7 @@ passport.use(
             })
             await user.save()
             req.session.uuid = uuid
-            debug('Linked GitHub to existing user:', user.username)
+            log.debug('Linked GitHub to existing user:', user.username)
             return done(null, user)
           }
         }
@@ -113,7 +113,7 @@ passport.use(
           })
           await user.save()
           req.session.uuid = uuid
-          debug('GitHub user authenticated successfully:', user.username)
+          log.debug('GitHub user authenticated successfully:', user.username)
           return done(null, user)
         } else {
           const userUuid = require('uuid').v4()
@@ -143,15 +143,15 @@ passport.use(
               },
             },
           }).catch((error) => {
-            debug('Error creating user in GitHub strategy:', error)
+            log.error('Error creating user in GitHub strategy:', error)
             return done(error)
           })
           req.session.uuid = uuid
-          debug('Created new GitHub user:', user.username)
+          log.debug('Created new GitHub user:', user.username)
           return done(null, user)
         }
       } catch (error) {
-        debug('Error in GitHub strategy:', error)
+        log.error('Error in GitHub strategy:', error)
         return done(error)
       }
     }
@@ -199,7 +199,7 @@ passport.use(
             })
             await user.save()
             req.session.uuid = uuid
-            debug('Linked Discord to existing user:', user.username)
+            log.debug('Linked Discord to existing user:', user.username)
             return done(null, user)
           }
         }
@@ -232,7 +232,7 @@ passport.use(
           })
           await user.save()
           req.session.uuid = uuid
-          debug('Discord user authenticated successfully:', user.username)
+          log.debug('Discord user authenticated successfully:', user.username)
           return done(null, user)
         } else {
           const userUuid = require('uuid').v4()
@@ -263,15 +263,15 @@ passport.use(
               },
             },
           }).catch((error) => {
-            debug('Error creating user in Discord strategy:', error)
+            log.error('Error creating user in Discord strategy:', error)
             return done(error)
           })
           req.session.uuid = uuid
-          debug('Created new Discord user:', user.username)
+          log.debug('Created new Discord user:', user.username)
           return done(null, user)
         }
       } catch (error) {
-        debug('Error in Discord strategy:', error)
+        log.error('Error in Discord strategy:', error)
         return done(error)
       }
     }

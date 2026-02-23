@@ -1,16 +1,14 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:user:announcements')
+const log = require('../../../utils/logHandler')
 const Announcement = require('../../../models/Announcement')
+const sendResponse = require('../../../utils/resUtils')
 router.get('/', async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ created: -1 }).lean()
     return res.json(announcements)
   } catch (error) {
-    debug('Error fetching announcements:', error)
-    return res.status(500).json({
-      error: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error fetching announcements:', error)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

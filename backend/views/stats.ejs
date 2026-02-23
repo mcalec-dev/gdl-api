@@ -61,17 +61,17 @@
             <h2 class="mb-3 text-lg font-semibold text-white">
               File Types
             </h2>
-            <table class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
+            <table id="file-types-table" class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
               <thead class="border-[#232329] bg-[#131316] text-gray-200">
                 <tr>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="type">
                     Type
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="count">
                     Count
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
-                    Total Size
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="size">
+                    Total Size & Distribution
                   </th>
                 </tr>
               </thead>
@@ -84,25 +84,25 @@
             Collection Details
           </h2>
           <div class="overflow-x-auto">
-            <table class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
+            <table id="collection-table" class="w-full overflow-hidden rounded-xl border border-[#232329] bg-[#18181b] text-left text-sm text-gray-300 shadow-lg">
               <thead class="border-[#232329] bg-[#131316] text-gray-200">
                 <tr>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="name">
                     Name
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="files">
                     Files
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
-                    Size
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="size">
+                    Size & Distribution
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="lastModified">
                     Last Modified
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="largest">
                     Largest File
                   </th>
-                  <th class="border border-[#232329] px-2 py-2 font-semibold">
+                  <th class="border border-[#232329] px-2 py-2 font-semibold sortable" data-column="smallest">
                     Smallest File
                   </th>
                 </tr>

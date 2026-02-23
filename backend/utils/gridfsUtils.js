@@ -1,14 +1,14 @@
 const mongoose = require('mongoose')
 const { GridFSBucket, ObjectId } = require('mongodb')
-const debug = require('debug')('gdl-api:gridfs')
+const log = require('./logHandler')
 let gridFSBucket
 function initGridFS(dbName = 'gdl') {
   try {
     gridFSBucket = new GridFSBucket(mongoose.connection.getClient().db(dbName))
-    debug('GridFS bucket initialized for database:', dbName)
+    log.debug('GridFS bucket initialized for database:', dbName)
     return gridFSBucket
   } catch (error) {
-    debug('Error initializing GridFS:', error)
+    log.error('Error initializing GridFS:', error)
   }
 }
 function getGridFS() {
@@ -30,16 +30,16 @@ async function uploadFile(fileBuffer, filename, options = {}) {
     return new Promise((resolve, reject) => {
       uploadStream.end(fileBuffer)
       uploadStream.on('finish', () => {
-        debug(`File uploaded: ${filename} (ID: ${uploadStream.id})`)
+        log.debug(`File uploaded: ${filename} (ID: ${uploadStream.id})`)
         resolve(uploadStream.id)
       })
       uploadStream.on('error', (error) => {
-        debug('Upload error:', error)
+        log.error('Upload error:', error)
         reject(error)
       })
     })
   } catch (error) {
-    debug('uploadFile error:', error)
+    log.error('uploadFile error:', error)
   }
 }
 async function downloadFile(fileId) {
@@ -51,16 +51,16 @@ async function downloadFile(fileId) {
       const chunks = []
       downloadStream.on('data', (chunk) => chunks.push(chunk))
       downloadStream.on('end', () => {
-        debug(`File downloaded: ${objectId}`)
+        log.debug(`File downloaded: ${objectId}`)
         resolve(Buffer.concat(chunks))
       })
       downloadStream.on('error', (error) => {
-        debug('Download error:', error)
+        log.error('Download error:', error)
         reject(error)
       })
     })
   } catch (error) {
-    debug('downloadFile error:', error)
+    log.error('downloadFile error:', error)
   }
 }
 async function getFileInfo(fileId) {
@@ -70,7 +70,7 @@ async function getFileInfo(fileId) {
     const file = await bucket.find({ _id: objectId }).toArray()
     return file[0]
   } catch (error) {
-    debug('getFileInfo error:', error)
+    log.error('getFileInfo error:', error)
   }
 }
 async function deleteFile(fileId) {
@@ -78,9 +78,9 @@ async function deleteFile(fileId) {
     const bucket = getGridFS()
     const objectId = typeof fileId === 'string' ? new ObjectId(fileId) : fileId
     await bucket.delete(objectId)
-    debug(`File deleted: ${objectId}`)
+    log.debug(`File deleted: ${objectId}`)
   } catch (error) {
-    debug('deleteFile error:', error)
+    log.error('deleteFile error:', error)
   }
 }
 async function listFiles(query = {}, options = {}) {
@@ -89,7 +89,7 @@ async function listFiles(query = {}, options = {}) {
     const files = await bucket.find(query, options).toArray()
     return files
   } catch (error) {
-    debug('listFiles error:', error)
+    log.error('listFiles error:', error)
     throw error
   }
 }
@@ -100,7 +100,7 @@ async function fileExists(fileId) {
     const file = await bucket.find({ _id: objectId }).toArray()
     return file.length > 0
   } catch (error) {
-    debug('fileExists error:', error)
+    log.error('fileExists error:', error)
     return false
   }
 }

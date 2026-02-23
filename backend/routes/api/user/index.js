@@ -1,15 +1,15 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:user')
+const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
 try {
-  debug('Mounting announcements route')
+  log.debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))
-  debug('Mounting dashboard route')
+  log.debug('Mounting dashboard route')
   router.use('/dashboard', require('./dashboard'))
-  debug('Mounting session route')
+  log.debug('Mounting session route')
   router.use('/session', require('./session'))
 } catch (error) {
-  debug('Error initializing user routes:', error)
+  log.error('Error initializing user routes:', error)
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'

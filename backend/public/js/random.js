@@ -6,6 +6,7 @@ import {
   createContextMenu,
   setContextIcons,
 } from '../min/contextmenu.min.js'
+import { initViewer } from '../min/viewer.min.js'
 const API_URL = '/api/random'
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
@@ -15,6 +16,7 @@ const HISTORY_LIMIT = 10
 let history = []
 let historyIndex = 0
 let currentMediaData = null
+let viewerApi = null
 function showMedia(data) {
   if (!data || !data.url) {
     console.error('Invalid media data:', data)
@@ -70,7 +72,33 @@ function showMedia(data) {
   mediaElement.addEventListener(isVideo ? 'loadeddata' : 'load', loadHandler)
   mediaElement.addEventListener('error', handleMediaError)
   mediaElement.src = mediaUrl
-  mediaElement.onclick = () => window.open(mediaUrl, '_blank')
+  mediaElement.onclick = async () => {
+    try {
+      const isImage = data.type.toLowerCase().startsWith('image')
+      // Only use viewer if it's available and elements exist in DOM
+      if (viewerApi && (isVideo || isImage)) {
+        const type = isVideo ? 'video' : 'image'
+        const item = {
+          name: data.file.split('/').pop(),
+          path: data.file,
+          type,
+          uuid: data.uuid,
+          size: data.size || 0,
+          modified: data.modified || null,
+          encodedPath: encodeURIComponent(data.file).replace(/%2F/g, '/'),
+          previewSrc: data.url,
+        }
+        viewerApi.setItemList([item])
+        viewerApi.showViewer(0)
+      } else {
+        window.open(mediaUrl, '_blank')
+      }
+    } catch (error) {
+      console.error('Error opening viewer:', error)
+      utils.handleError(error)
+      window.open(mediaUrl, '_blank')
+    }
+  }
   mediaContainer.appendChild(mediaElement)
 }
 async function loadRandomMedia() {
@@ -123,7 +151,7 @@ function showPreviousMedia() {
       historyIndex = lastValidIndex
       const mediaData = history[historyIndex]
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-      showMedia(mediaData, true)
+      showMedia(mediaData)
     } else {
       historyIndex = 0
       mediaContainer.classList.remove('has-image')
@@ -145,7 +173,7 @@ function showPreviousMedia() {
       historyIndex = previousIndex
       const mediaData = history[historyIndex]
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-      showMedia(mediaData, true)
+      showMedia(mediaData)
     } else {
       historyIndex = 0
       mediaContainer.classList.remove('has-image')
@@ -170,7 +198,7 @@ function showNextMedia() {
       historyIndex = nextIndex
       const mediaData = history[historyIndex]
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-      showMedia(mediaData, true)
+      showMedia(mediaData)
     } else {
       console.error('No valid media data found when navigating forward.')
     }
@@ -344,13 +372,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadImageBtn.addEventListener('click', loadRandomMedia)
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
-  await loadIcons()
-  setContextIcons(icons)
-  backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
-  loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`
-  forwardImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.forward}</span>`
-  createContextMenu()
-  setupRandomMediaContextMenu()
+  try {
+    await loadIcons()
+    setContextIcons(icons)
+    backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
+    loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`
+    forwardImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.forward}</span>`
+    createContextMenu()
+    setupRandomMediaContextMenu()
+    viewerApi = await initViewer()
+    console.log('Viewer initialized successfully')
+  } catch (error) {
+    console.warn('Random page initialization warning:', error)
+    try {
+      utils.handleError(error)
+    } catch (e) {
+      console.warn('Error handler failed:', e)
+    }
+  }
   window.addEventListener('keydown', (e) => {
     switch (e.key) {
       case 'ArrowLeft':

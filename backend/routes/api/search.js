@@ -1,20 +1,21 @@
 const router = require('express').Router()
 const { BASE_PATH } = require('../../config')
 const { searchDatabase } = require('../../utils/searchUtils')
-const debug = require('debug')('gdl-api:api:search')
+const log = require('../../utils/logHandler')
 const { requireRole } = require('../../utils/authUtils')
+const sendResponse = require('../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
   if (!req.user) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({ message: 'Unauthorized', status: 401 })
+    log.debug('Unauthorized access attempt')
+    return sendResponse(res, 401)
   }
   const { q, type } = req.query
-  debug('Starting DB search for: "%s" with filter(s): %o', q, {
+  log.debug('Starting DB search for: "%s" with filter(s): %o', q, {
     type,
   })
   if (!q || q.length === 0) {
-    debug('Search query is empty')
-    return res.status(400).json({ message: 'Bad Request', status: 400 })
+    log.debug('Search query is empty')
+    return sendResponse(res, 400, 'Search query cannot be empty')
   }
   try {
     const simplifiedResults = await searchDatabase({
@@ -24,18 +25,15 @@ router.get('/', requireRole('user'), async (req, res) => {
       protocol: req.protocol,
       hostname: req.hostname,
     })
-    debug('Found %s entries (DB)', simplifiedResults.length)
+    log.debug('Found %s entries (DB)', simplifiedResults.length)
     return res.json({
       query: q,
       count: simplifiedResults.length,
       results: simplifiedResults,
     })
   } catch (error) {
-    debug('Search error:', error.stack)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Search error:', error.stack)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

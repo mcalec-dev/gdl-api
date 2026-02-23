@@ -1,8 +1,9 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:auth:provider')
+const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
 const passport = require('../../../utils/passport')
 const { BASE_PATH, OAUTH_PROVIDERS } = require('../../../config')
+const sendResponse = require('../../../utils/resUtils')
 router.get('/', async (req, res) => {
   const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
   return res.json({
@@ -19,16 +20,16 @@ router.get(
   (req, res, next) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
-      debug('Provider mismatch:', provider)
-      return res.status(400).json({ message: 'Invalid Request', status: 400 })
+      log.debug('Provider mismatch:', provider)
+      return sendResponse(res, 400, 'Invalid provider')
     }
     passport.authenticate(provider, async (err, oauthUser) => {
       if (err) {
-        debug('OAuth error:', err)
+        log.error('OAuth error:', err)
         return res.redirect('/')
       }
       if (!oauthUser) {
-        debug('No OAuth user returned')
+        log.debug('No OAuth user returned')
         return res.redirect('/')
       }
       try {
@@ -40,13 +41,13 @@ router.get(
         }
         req.login(oauthUser, (loginErr) => {
           if (loginErr) {
-            debug('Error logging in after OAuth:', loginErr)
+            log.error('Error logging in after OAuth:', loginErr)
             return res.redirect('/')
           }
           return res.redirect('/dashboard')
         })
       } catch (error) {
-        debug('Callback processing error:', error)
+        log.error('Callback processing error:', error)
         return res.redirect('/')
       }
     })(req, res, next)
@@ -57,8 +58,8 @@ router.get(
   async (req, res, next) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
-      debug('Provider mismatch:', provider)
-      return res.status(400).json({ message: 'Bad Request', status: 400 })
+      log.debug('Provider mismatch:', provider)
+      return sendResponse(res, 400, 'Invalid provider')
     }
     try {
       const options =
@@ -67,11 +68,8 @@ router.get(
           : { scope: ['identify', 'email'] }
       passport.authenticate(provider, options)(req, res, next)
     } catch (error) {
-      debug('Failed to authenticate OAuth:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.error('Failed to authenticate OAuth:', error)
+      return sendResponse(res, 500, 'Failed to authenticate OAuth')
     }
   }
 )
@@ -81,15 +79,12 @@ router.get(
   async (req, res, next) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
-      debug('Provider mismatch:', provider)
-      return res.status(400).json({ message: 'Bad Request', status: 400 })
+      log.debug('Provider mismatch:', provider)
+      return sendResponse(res, 400, 'Invalid provider')
     }
     if (req.user.oauth?.[provider]?.id) {
-      debug('Provider already linked')
-      return res.status(400).json({
-        message: 'Bad Request',
-        status: 400,
-      })
+      log.debug('Provider already linked')
+      return sendResponse(res, 400, 'Provider already linked')
     }
     try {
       const options =
@@ -98,11 +93,8 @@ router.get(
           : { scope: ['identify', 'email'], state: req.user.id }
       passport.authenticate(provider, options)(req, res, next)
     } catch (error) {
-      debug('Failed to authenticate OAuth:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.error('Failed to authenticate OAuth:', error)
+      return sendResponse(res, 500, 'Failed to authenticate OAuth')
     }
   }
 )
@@ -112,29 +104,24 @@ router.get(
   async (req, res) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
-      debug('Provider mismatch:', provider)
-      return res.status(400).json({
-        message: 'Bad Request',
-        status: 400,
-      })
+      log.debug('Provider mismatch:', provider)
+      return sendResponse(res, 400, 'Invalid provider')
     }
     try {
       if (!req.user.oauth?.[provider]?.id) {
-        debug('No provider found')
-        return res.status(400).json({
-          message: 'Bad Request',
-          status: 400,
-        })
+        log.debug('No provider found')
+        return sendResponse(res, 400, 'Provider not linked')
       }
       const hasPassword = !!req.user.password
       const otherOAuthProviders = Object.keys(req.user.oauth || {}).filter(
         (p) => p !== provider && req.user.oauth[p]?.id
       )
       if (!hasPassword && otherOAuthProviders.length === 0) {
-        return res.status(400).json({
-          message: 'Bad Request',
-          status: 400,
-        })
+        return sendResponse(
+          res,
+          400,
+          'Cannot unlink the only authentication method'
+        )
       }
       if (!req.user.oauth) req.user.oauth = {}
       delete req.user.oauth[provider]
@@ -142,17 +129,10 @@ router.get(
         req.user.oauth = undefined
       }
       await req.user.save()
-      return res.json({
-        success: true,
-        message: 'Provider unlinked successfully',
-        status: 200,
-      })
+      return sendResponse(res, 200, 'Provider unlinked successfully')
     } catch (error) {
-      debug('Error unlinking provider:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.error('Error unlinking provider:', error)
+      return sendResponse(res, 500, 'Failed to unlink provider')
     }
   }
 )

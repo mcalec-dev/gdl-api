@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs').promises
 const crypto = require('crypto')
-const debug = require('debug')('gdl-api:utils:file')
+const log = require('./logHandler')
 const {
   normalizeString,
   safeApiPath,
@@ -136,7 +136,7 @@ async function calculateFileHash(filePath) {
     }
     return hash.digest('hex')
   } catch (error) {
-    debug('Error calculating file hash:', {
+    log.error('Error calculating file hash:', {
       path: filePath,
       error: error.message,
     })
@@ -144,6 +144,10 @@ async function calculateFileHash(filePath) {
   }
 }
 async function upsertDirectoryEntry(dirObj) {
+  if (!dirObj || !dirObj.paths || !dirObj.paths.relative) {
+    log.debug('Invalid directory object for upsert:', dirObj)
+    return { result: null, isNew: false }
+  }
   try {
     const filter = { 'paths.relative': dirObj.paths.relative }
     let existing = await Directory.findOne(filter)
@@ -160,9 +164,8 @@ async function upsertDirectoryEntry(dirObj) {
         created: dirObj.created || new Date(),
         modified: dirObj.modified || new Date(),
       })
-      debug('Upserted new directory entry:', dirObj.paths.relative)
       await newDirectory.save()
-      return newDirectory
+      return { result: newDirectory, isNew: true }
     } else {
       existing = await Directory.findOneAndUpdate(
         filter,
@@ -182,17 +185,21 @@ async function upsertDirectoryEntry(dirObj) {
         },
         { new: true }
       )
-      debug('Updated existing directory entry:', dirObj.paths.relative)
-      return existing
+      return { result: existing, isNew: false }
     }
   } catch (error) {
-    debug('Error upserting directory entry:', {
+    log.error('Error upserting directory entry:', {
       path: dirObj.paths?.relative,
       error: error.message,
     })
+    return { result: null, isNew: false }
   }
 }
 async function upsertFileEntry(fileObj) {
+  if (!fileObj || !fileObj.paths || !fileObj.paths.relative) {
+    log.debug('Invalid file object for upsert:', fileObj)
+    return null
+  }
   try {
     const filter = { 'paths.relative': fileObj.paths.relative }
     let existing = await File.findOne(filter)
@@ -201,7 +208,7 @@ async function upsertFileEntry(fileObj) {
       try {
         hash = await calculateFileHash(fileObj.paths.local)
       } catch (error) {
-        debug('Failed to generate hash for file:', {
+        log.error('Failed to generate hash for file:', {
           path: fileObj.paths?.relative,
           error: error.message,
         })
@@ -209,7 +216,7 @@ async function upsertFileEntry(fileObj) {
       }
     }
     if (!existing) {
-      debug('Creating new file entry:', fileObj.paths.relative)
+      log.debug('Creating new file entry:', fileObj.paths.relative)
       const newFile = new File({
         ...fileObj,
         paths: {
@@ -227,7 +234,7 @@ async function upsertFileEntry(fileObj) {
         modified: fileObj.modified || null,
         meta: { ...fileObj.meta },
       })
-      debug('Upserted new file entry:', fileObj.paths.relative)
+      log.debug('Upserted new file entry:', fileObj.paths.relative)
       await newFile.save()
       return newFile
     } else {
@@ -254,11 +261,11 @@ async function upsertFileEntry(fileObj) {
         },
         { new: true }
       )
-      debug('Updated existing file entry:', fileObj.paths.relative)
+      log.debug('Updated existing file entry:', fileObj.paths.relative)
       return existing
     }
   } catch (error) {
-    debug('Error upserting file entry:', {
+    log.error('Error upserting file entry:', {
       path: fileObj.paths?.relative,
       error: error.message,
     })
@@ -266,7 +273,7 @@ async function upsertFileEntry(fileObj) {
 }
 async function upsertAccessedItem(realPath) {
   if (!realPath) {
-    debug('No path provided for upsert')
+    log.debug('No path provided for upsert')
     return null
   }
   try {
@@ -298,7 +305,7 @@ async function upsertAccessedItem(realPath) {
           modified: stats.mtime,
         })
       } catch (error) {
-        debug('Failed to upsert directory:', {
+        log.error('Failed to upsert directory:', {
           path: relative,
           error: error.message,
         })
@@ -310,7 +317,7 @@ async function upsertAccessedItem(realPath) {
         try {
           meta = await getImageMeta(realPath)
         } catch (error) {
-          debug('Error getting image meta for upsert:', {
+          log.error('Error getting image meta for upsert:', {
             path: relative,
             error: error.message,
           })
@@ -320,7 +327,7 @@ async function upsertAccessedItem(realPath) {
       try {
         hash = await calculateFileHash(realPath)
       } catch (error) {
-        debug('Error calculating file hash for upsert:', {
+        log.error('Error calculating file hash for upsert:', {
           path: relative,
           error: error.message,
         })
@@ -347,7 +354,7 @@ async function upsertAccessedItem(realPath) {
           meta,
         })
       } catch (error) {
-        debug('Failed to upsert file:', {
+        log.error('Failed to upsert file:', {
           path: relative,
           error: error.message,
         })
@@ -355,7 +362,7 @@ async function upsertAccessedItem(realPath) {
     }
     return result
   } catch (error) {
-    debug('Error accessing or upserting item:', {
+    log.error('Error accessing or upserting item:', {
       path: realPath,
       error: error.message,
     })
@@ -369,7 +376,7 @@ async function maybeUpsertAccessed(realPath, isDirectory = false) {
     try {
       await upsertAccessedItem(realPath)
     } catch (err) {
-      debug('Background upsertAccessedItem failed:', err)
+      log.error('Background upsertAccessedItem failed:', err)
     }
   }
 }
@@ -424,6 +431,7 @@ function parseSortQuery(query) {
 async function scanAndSyncDirectory(dirPath, relativePath = '') {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    let dirStats = { created: 0, updated: 0 }
     for (const entry of entries) {
       const entryPath = path.join(dirPath, entry.name)
       const entryRelativePath = relativePath
@@ -437,7 +445,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           (DISALLOWED_FILES.includes(entry.name) ||
             isDisallowedExtension(entry.name)))
       ) {
-        debug(`Skipping excluded item: ${entryRelativePath}`)
+        log.debug(`Skipping excluded item: ${entryRelativePath}`)
         continue
       }
       let size = 0
@@ -453,13 +461,13 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           size = stats.size
         }
       } catch (statError) {
-        debug(`Error getting stats for ${entryPath}:`, statError)
+        log.error(`Error getting stats for ${entryPath}:`, statError)
         continue
       }
       const paths = buildPaths(dirPath, entryRelativePath, BASE_PATH)
       if (entry.isDirectory()) {
         const { collection, author } = deriveCollectionAuthor(entryRelativePath)
-        await upsertDirectoryEntry({
+        const upsertResult = await upsertDirectoryEntry({
           name: entry.name,
           paths,
           size: size,
@@ -469,11 +477,20 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           created: ctime,
           modified: mtime,
         })
-        await scanAndSyncDirectory(entryPath, entryRelativePath)
+        if (upsertResult.isNew) dirStats.created++
+        else dirStats.updated++
+        const nestedStats = await scanAndSyncDirectory(
+          entryPath,
+          entryRelativePath
+        )
+        dirStats.created += nestedStats.created
+        dirStats.updated += nestedStats.updated
       }
       if (entry.isFile()) {
         if (!hasAllowedExtension(entryPath)) {
-          debug(`Skipping file with disallowed extension: ${entryRelativePath}`)
+          log.debug(
+            `Skipping file with disallowed extension: ${entryRelativePath}`
+          )
           continue
         }
         let metadata = {}
@@ -486,7 +503,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         try {
           hash = await calculateFileHash(entryPath)
         } catch (error) {
-          debug('Error calculating file hash in scanAndSyncDirectory:', {
+          log.error('Error calculating file hash in scanAndSyncDirectory:', {
             path: entryRelativePath,
             error: error.message,
           })
@@ -508,26 +525,30 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         })
       }
     }
+    return dirStats
   } catch (error) {
-    debug(`Error scanning directory ${dirPath}:`, error)
+    log.error(`Error scanning directory ${dirPath}:`, error)
     throw error
   }
 }
 async function syncAllFilesToDatabase() {
   try {
-    debug('Starting comprehensive database sync...')
+    log.debug('Starting comprehensive database sync...')
     const stats = await fs.stat(BASE_DIR)
     if (!stats.isDirectory()) {
       throw new Error(`${BASE_DIR} is not a directory`)
     }
-    await scanAndSyncDirectory(BASE_DIR, '')
-    debug('Database sync completed successfully')
+    const dirStats = await scanAndSyncDirectory(BASE_DIR, '')
+    log.debug(
+      `Database sync completed: Created ${dirStats.created} directories, Updated ${dirStats.updated} directories`
+    )
     return {
       success: true,
       message: 'All files and directories synced to database',
+      stats: dirStats,
     }
   } catch (error) {
-    debug('Error during database sync:', error)
+    log.error('Error during database sync:', error)
     return {
       success: false,
       message: `Database sync failed: ${error.message}`,
@@ -536,10 +557,10 @@ async function syncAllFilesToDatabase() {
 }
 async function initializeDatabaseSync() {
   try {
-    debug('Initializing database sync...')
+    log.debug('Initializing database sync...')
     await syncAllFilesToDatabase()
   } catch (error) {
-    debug('Failed to initialize database sync:', error)
+    log.error('Failed to initialize database sync:', error)
   }
 }
 async function formatListingEntry(
@@ -559,7 +580,7 @@ async function formatListingEntry(
         (DISALLOWED_FILES.includes(entry.name) ||
           isDisallowedExtension(entry.name)))
     ) {
-      debug(`Excluded entry: ${entry.name}`)
+      log.debug(`Excluded entry: ${entry.name}`)
       return null
     }
     const entryPath = safePath(baseDir, entry.name)
@@ -604,7 +625,7 @@ async function formatListingEntry(
     }
     return result
   } catch (error) {
-    debug('Error formatting listing entry:', error)
+    log.error('Error formatting listing entry:', error)
     return null
   }
 }
@@ -613,7 +634,7 @@ async function batchFetchFileMetadata(relativePaths) {
     return {}
   }
   try {
-    debug('Batch fetching file metadata for paths:', relativePaths)
+    log.debug('Batch fetching file metadata for paths:', relativePaths)
     const files = await File.find(
       { 'paths.relative': { $in: relativePaths } },
       { 'paths.relative': 1, uuid: 1, hash: 1 }
@@ -629,12 +650,13 @@ async function batchFetchFileMetadata(relativePaths) {
     })
     return metadataMap
   } catch (error) {
-    debug('Error batch fetching file metadata:', error)
+    log.error('Error batch fetching file metadata:', error)
     return {}
   }
 }
 async function createDbEntriesForContents(items, parentPath = '') {
   try {
+    let dirStats = { created: 0, updated: 0 }
     for (const item of items) {
       const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
       const paths = buildPaths(BASE_DIR, relPath, BASE_PATH)
@@ -647,7 +669,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
       }
       if (item.type === 'directory') {
         const { collection, author } = deriveCollectionAuthor(relPath)
-        await upsertDirectoryEntry({
+        const upsertResult = await upsertDirectoryEntry({
           name: item.name,
           paths,
           size: item.size || 0,
@@ -657,8 +679,15 @@ async function createDbEntriesForContents(items, parentPath = '') {
           created: item.created || null,
           modified: item.modified || null,
         })
+        if (upsertResult.isNew) dirStats.created++
+        else dirStats.updated++
         if (item.contents) {
-          await createDbEntriesForContents(item.contents, relPath)
+          const nestedStats = await createDbEntriesForContents(
+            item.contents,
+            relPath
+          )
+          dirStats.created += nestedStats.created
+          dirStats.updated += nestedStats.updated
         }
       }
       if (item.type === 'file') {
@@ -666,10 +695,13 @@ async function createDbEntriesForContents(items, parentPath = '') {
         try {
           hash = await calculateFileHash(localPath)
         } catch (error) {
-          debug('Error calculating file hash in createDbEntriesForContents:', {
-            path: relPath,
-            error: error.message,
-          })
+          log.error(
+            'Error calculating file hash in createDbEntriesForContents:',
+            {
+              path: relPath,
+              error: error.message,
+            }
+          )
         }
         await upsertFileEntry({
           name: item.name,
@@ -686,8 +718,10 @@ async function createDbEntriesForContents(items, parentPath = '') {
         })
       }
     }
+    return dirStats
   } catch (error) {
-    debug('Error creating DB entries for contents:', error)
+    log.error('Error creating DB entries for contents:', error)
+    return { created: 0, updated: 0 }
   }
 }
 module.exports = {

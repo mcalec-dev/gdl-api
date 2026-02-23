@@ -1,7 +1,7 @@
 const ms = require('ms')
 const bytes = require('bytes')
 const dotenv = require('dotenv')
-const debug = require('debug')('gdl-api:config')
+const log = require('./utils/logHandler')
 const https = require('https')
 const http = require('http')
 const path = require('path')
@@ -36,15 +36,15 @@ async function getHost() {
   const altHostOnline = await checkHostOnline(altHost)
   try {
     if (hostOnline) {
-      debug('Primary host is online:', host)
+      log.debug('Primary host is online:', host)
       return host
     }
     if (altHostOnline) {
-      debug('Alternate host is online:', altHost)
+      log.debug('Alternate host is online:', altHost)
       return altHost
     }
   } catch (error) {
-    debug('Both hosts are offline:', error)
+    log.error('Both hosts are offline:', error)
     return undefined
   }
 }
@@ -129,6 +129,10 @@ for (const [key, { env, parse }] of Object.entries(schema)) {
   const value = env ? process.env[env] : undefined
   config[key] = parse(value)
 }
-debug('Config loaded successfully')
-config.debug = debug
+if (config.HOST && typeof config.HOST.then === 'function') {
+  config.HOST = config.HOST.then((host) => host)
+} else {
+  config.HOST = undefined
+}
+log.info('Config loaded successfully')
 module.exports = config

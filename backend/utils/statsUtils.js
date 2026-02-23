@@ -2,7 +2,7 @@ const fs = require('fs').promises
 const path = require('path')
 const { isExcluded, hasAllowedExtension } = require('./fileUtils')
 const { BASE_DIR } = require('../config')
-const debug = require('debug')('gdl-api:utils:stats')
+const log = require('./logHandler')
 async function aggregateStats(dirPath, stats = null) {
   if (!stats) {
     stats = {
@@ -84,7 +84,7 @@ async function aggregateStats(dirPath, stats = null) {
       }
     }
   } catch (error) {
-    debug('Error aggregating stats for', dirPath, error)
+    log.error('Error aggregating stats for', dirPath, error)
   }
   return stats
 }

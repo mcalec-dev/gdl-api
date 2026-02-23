@@ -1,19 +1,16 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:random')
+const log = require('../../utils/logHandler')
 const File = require('../../models/File')
 const { requireRole } = require('../../utils/authUtils')
 const { getHostUrl } = require('../../utils/urlUtils')
+const sendResponse = require('../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
   try {
-    const getRandomImage = await File.aggregate([
-      { $sample: { size: 1 } },
-    ]).catch((error) => {
-      debug('Error getting random file from database:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
-    })
+    const getRandomImage = await File.aggregate([{ $sample: { size: 1 } }])
+    if (!getRandomImage || getRandomImage.length === 0) {
+      log.debug('No random file found in database')
+      return sendResponse(res, 404)
+    }
     const randomImage = getRandomImage[0]
     return res.json({
       file: String(randomImage.name),
@@ -29,11 +26,8 @@ router.get('/', requireRole('user'), async (req, res) => {
       uuid: String(randomImage.uuid),
     })
   } catch (error) {
-    debug('Error in random route:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error in random route:', error)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

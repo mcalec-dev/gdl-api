@@ -1,5 +1,5 @@
 const os = require('os')
-const debug = require('debug')('gdl-api:utils:memory')
+const log = require('./logHandler')
 const MEMORY_THRESHOLDS = {
   WARNING: 1024, // 1GB
   CRITICAL: 2048, // 2GB
@@ -58,17 +58,17 @@ function measureCpuUsage() {
 }
 function handleHighCpu(cpuUsage) {
   if (cpuUsage >= CPU_THRESHOLDS.FAILURE) {
-    debug('CRITICAL: CPU usage exceeded failure threshold! (%d%)', cpuUsage)
+    log.debug('CRITICAL: CPU usage exceeded failure threshold! (%d%)', cpuUsage)
     handleCriticalCpu()
   } else if (cpuUsage >= CPU_THRESHOLDS.CRITICAL) {
-    debug('WARNING: CPU usage exceeded critical threshold (%d%)', cpuUsage)
+    log.debug('WARNING: CPU usage exceeded critical threshold (%d%)', cpuUsage)
   } else if (cpuUsage >= CPU_THRESHOLDS.WARNING) {
-    debug('NOTICE: CPU usage exceeded warning threshold (%d%)', cpuUsage)
+    log.debug('NOTICE: CPU usage exceeded warning threshold (%d%)', cpuUsage)
   }
 }
 function handleCriticalCpu() {
   cpuHistory.readings = []
-  debug('Cleared CPU history due to critical CPU usage')
+  log.debug('Cleared CPU history due to critical CPU usage')
 }
 function checkMemoryLeaks(currentHeap) {
   const heapGrowthRate = lastKnownHeap
@@ -77,7 +77,7 @@ function checkMemoryLeaks(currentHeap) {
   if (currentHeap > lastKnownHeap) {
     growthCount++
     if (growthCount >= LEAK_THRESHOLD || heapGrowthRate > 20) {
-      debug(
+      log.debug(
         'Memory leak detected! Heap: %d MB, Growth rate: %d%',
         currentHeap,
         heapGrowthRate
@@ -91,7 +91,7 @@ function checkMemoryLeaks(currentHeap) {
   if (currentHeap >= MEMORY_THRESHOLDS.WARNING) {
     consecutiveHighMemory++
     if (consecutiveHighMemory >= 2) {
-      debug('High memory usage: %d MB', currentHeap)
+      log.debug('High memory usage: %d MB', currentHeap)
       handleHighMemory()
       consecutiveHighMemory = 0
     }
@@ -100,14 +100,14 @@ function checkMemoryLeaks(currentHeap) {
   }
   lastKnownHeap = currentHeap
   if (currentHeap >= MEMORY_THRESHOLDS.CRITICAL) {
-    debug('Critical memory state! Forcing immediate cleanup')
+    log.debug('Critical memory state! Forcing immediate cleanup')
     if (global.gc) global.gc()
   }
 }
 function handleMemoryLeak(currentHeap) {
-  debug('Attempting to fix memory leak. Current heap: %d MB', currentHeap)
+  log.debug('Attempting to fix memory leak. Current heap: %d MB', currentHeap)
   if (global.gc) {
-    debug('Running forced garbage collection')
+    log.debug('Running forced garbage collection')
     global.gc()
   }
   growthCount = 0
@@ -115,7 +115,7 @@ function handleMemoryLeak(currentHeap) {
   memoryHistory.readings = []
   cpuHistory.readings = []
   const afterCleanup = getMemoryUsage()
-  debug(
+  log.debug(
     'Memory after leak cleanup: Heap: %d MB, RSS: %d MB',
     afterCleanup.heapUsed,
     afterCleanup.rss
@@ -131,32 +131,32 @@ function logMemoryUsage() {
   checkMemoryLeaks(usage.heapUsed)
   handleHighCpu(cpuUsage)
   if (usage.heapUsed >= MEMORY_THRESHOLDS.FAILURE) {
-    debug(
+    log.debug(
       'CRITICAL: Memory usage exceeded failure threshold! Forcing cleanup...'
     )
     handleCriticalMemory()
   } else if (usage.heapUsed >= MEMORY_THRESHOLDS.CRITICAL) {
-    debug('WARNING: Memory usage exceeded critical threshold')
+    log.debug('WARNING: Memory usage exceeded critical threshold')
     handleHighMemory()
   } else if (usage.heapUsed >= MEMORY_THRESHOLDS.WARNING) {
-    debug('NOTICE: Memory usage exceeded warning threshold')
+    log.debug('NOTICE: Memory usage exceeded warning threshold')
   }
   return { ...usage, cpuUsage }
 }
 function handleHighMemory() {
   if (global.gc) {
-    debug('Running garbage collection')
+    log.debug('Running garbage collection')
     global.gc()
   }
 }
 function handleCriticalMemory() {
   if (global.gc) {
-    debug('Running forced garbage collection')
+    log.debug('Running forced garbage collection')
     global.gc()
   }
   memoryHistory.readings = []
   const afterCleanup = getMemoryUsage()
-  debug(
+  log.debug(
     'Memory after cleanup: Heap: %d MB, RSS: %d MB',
     afterCleanup.heapUsed,
     afterCleanup.rss

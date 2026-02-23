@@ -1,12 +1,12 @@
 const { connection } = require('mongoose')
-const debug = require('debug')('gdl:utils:auth')
+const log = require('./logHandler')
 function requireRole(role) {
   if (!role) {
     throw new Error('Role is required for requireRole middleware')
   }
   return (req, res, next) => {
     if (!req.user) {
-      debug('Unauthorized access attempt')
+      log.debug('Unauthorized access attempt')
       return res.status(401).json({
         message: 'Unauthorized',
         status: 401,
@@ -18,13 +18,13 @@ function requireRole(role) {
       req.user.roles &&
       req.user.roles.includes(role)
     ) {
-      debug('User:', req.user.username, 'has role:', role)
+      log.debug('User,', req.user.username, 'has role(s):', role)
       return next()
     }
-    debug(
-      'User:',
+    log.debug(
+      'User,',
       req.user ? req.user.username : 'unknown',
-      'does not have role:',
+      'does not have role(s):',
       role
     )
     return res.status(403).json({
@@ -41,16 +41,58 @@ function requireAnyRole(roles) {
     ) {
       return next()
     }
-    debug('User does not have any of the roles:' + roles)
+    log.debug('User does not have any of the roles:' + roles)
     return res.status(403).json({
       message: 'Forbidden',
       status: 403,
     })
   }
 }
+function requireAuth(req, res, next) {
+  if (!req.isAuthenticated()) {
+    log.debug(
+      'Unauthorized access attempt: user not authenticated via passport'
+    )
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  if (!req.user) {
+    log.debug('Unauthorized access attempt: no user object in request')
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  if (!req.session) {
+    log.debug(
+      'Unauthorized access attempt: no session found for user:',
+      req.user.username
+    )
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  if (req.session.expires && new Date(req.session.expires) < new Date()) {
+    log.debug('Session expired for user:', req.user.username)
+    return res.status(401).json({
+      message: 'Unauthorized',
+      status: 401,
+    })
+  }
+  log.debug('User,', req.user.username, 'authenticated with valid session')
+  return next()
+}
 async function countActiveSessions() {
   return connection.collection('sessions').countDocuments({
     expires: { $gt: new Date() },
   })
 }
-module.exports = { requireRole, requireAnyRole, countActiveSessions }
+module.exports = {
+  requireRole,
+  requireAnyRole,
+  requireAuth,
+  countActiveSessions,
+}

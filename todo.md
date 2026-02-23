@@ -11,13 +11,13 @@
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
 - proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, sitemap, glob, express-useragent, rollup
+- npm packages to utilize; moment, pm2, async, sitemap, glob, rollup
 - app using native frameworks
 - autocomplete for search frontend (like google)
 - implement google oauth with passport
-- fix discord bot embed buttons from not working
 - configurable grid layout for frontend files
 - compiling tailwindcss within the dist dir
 - rollup with nexe
 - `AUTO_SCAN` even if its on, it should upsert directories when accessed too
 - npm package `emailvalid` for email validation in user registrations
+- backend typescript rewrite

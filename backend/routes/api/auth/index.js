@@ -1,19 +1,19 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:auth')
+const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
 try {
-  debug('Mounting check route')
+  log.debug('Mounting check route')
   router.use('/check', require('./check'))
-  debug('Mounting logout route')
+  log.debug('Mounting logout route')
   router.use('/logout', require('./logout'))
-  debug('Mounting login route')
+  log.debug('Mounting login route')
   router.use('/login', require('./login'))
-  debug('Mounting register route')
+  log.debug('Mounting register route')
   router.use('/provider', require('./provider'))
-  debug('Mounting provider route')
+  log.debug('Mounting provider route')
   router.use('/register', require('./register'))
 } catch (error) {
-  debug('Error mounting auth routes:', error)
+  log.error('Error mounting auth routes:', error)
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'

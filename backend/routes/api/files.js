@@ -2,7 +2,8 @@ const router = require('express').Router()
 const path = require('path')
 const { requireRole } = require('../../utils/authUtils')
 const fs = require('fs').promises
-const debug = require('debug')('gdl-api:api:files')
+const log = require('../../utils/logHandler')
+const sendResponse = require('../../utils/resUtils')
 const {
   BASE_DIR,
   AUTO_SCAN,
@@ -33,38 +34,29 @@ const {
   validateRequestParams,
   isSubPath,
 } = require('../../utils/pathUtils')
-const { resizeImage } = require('../../utils/imageUtils')
+const { resizeImage, applyMetadata } = require('../../utils/imageUtils')
 if (AUTO_SCAN === true) initializeDatabaseSync()
-else if (!AUTO_SCAN || AUTO_SCAN === false) debug('Skipping full database sync')
+else if (!AUTO_SCAN || AUTO_SCAN === false)
+  log.debug('Skipping full database sync')
 router.get('/', requireRole('user'), async (req, res) => {
   if (!req.user) {
-    debug('User not authenticated')
-    return res.status(403).json({
-      message: 'Forbidden',
-      status: 403,
-    })
+    return sendResponse(res, 401)
   }
   try {
     const normalizedDir = path.resolve(BASE_DIR)
     const stats = await fs.stat(normalizedDir)
     if (!stats.isDirectory()) {
-      debug(normalizedDir, 'is not a directory')
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.debug(normalizedDir, 'is not a directory')
+      return sendResponse(res, 500)
     }
     let entries = []
     try {
       entries = await fs.readdir(normalizedDir, { withFileTypes: true })
-      debug(`Found ${entries.length} entries in root directory`)
+      log.debug(`Found ${entries.length} entries in root directory`)
       await maybeUpsertAccessed(normalizedDir, true)
     } catch (error) {
-      debug('Failed to read root directory:', error)
-      return res.status(500).json({
-        message: 'Internal Server Error',
-        status: 500,
-      })
+      log.error('Failed to read root directory:', error)
+      return sendResponse(res, 500)
     }
     const shouldFetchMetadata = req.query.meta === 'true'
     let metadataMap = {}
@@ -136,7 +128,7 @@ router.get('/', requireRole('user'), async (req, res) => {
         res.json(updatedPaginatedFiles)
       }
     } catch (syncError) {
-      debug('Error syncing entries to database:', syncError)
+      log.error('Error syncing entries to database:', syncError)
       if (req.user) {
         res.json(paginatedFiltered)
       } else {
@@ -144,11 +136,8 @@ router.get('/', requireRole('user'), async (req, res) => {
       }
     }
   } catch (error) {
-    debug('Error in root directory listing:', error)
-    res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error in root directory listing:', error)
+    return sendResponse(res, 500)
   }
 })
 router.get(
@@ -161,11 +150,8 @@ router.get(
   async (req, res) => {
     const validatedParams = validateRequestParams(req.params)
     if (!validatedParams.isValid) {
-      debug('Invalid path parameters provided:', req.params)
-      return res.status(400).json({
-        message: 'Invalid path parameters',
-        status: 400,
-      })
+      log.debug('Invalid path parameters provided:', req.params)
+      return sendResponse(res, 400, 'Invalid path parameters')
     }
     const { collection, author, additionalPath } = validatedParams
     const normalizedDir = path.resolve(BASE_DIR)
@@ -175,68 +161,52 @@ router.get(
         try {
           return decodeURIComponent(component)
         } catch (error) {
-          debug('Failed to decode URI component:', component, error)
+          log.error('Failed to decode URI component:', component, error)
           return component
         }
       })
     let realPath = safePath(normalizedDir, ...pathComponents)
     if (!realPath) {
-      debug(
+      log.debug(
         'Path construction resulted in unsafe path for components:',
         pathComponents
       )
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
+      return sendResponse(res, 400, 'Invalid path parameters')
     }
     if (!isSubPath(realPath, normalizedDir)) {
-      debug(`Path safety check failed: ${realPath} not within ${normalizedDir}`)
-      return res.status(403).json({
-        message: 'Forbidden',
-        status: 403,
-      })
+      log.error(
+        `Path safety check failed: ${realPath} not within ${normalizedDir}`
+      )
+      return sendResponse(res, 400, 'Invalid path parameters')
     }
     const relativePath = path
       .relative(normalizedDir, realPath)
       .replace(/\\/g, '/')
     if (await isExcluded(relativePath)) {
-      debug(`Access denied to: ${relativePath}`)
-      return res.status(404).json({
-        message: 'Not Found',
-        status: 404,
-      })
+      log.debug(`Access denied to: ${relativePath}`)
+      return sendResponse(res, 404)
     }
     try {
       await fs.access(realPath)
     } catch (error) {
-      debug(error)
-      return res.status(404).json({
-        message: 'Not Found',
-        status: 404,
-      })
+      log.error(error)
+      return sendResponse(res, 404)
     }
     const stats = await fs.stat(realPath)
     if (stats.isDirectory()) {
       if (!req.user) {
-        return res.status(403).json({
-          message: 'Forbidden',
-          status: 403,
-        })
+        return sendResponse(res, 401)
       }
       let entries = []
       try {
         entries = await fs.readdir(realPath, { withFileTypes: true })
-        debug(`Found ${entries.length} entries in directory`)
+        log.debug(`Found ${entries.length} entries in directory`)
         if (UPSERT_ON_ACCESS !== 'file') {
           await maybeUpsertAccessed(realPath, true)
         }
       } catch (error) {
-        debug(error)
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          status: 500,
-        })
+        log.error(error)
+        return sendResponse(res, 500)
       }
       const shouldFetchMetadata = req.query.includeMetadata === 'true'
       let metadataMap = {}
@@ -306,7 +276,7 @@ router.get(
           })
         }
       } catch (syncError) {
-        debug('Error syncing directory entries to database:', syncError)
+        log.error('Error syncing directory entries to database:', syncError)
       }
       res.json(paginated)
     } else {
@@ -315,11 +285,8 @@ router.get(
         DISALLOWED_FILES.includes(path.basename(realPath)) ||
         isDisallowedExtension(path.basename(realPath))
       ) {
-        debug(`Access denied to file: ${realPath}`)
-        return res.status(404).json({
-          message: 'Not Found',
-          status: 404,
-        })
+        log.debug(`Access denied to file: ${realPath}`)
+        return sendResponse(res, 404)
       }
       if (isImageFile(realPath) === true) {
         try {
@@ -328,58 +295,82 @@ router.get(
           const scaleParam = req.query.scale || req.query.x
           const scale =
             typeof scaleParam === 'string' ? parseFloat(scaleParam) : undefined
+          const rawParam = req.query.raw === 'true' || req.query.raw === ''
+          if (rawParam && (scale || kernel)) {
+            log.debug('Raw parameter cannot be used with scale or kernel')
+            return sendResponse(
+              res,
+              400,
+              'raw cannot be used with scale or kernel'
+            )
+          }
+          if (rawParam) {
+            log.debug('Returning raw file without modifications')
+            await maybeUpsertAccessed(realPath, false)
+            return res.sendFile(realPath)
+          }
           const resizeOptions = {}
           if (!kernel && req.query.kernel) {
-            debug('Invalid kernel parameter provided:', req.query.kernel)
-            res.status(400).json({
-              message: 'Invalid kernel parameter',
-              status: 400,
-            })
-            return
+            log.debug('Invalid kernel parameter provided:', req.query.kernel)
+            return sendResponse(res, 400, 'Invalid kernel parameter')
           }
           if (!scale && scaleParam) {
-            debug('Invalid scale parameter provided:', scaleParam)
-            res.status(400).json({
-              message: 'Invalid scale parameter',
-              status: 400,
-            })
-            return
+            log.debug('Invalid scale parameter provided:', scaleParam)
+            return sendResponse(res, 400, 'Invalid scale parameter')
           }
           if (scale) resizeOptions.scale = scale
           if (kernel) resizeOptions.kernel = kernel
           if (!isNaN(scale) && scale > 0 && scale !== 100) {
-            debug('Resizing image with scale:', scale)
+            log.debug('Resizing image with scale:', scale)
           }
-          const transformer = await resizeImage(realPath, resizeOptions)
-          if (transformer === undefined) {
-            debug('No resizing needed, sending original file')
-            await maybeUpsertAccessed(realPath, false)
-            return res.sendFile(realPath)
-          }
-          if (transformer) {
-            res.type(path.extname(realPath).slice(1))
-            await maybeUpsertAccessed(realPath, false)
-            transformer.pipe(res)
-            return
-          }
-          if (transformer === null) {
-            debug('Failure resizing image')
-            return res.status(500).json({
-              message: 'Internal Server Error',
-              status: 500,
-            })
+          if (scale) {
+            const transformer = await resizeImage(realPath, resizeOptions)
+            if (transformer === undefined) {
+              log.debug(
+                'No resizing needed, applying metadata to original file'
+              )
+              const metadataTransformer = await applyMetadata(realPath)
+              if (metadataTransformer) {
+                res.type(path.extname(realPath).slice(1))
+                await maybeUpsertAccessed(realPath, false)
+                metadataTransformer.pipe(res)
+                return
+              } else {
+                await maybeUpsertAccessed(realPath, false)
+                return res.sendFile(realPath)
+              }
+            }
+            if (transformer) {
+              res.type(path.extname(realPath).slice(1))
+              await maybeUpsertAccessed(realPath, false)
+              transformer.pipe(res)
+              return
+            }
+            if (transformer === null) {
+              log.debug('Failure resizing image')
+              return sendResponse(res, 500, 'Failed to resize image')
+            }
+          } else {
+            log.debug('No scale parameter, applying metadata to original file')
+            const metadataTransformer = await applyMetadata(realPath)
+            if (metadataTransformer) {
+              res.type(path.extname(realPath).slice(1))
+              await maybeUpsertAccessed(realPath, false)
+              metadataTransformer.pipe(res)
+              return
+            } else {
+              await maybeUpsertAccessed(realPath, false)
+              return res.sendFile(realPath)
+            }
           }
         } catch (error) {
-          debug(error)
-          return res.status(500).json({
-            message: 'Internal Server Error',
-            status: 500,
-          })
+          log.error(error)
+          return sendResponse(res, 500)
         }
       }
       if (isVideoFile(realPath) || isAudioFile(realPath)) {
         if (!req.headers.range) {
-          debug(
+          log.debug(
             'Request does not have any range headers - sending file instead'
           )
           await maybeUpsertAccessed(realPath, false)
@@ -417,11 +408,8 @@ router.get(
           }
           return
         } catch (error) {
-          debug('Error streaming media file:', error)
-          return res.status(500).json({
-            message: 'Internal Server Error',
-            status: 500,
-          })
+          log.error('Error streaming media file:', error)
+          return sendResponse(res, 500)
         }
       }
       if (isDocFile(realPath)) {
@@ -437,28 +425,19 @@ router.get(
               await maybeUpsertAccessed(realPath, false)
             })
         } catch (error) {
-          debug('Error in mammoth doc conversion:', error)
-          return res.status(500).json({
-            message: 'Internal Server Error',
-            status: 500,
-          })
+          log.error('Error in mammoth doc conversion:', error)
+          return sendResponse(res, 500)
         }
       }
       if (isSwfFile(realPath)) {
-        return res.status(415).json({
-          message: 'Unsupported Media Type',
-          status: 415,
-        })
+        return sendResponse(res, 501, 'SWF file handling not implemented')
       }
       try {
         await maybeUpsertAccessed(realPath, false)
         res.sendFile(realPath)
       } catch (error) {
-        debug('Error in sending file:', error)
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          status: 500,
-        })
+        log.error('Error in sending file:', error)
+        return sendResponse(res, 500)
       }
     }
   }

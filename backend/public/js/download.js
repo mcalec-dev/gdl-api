@@ -1,46 +1,5 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', () => {
-  const uuidInput = document.getElementById('uuidInput')
-  const downloadButton = document.getElementById('downloadButton')
-  const statusMessage = document.getElementById('statusMessage')
-  const API_URL = '/api/download'
-  downloadButton.addEventListener('click', async () => {
-    const uuid = uuidInput.value.trim()
-    if (!uuid) {
-      statusMessage.textContent = 'Please enter a UUID.'
-      statusMessage.style.display = 'block'
-      return
-    }
-    if (uuid.length !== 36) {
-      statusMessage.textContent = 'Invalid UUID length.'
-      statusMessage.style.display = 'block'
-      return
-    }
-    statusMessage.textContent = ''
-    statusMessage.style.display = 'none'
-    statusMessage.textContent = 'Downloading...'
-    statusMessage.style.display = 'block'
-    try {
-      const a = document.createElement('a')
-      a.href = `${API_URL}?uuid=${uuid}`
-      a.download = ''
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      setTimeout(() => {
-        document.body.removeChild(a)
-        statusMessage.textContent = ''
-        statusMessage.style.display = 'none'
-      }, 1200)
-    } catch (error) {
-      utils.handleError(error)
-      const errorMsg = error.message
-      statusMessage.textContent = errorMsg
-      statusMessage.style.display = 'block'
-    }
-  })
-})
 async function initDownload(url) {
   if (!url) return console.error('No URL provided for download')
   try {
@@ -52,8 +11,7 @@ async function initDownload(url) {
     a.click()
     document.body.removeChild(a)
   } catch (error) {
-    utils.handleError(error)
-    console.error('Error initializing download:', error)
+    return utils.handleError(error)
   }
 }
 const VERSION = '1.0.1'

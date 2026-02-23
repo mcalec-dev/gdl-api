@@ -1,5 +1,6 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:auth:check')
+const log = require('../../../utils/logHandler')
+const sendResponse = require('../../../utils/resUtils')
 router.get('/', (req, res) => {
   try {
     return res.json({
@@ -9,11 +10,8 @@ router.get('/', (req, res) => {
       oauth: req.user?.oauth,
     })
   } catch (error) {
-    debug('Error checking auth status:', error)
-    return res.status(500).json({
-      message: 'Internal server error',
-      status: 500,
-    })
+    log.error('Error checking auth status:', error)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

@@ -1,38 +1,30 @@
 const router = require('express').Router()
 const { requireRole } = require('../../../utils/authUtils')
-const debug = require('debug')('gdl-api:api:user:session')
+const log = require('../../../utils/logHandler')
+const sendResponse = require('../../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
   try {
-    debug('Getting sessions for:', req.user.username || 'user')
+    log.debug('Getting sessions for:', req.user.username || 'user')
     return res.json(req.user.sessions)
   } catch (error) {
-    debug('Failed to get sessions for user:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Failed to get sessions for user:', error)
+    return sendResponse(res, 500)
   }
 })
 router.delete(['/:uuid', '/:uuid/'], requireRole('user'), async (req, res) => {
   const { uuid } = req.params
   if (!uuid) {
-    debug('No UUID provided for session deletion')
-    return res.status(400).json({
-      message: 'Bad Request',
-      status: 400,
-    })
+    log.debug('No UUID provided for session deletion')
+    return sendResponse(res, 400, 'UUID parameter is required')
   }
   try {
     req.user.sessions = (req.user.sessions || []).filter((s) => s.uuid !== uuid)
     await req.user.save()
-    debug('Deleted session', uuid, 'for user:', req.user.username || 'user')
-    return res.status(204).send()
+    log.debug('Deleted session', uuid, 'for user:', req.user.username || 'user')
+    return sendResponse(res, 204, 'Session deleted successfully')
   } catch (error) {
-    debug('Failed to delete session for user:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Failed to delete session for user:', error)
+    return sendResponse(res, 500)
   }
 })
 module.exports = router

@@ -1,12 +1,13 @@
 const router = require('express').Router()
-const debug = require('debug')('gdl-api:api:admin')
+const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
 const { getHostUrl } = require('../../../utils/urlUtils')
+const sendResponse = require('../../../utils/resUtils')
 try {
-  debug('Mounting announcements route')
+  log.debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))
 } catch (error) {
-  debug('Error initializing admin routes:', error)
+  log.error('Error initializing admin routes:', error)
 }
 const User = require('../../../models/User')
 const Directory = require('../../../models/Directory')
@@ -16,11 +17,8 @@ const { countActiveSessions } = require('../../../utils/authUtils')
 router.get('/', requireRole('admin'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   if (!req.user || !req.user.roles.includes('admin')) {
-    debug('Unauthorized access attempt')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    log.debug('Unauthorized access attempt to admin dashboard')
+    return sendResponse(res, 401)
   }
   try {
     const uptime = Math.floor(Date.now() - uptimeStart)
@@ -52,86 +50,81 @@ router.get('/', requireRole('admin'), async (req, res) => {
       },
     })
   } catch (error) {
-    debug('Error loading admin dashboard:', error)
-    return res.status(500).json({
-      message: 'Internal Server Error',
-      status: 500,
-    })
+    log.error('Error loading admin dashboard:', error)
+    return sendResponse(res, 500)
   }
 })
-
 // User actions: ban, mute, suspend, IP actions
 router.post('/user/:id/action', requireRole('admin'), (req, res) => {
   // { action: 'ban'|'mute'|'suspend', ip: optional }
-  res.status(201).json({ success: true })
+  return sendResponse(res, 501, 'User actions not implemented yet')
 })
-
 // User management: view, edit, role change, reset password/email/username
 router.get('/users', requireRole('admin'), (req, res) => {
   // TODO: list users
-  res.json([])
+  return sendResponse(res, 501, 'User listing not implemented yet')
 })
 router.get('/user/:id', requireRole('admin'), (req, res) => {
   // TODO: get user info
-  res.json({})
+  return sendResponse(res, 501, 'Get user info not implemented yet')
 })
 router.put('/user/:id', requireRole('admin'), (req, res) => {
   // TODO: update user info
-  res.status(204).send()
+  return sendResponse(res, 501, 'Update user info not implemented yet')
 })
-
 // Role permissions management
 router.get('/roles', requireRole('admin'), (req, res) => {
-  res.json(['admin', 'moderator', 'user', 'visitor', 'banned'])
+  return sendResponse(res, 200, [
+    'admin',
+    'moderator',
+    'user',
+    'visitor',
+    'banned',
+  ])
 })
-
 // Tag management
 router.get(['/tags', '/tags/'], requireRole('admin'), (req, res) => {
   // TODO: list tags
-  res.json([])
+  return sendResponse(res, 501, 'Tag listing not implemented yet')
 })
 router.post('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: create tag
-  res.status(201).json({ success: true })
+  return sendResponse(res, 201, 'Tag created successfully')
 })
 router.put('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: update tag
-  res.status(204).send()
+  return sendResponse(res, 501, 'Tag update not implemented yet')
 })
 router.delete('/tags/:id', requireRole('admin'), (req, res) => {
   // TODO: delete tag
-  res.status(204).send()
+  return sendResponse(res, 501, 'Tag deletion not implemented yet')
 })
-
 // DMCA/takedown system
 router.get('/dmca', requireRole('admin'), (req, res) => {
   // TODO: list takedown requests
-  res.json([])
+  return sendResponse(res, 501, 'DMCA/takedown listing not implemented yet')
 })
 router.post('/dmca', requireRole('admin'), (req, res) => {
   // TODO: create takedown request
-  res.status(201).json({ success: true })
+  return sendResponse(res, 201, 'Takedown request created successfully')
 })
 router.put('/dmca/:id', requireRole('admin'), (req, res) => {
   // TODO: update takedown request
-  res.status(204).send()
+  return sendResponse(res, 501, 'Takedown request update not implemented yet')
 })
-
 // File duplicate checks
 router.get('/file/duplicates', requireRole('admin'), (req, res) => {
   // TODO: check for duplicate files
-  res.json([])
+  return sendResponse(res, 501, 'File duplicate check not implemented yet')
 })
-
 // Filename/URI checks
 router.get('/file/uri-check', requireRole('admin'), (req, res) => {
   // TODO: check file URIs
-  res.json([])
+  return sendResponse(res, 501, 'File URI check not implemented yet')
 })
-
 // Cache tools
 router.post('/cache/purge', requireRole('admin'), (req, res) => {
   // TODO: purge caches
-  res.status(201).json({ success: true })
+  return sendResponse(res, 201, 'Cache purged successfully')
 })
 module.exports = router
