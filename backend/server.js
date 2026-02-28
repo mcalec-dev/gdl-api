@@ -406,17 +406,16 @@ async function initApp() {
   })
   // trolling middleware
   app.use((req, res, next) => {
-    const ua = req.headers['user-agent'] || req.get('User-Agent')
     const uri = req.path + '?' + new URLSearchParams(req.query).toString()
     const chance = TROLLING_CHANCE
     const terms = TROLLING_TERMS
     const uriRickroll = uri.toLowerCase().includes('rickroll')
     if (Math.random() < chance || uriRickroll) {
-      if (isbot(ua)) {
-        log.debug('Bot detected:', ua)
-        return res.send('Bot detected!')
+      if (isbot(req.useragent.source)) {
+        log.debug('Bot/crawler detected:', req.useragent.source)
+        return next()
       }
-      log.debug('Sending troll to:', req.ip, ua)
+      log.debug('Sending troll to:', req.ip, req.useragent.source)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
@@ -425,7 +424,7 @@ async function initApp() {
       uri.toLowerCase().includes(term.toLowerCase())
     )
     if (containsBlockedTerm) {
-      log.debug('Sending troll to:', req.ip, ua)
+      log.debug('Sending troll to:', req.ip, req.useragent)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'so-you-found-it.mp4')
       )
@@ -434,9 +433,8 @@ async function initApp() {
   })
   // bot detection middleware
   app.use((req, res, next) => {
-    const ua = req.headers['user-agent'] || req.get('User-Agent')
-    if (isbot(ua)) {
-      log.debug('Bot detected:', ua)
+    if (isbot(req.useragent.source)) {
+      log.debug('Bot/crawler detected:', req.useragent.source)
       if (res.headersSent) {
         return next()
       }

@@ -1,5 +1,7 @@
 name: Build and Publish Electron Client
-
+permissions:
+  contents: write
+  packages: write
 on:
   workflow_dispatch:
     inputs:

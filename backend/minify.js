@@ -3,7 +3,6 @@ const path = require('path')
 const { minify } = require('terser')
 const CleanCSS = require('clean-css')
 const glob = require('fast-glob')
-const chalk = require('chalk')
 const log = require('./utils/logHandler')
 const publicDir = path.join(__dirname, 'public')
 const minifyJS = async (filePath) => {
@@ -19,7 +18,7 @@ const minifyJS = async (filePath) => {
     await fs.mkdir(outputDir, { recursive: true })
     await fs.writeFile(outputPath, minified.code)
   } catch (error) {
-    log.error(chalk.redBright('Error minifying JS file:', filePath, error))
+    log.error('Error minifying JS file:', filePath, error)
   }
 }
 const minifyCSS = async (filePath) => {
@@ -35,7 +34,7 @@ const minifyCSS = async (filePath) => {
     await fs.mkdir(outputDir, { recursive: true })
     await fs.writeFile(outputPath, minified.styles)
   } catch (error) {
-    log.error(chalk.redBright('Error minifying CSS file:', filePath, error))
+    log.error('Error minifying CSS file:', filePath, error)
   }
 }
 async function processFiles() {
@@ -56,7 +55,7 @@ async function processFiles() {
     for (const file of cssFiles) {
       await minifyCSS(file)
     }
-    log.info(chalk.green('File processing complete.'))
+    log.info('File processing complete')
   } catch (error) {
     log.error('Error in file processing:', error)
   }
