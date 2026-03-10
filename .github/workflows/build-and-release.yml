@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install
-        run: npm ci
+        run: npm i
       - name: Build
         run: npm run build
       - name: Upload Release
