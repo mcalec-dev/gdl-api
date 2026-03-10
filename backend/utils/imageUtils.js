@@ -100,13 +100,16 @@ async function applyMetadata(imagePath) {
     return null
   }
 }
-async function resizeImage(imagePath, { width, height, scale, kernel }) {
+async function resizeImage(
+  imagePath,
+  { width, height, scale, kernel, quality }
+) {
   if (!imagePath) {
-    log.debug('No image path provided for resizing')
+    log.warn('No image path provided for resizing')
     return null
   }
   if (!width && !height && !scale) {
-    log.debug('No resize parameters provided')
+    log.warn('No resize parameters provided')
     return undefined
   }
   if (scale === 100) {
@@ -114,8 +117,12 @@ async function resizeImage(imagePath, { width, height, scale, kernel }) {
     return undefined
   }
   if (kernel && !validKernels.includes(kernel)) {
-    log.debug('Invalid kernel provided:', kernel)
+    log.warn('Invalid kernel provided:', kernel)
     kernel = scale > 100 ? 'lanczos3' : 'mitchell'
+  }
+  if (!quality || quality === undefined || quality === null) {
+    log.debug('Quality is doesnt exist or is not defined', quality)
+    quality = 0
   }
   let mtime = new Date()
   try {

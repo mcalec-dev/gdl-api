@@ -1,0 +1,45 @@
+name: Lint and Format Backend
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "backend/**"
+      - ".github/workflows/lint-and-format.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Format
+        run: npm run format
+      - name: Commit Changes
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format code"
+          file_pattern: "backend/**/*.{js,json,css}"
+          skip_fetch: false
+          skip_checkout: false

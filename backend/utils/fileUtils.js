@@ -42,6 +42,23 @@ function hasAllowedExtension(filePath) {
     : false
   return !isDisallowed
 }
+function allowedQualityParams(param) {
+  if (!param) return null
+  const ALLOWED_PARAMS = {
+    undefined: undefined,
+    0: 'default',
+    1: 'low',
+    2: 'medium',
+    3: 'high',
+  }
+  if (param === undefined) return undefined
+  if (param.includes(ALLOWED_PARAMS)) {
+    return param
+  } else {
+    log.warn('quality parameter doesnt include set params')
+    return null
+  }
+}
 const safeDisallowedDirs = Array.isArray(DISALLOWED_DIRS) ? DISALLOWED_DIRS : []
 const safeDisallowedFiles = Array.isArray(DISALLOWED_FILES)
   ? DISALLOWED_FILES
@@ -742,4 +759,5 @@ module.exports = {
   createDbEntriesForContents,
   initializeDatabaseSync,
   batchFetchFileMetadata,
+  allowedQualityParams,
 }

@@ -28,6 +28,7 @@ const {
   createDbEntriesForContents,
   initializeDatabaseSync,
   batchFetchFileMetadata,
+  allowedQualityParams,
 } = require('../../utils/fileUtils')
 const {
   safePath,
@@ -290,11 +291,24 @@ router.get(
       }
       if (isImageFile(realPath) === true) {
         try {
+          const qualityParam =
+            typeof req.query.quality === 'string'
+              ? req.query.quality
+              : typeof req.query.q === 'string'
+                ? req.query.q
+                : undefined
+          const quality = allowedQualityParams(qualityParam)
+            ? qualityParam
+            : undefined
           const kernel =
             typeof req.query.kernel === 'string' ? req.query.kernel : undefined
-          const scaleParam = req.query.scale || req.query.x
-          const scale =
-            typeof scaleParam === 'string' ? parseFloat(scaleParam) : undefined
+          const scaleParam =
+            typeof req.query.scale === 'string'
+              ? req.query.scale
+              : typeof req.query.x === 'string'
+                ? req.query.x
+                : undefined
+          const scale = parseFloat(scaleParam) || undefined
           const rawParam = req.query.raw === 'true' || req.query.raw === ''
           if (rawParam && (scale || kernel)) {
             log.debug('Raw parameter cannot be used with scale or kernel')
@@ -320,6 +334,7 @@ router.get(
           }
           if (scale) resizeOptions.scale = scale
           if (kernel) resizeOptions.kernel = kernel
+          if (quality) resizeOptions.quality = quality
           if (!isNaN(scale) && scale > 0 && scale !== 100) {
             log.debug('Resizing image with scale:', scale)
           }

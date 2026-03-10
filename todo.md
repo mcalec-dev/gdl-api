@@ -21,3 +21,4 @@
 - `AUTO_SCAN` even if its on, it should upsert directories when accessed too
 - npm package `emailvalid` for email validation in user registrations
 - backend typescript rewrite
+- finish adding the quality settings/params to the files endpoint with sharp (imageUtils & fileUtils)
