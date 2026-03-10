@@ -5,14 +5,5 @@
   "semi": false,
   "useTabs": false,
   "singleQuote": true,
-  "htmlWhitespaceSensitivity": "ignore",
-  "overrides": [
-    {
-      "files": "*.ejs",
-      "options": {
-        "parser": "html",
-        "printWidth": 100000
-      }
-    }
-  ]
+  "htmlWhitespaceSensitivity": "ignore"
 }
