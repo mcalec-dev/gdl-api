@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: gdl-api
   description: gdl-api express api server + frontend + bots
-  version: 0.2.31
+  version: 0.2.42
   license:
     name: MIT
 servers:
@@ -48,9 +48,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  api:
-                    type: string
-                    example: v2
                   name:
                     type: string
                   version:
@@ -77,8 +74,6 @@ paths:
                       auth:
                         type: string
                       user:
-                        type: string
-                      download:
                         type: string
                       files:
                         type: string
@@ -168,12 +163,19 @@ paths:
               required:
                 - password
       responses:
-        "200":
+        "201":
           description: User successfully logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    type: object
         "400":
-          description: Invalid request parameters
-        "401":
-          description: Invalid credentials
+          description: Missing credentials, user not found, or invalid password
         "403":
           description: User already logged in
         "500":
@@ -187,7 +189,7 @@ paths:
       responses:
         "201":
           description: User successfully logged out
-        "400":
+        "401":
           description: User is not logged in
         "500":
           description: Internal server error
@@ -231,10 +233,26 @@ paths:
       tags:
         - Authentication
       summary: Get OAuth provider endpoints
-      description: Get available OAuth provider endpoints for login, link, and unlink operations
+      description: Get available OAuth provider endpoints for callback, login, link, and unlink operations
       responses:
         "200":
           description: OAuth provider URLs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  urls:
+                    type: object
+                    properties:
+                      callback:
+                        type: string
+                      login:
+                        type: string
+                      link:
+                        type: string
+                      unlink:
+                        type: string
   /auth/provider/login/{provider}:
     get:
       tags:
@@ -350,11 +368,18 @@ paths:
           schema:
             type: integer
           description: Page number for pagination
+        - in: query
+          name: meta
+          schema:
+            type: boolean
+          description: Include extended file metadata (uuid, hash, sidecar)
       responses:
         "200":
           description: List of files and directories
-        "403":
+        "401":
           description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "500":
           description: Internal server error
   /files/{collection}/:
@@ -431,6 +456,10 @@ paths:
           description: File content as binary data
         "400":
           description: Missing or invalid uuid parameter
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "404":
           description: File not found or not accessible
         "500":
@@ -457,6 +486,10 @@ paths:
           description: File content as binary data
         "400":
           description: Missing or invalid uuid parameter
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "404":
           description: File not found or not accessible
         "500":
@@ -503,6 +536,10 @@ paths:
                     format: date-time
         "400":
           description: No file provided or file too large
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "500":
           description: File upload failed
   /uuid/{uuid}/{type}:
@@ -530,6 +567,10 @@ paths:
           description: File or directory information retrieved successfully
         "400":
           description: Invalid UUID or type parameter
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "404":
           description: File or directory not found
         "500":
@@ -543,6 +584,41 @@ paths:
       responses:
         "200":
           description: Random file metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                  path:
+                    type: string
+                  collection:
+                    type: string
+                  author:
+                    type: string
+                  size:
+                    type: number
+                  url:
+                    type: string
+                  created:
+                    type: string
+                    format: date-time
+                  modified:
+                    type: string
+                    format: date-time
+                  type:
+                    type: string
+                  hash:
+                    type: string
+                  uuid:
+                    type: string
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: No file found in database
         "500":
           description: Internal server error
   /random/:
@@ -554,28 +630,41 @@ paths:
       responses:
         "200":
           description: Random file metadata
-        "500":
-          description: Internal server error
-  /random/image:
-    get:
-      tags:
-        - Random
-      summary: Retrieve a random image file
-      description: Retrieve a random image file and stream it as a file download
-      responses:
-        "200":
-          description: Image file binary content
-        "500":
-          description: Internal server error
-  /random/image/:
-    get:
-      tags:
-        - Random
-      summary: Retrieve a random image file (with trailing slash)
-      description: Retrieve a random image file and stream it as a file download
-      responses:
-        "200":
-          description: Image file binary content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                  path:
+                    type: string
+                  collection:
+                    type: string
+                  author:
+                    type: string
+                  size:
+                    type: number
+                  url:
+                    type: string
+                  created:
+                    type: string
+                    format: date-time
+                  modified:
+                    type: string
+                    format: date-time
+                  type:
+                    type: string
+                  hash:
+                    type: string
+                  uuid:
+                    type: string
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: No file found in database
         "500":
           description: Internal server error
   /search/:
@@ -640,6 +729,10 @@ paths:
                   collections:
                     type: object
                     description: Collection statistics including totals and file types
+        "401":
+          description: User not authenticated
+        "403":
+          description: Insufficient permissions
         "500":
           description: Internal server error
   /health/:
@@ -698,8 +791,6 @@ paths:
                     type: array
                     items:
                       type: string
-                  id:
-                    type: string
                   uuid:
                     type: string
                   created:
@@ -712,7 +803,7 @@ paths:
                     type: object
                   sessions:
                     type: array
-                    items: 
+                    items:
                       type: object
                       properties:
                         uuid:
@@ -726,6 +817,8 @@ paths:
                           type: string
         "401":
           description: User not authenticated
+        "404":
+          description: User not found
         "500":
           description: Internal server error
   /user/session/:
@@ -825,6 +918,33 @@ paths:
       responses:
         "200":
           description: Admin statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      uptime:
+                        type: integer
+                        description: Server uptime in milliseconds
+                      totalUsers:
+                        type: integer
+                      loggedInUsers:
+                        type: integer
+                      topTags:
+                        type: array
+                        items: {}
+                      storageUsage:
+                        type: integer
+                      flags:
+                        type: integer
+                  urls:
+                    type: object
+                    properties:
+                      announcements:
+                        type: string
         "401":
           description: User not authenticated or not an admin
         "500":
@@ -834,16 +954,16 @@ paths:
       tags:
         - Admin
       summary: List all users
-      description: Get a list of all registered users (TODO - future implementation)
+      description: Get a list of all registered users (not yet implemented)
       responses:
-        "200":
-          description: List of users
+        "501":
+          description: Not implemented
   /admin/user/{id}:
     get:
       tags:
         - Admin
       summary: Get user information
-      description: Retrieve detailed information about a specific user
+      description: Retrieve detailed information about a specific user (not yet implemented)
       parameters:
         - in: path
           name: id
@@ -852,13 +972,13 @@ paths:
             type: string
           description: User ID
       responses:
-        "200":
-          description: User information
+        "501":
+          description: Not implemented
     put:
       tags:
         - Admin
       summary: Update user information
-      description: Modify user account details
+      description: Modify user account details (not yet implemented)
       parameters:
         - in: path
           name: id
@@ -867,8 +987,8 @@ paths:
             type: string
           description: User ID
       responses:
-        "204":
-          description: User updated successfully
+        "501":
+          description: Not implemented
   /admin/user/{id}/action:
     post:
       tags:
@@ -896,8 +1016,8 @@ paths:
                   type: string
                   description: Optional IP address to ban
       responses:
-        "201":
-          description: Action completed successfully
+        "501":
+          description: Not implemented
         "401":
           description: User not authorized
   /admin/roles:
@@ -914,10 +1034,10 @@ paths:
       tags:
         - Admin
       summary: List all tags
-      description: Get all file/content tags (TODO - future implementation)
+      description: Get all file/content tags (not yet implemented)
       responses:
-        "200":
-          description: List of tags
+        "501":
+          description: Not implemented
   /admin/tags/{id}:
     post:
       tags:
@@ -943,8 +1063,8 @@ paths:
           schema:
             type: string
       responses:
-        "204":
-          description: Tag updated successfully
+        "501":
+          description: Not implemented
     delete:
       tags:
         - Admin
@@ -956,17 +1076,17 @@ paths:
           schema:
             type: string
       responses:
-        "204":
-          description: Tag deleted successfully
+        "501":
+          description: Not implemented
   /admin/dmca:
     get:
       tags:
         - Admin
       summary: List DMCA/takedown requests
-      description: Get all DMCA and takedown requests (TODO - future implementation)
+      description: Get all DMCA and takedown requests (not yet implemented)
       responses:
-        "200":
-          description: List of takedown requests
+        "501":
+          description: Not implemented
     post:
       tags:
         - Admin
@@ -986,32 +1106,32 @@ paths:
           schema:
             type: string
       responses:
-        "204":
-          description: Takedown request updated
+        "501":
+          description: Not implemented
   /admin/file/duplicates:
     get:
       tags:
         - Admin
       summary: Find duplicate files
-      description: Search for duplicate files in the system (TODO - future implementation)
+      description: Search for duplicate files in the system (not yet implemented)
       responses:
-        "200":
-          description: List of duplicate files
+        "501":
+          description: Not implemented
   /admin/file/uri-check:
     get:
       tags:
         - Admin
       summary: Check file URIs
-      description: Validate and check file URIs (TODO - future implementation)
+      description: Validate and check file URIs (not yet implemented)
       responses:
-        "200":
-          description: URI check results
+        "501":
+          description: Not implemented
   /admin/cache/purge:
     post:
       tags:
         - Admin
       summary: Purge server caches
-      description: Clear all server caches (TODO - future implementation)
+      description: Clear all server caches (not yet implemented)
       responses:
         "201":
           description: Caches purged successfully
@@ -1043,9 +1163,13 @@ paths:
                 severity:
                   type: string
                   enum: [info, warning, error]
+              required:
+                - title
       responses:
         "201":
           description: Announcement created successfully
+        "400":
+          description: Title is required
   /admin/announcements/{uuid}:
     put:
       tags:
@@ -1073,11 +1197,13 @@ paths:
                 severity:
                   type: string
                   enum: [info, warning, error]
+              required:
+                - severity
       responses:
         "204":
           description: Announcement updated successfully
         "400":
-          description: Invalid UUID or missing required fields
+          description: Invalid UUID or severity not provided
         "404":
           description: Announcement not found
     delete:

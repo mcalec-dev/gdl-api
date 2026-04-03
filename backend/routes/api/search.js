@@ -6,7 +6,7 @@ const { requireRole } = require('../../utils/authUtils')
 const sendResponse = require('../../utils/resUtils')
 router.get('/', requireRole('user'), async (req, res) => {
   if (!req.user) {
-    log.debug('Unauthorized access attempt')
+    log.warn('Unauthorized access attempt')
     return sendResponse(res, 401)
   }
   const { q, type } = req.query
@@ -25,7 +25,7 @@ router.get('/', requireRole('user'), async (req, res) => {
       protocol: req.protocol,
       hostname: req.hostname,
     })
-    log.debug('Found %s entries (DB)', simplifiedResults.length)
+    log.info('Found %s entries (DB)', simplifiedResults.length)
     return res.json({
       query: q,
       count: simplifiedResults.length,

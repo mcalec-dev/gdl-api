@@ -1,7 +1,5 @@
 # gdl-api
 
-## **Don't use the new frontend yet because it is in the early alpha stages**
-
 an express api thing i made mainly for gallery-dl downloads.  
 
 Swagger documentation accessible at `/docs/`

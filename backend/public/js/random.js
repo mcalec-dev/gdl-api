@@ -74,8 +74,9 @@ function showMedia(data) {
   mediaElement.src = mediaUrl
   mediaElement.onclick = async () => {
     try {
-      const isImage = data.type.toLowerCase().startsWith('image')
-      // Only use viewer if it's available and elements exist in DOM
+      const isImage = data.file
+        .toLowerCase()
+        .match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
       if (viewerApi && (isVideo || isImage)) {
         const type = isVideo ? 'video' : 'image'
         const item = {

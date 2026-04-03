@@ -5,7 +5,7 @@ let gridFSBucket
 function initGridFS(dbName = 'gdl') {
   try {
     gridFSBucket = new GridFSBucket(mongoose.connection.getClient().db(dbName))
-    log.debug('GridFS bucket initialized for database:', dbName)
+    log.info('GridFS bucket initialized for database:', dbName)
     return gridFSBucket
   } catch (error) {
     log.error('Error initializing GridFS:', error)

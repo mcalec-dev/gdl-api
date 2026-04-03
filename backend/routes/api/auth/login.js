@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
             log.error('Error saving session after login:', saveErr)
             return sendResponse(res, 500)
           }
-          log.debug('User logged in:', user.username)
+          log.info('User logged in:', user.username)
           return res.status(201).json({
             success: true,
             user,

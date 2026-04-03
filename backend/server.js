@@ -3,6 +3,7 @@ const session = require('express-session')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
 const { setReqVars } = require('./utils/requestUtils')
+const { initDbCacheLayer } = require('./utils/dbUtils')
 const app = express()
 const sessionStore = require('./utils/sessionStore')
 const passport = require('./utils/passport')
@@ -13,7 +14,6 @@ const swaggerUi = require('swagger-ui-express')
 const log = require('./utils/logHandler')
 const BodyParser = require('body-parser')
 const rateLimit = require('express-rate-limit')
-const ms = require('ms')
 const {
   NODE_ENV,
   PORT,
@@ -28,15 +28,16 @@ const {
   RATE_LIMIT_MAX,
   TROLLING_CHANCE,
   TROLLING_TERMS,
-} = require('./config')
-// init swagger docs
+} = /** @type {any} */ (require('./config'))
 async function initSwagger() {
   try {
     const yaml = require('js-yaml')
     const fs = require('fs').promises
     const swaggerPath = path.join(__dirname, 'openapi.yaml')
     const swaggerFile = await fs.readFile(swaggerPath, 'utf8')
-    const swaggerSpec = yaml.load(swaggerFile)
+    const swaggerSpec = /** @type {import('swagger-ui-express').JsonObject} */ (
+      yaml.load(swaggerFile)
+    )
     swaggerSpec.servers = [
       {
         url: `https://${await HOST}${BASE_PATH}`,
@@ -58,26 +59,27 @@ if (BASE_PATH) {
     res.redirect(307, `${BASE_PATH}/`)
   })
 }
-// init mongodb and session store
+// init database and session store
 async function initDB() {
+  initDbCacheLayer()
   const store = sessionStore()
-  const cookieMaxAgeMs =
-    typeof COOKIE_MAX_AGE === 'string' ? ms(COOKIE_MAX_AGE) : COOKIE_MAX_AGE
+  const cookieMaxAgeMs = COOKIE_MAX_AGE
   try {
     const connection = await require('mongoose').connect(MONGODB_URL)
-    log.debug('MongoDB connected')
+    log.info('MongoDB connected')
     const gridfsUtils = require('./utils/gridfsUtils')
     gridfsUtils.initGridFS()
     if (store) {
       const db = connection.connection.db
+      if (!db) throw new Error('Database connection unavailable')
       const sessions = db.collection('sessions')
       try {
         await sessions.createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
-        log.debug('TTL index created on sessions collection')
+        log.info('TTL index created on sessions collection')
       } catch (indexError) {
         log.debug(
           'TTL index already exists or creation failed:',
-          indexError.message
+          indexError instanceof Error ? indexError.message : String(indexError)
         )
       }
       const cutoffDate = new Date(Date.now() - cookieMaxAgeMs)
@@ -87,7 +89,7 @@ async function initDB() {
           { 'expires.$date': { $lt: cutoffDate } },
         ],
       })
-      log.debug(`Expired sessions cleaned up (${result.deletedCount} removed)`)
+      log.info(`Expired sessions cleaned up (${result.deletedCount} removed)`)
       const User = require('./models/User')
       const userResult = await User.updateMany(
         {},
@@ -99,7 +101,7 @@ async function initDB() {
           },
         }
       )
-      log.debug(
+      log.info(
         `User sessions cleaned up (${userResult.modifiedCount} users updated)`
       )
     }
@@ -124,9 +126,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('index', {
+        ...vars,
         title: 'Home',
         currentPage: 'home',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering home page:', error)
@@ -137,9 +139,9 @@ async function renderApp() {
     try {
       const vars = await webVars()
       res.render('random', {
+        ...vars,
         title: 'Random',
         currentPage: 'random',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering random page:', error)
@@ -150,9 +152,9 @@ async function renderApp() {
     try {
       const vars = await webVars()
       res.render('stats', {
+        ...vars,
         title: 'Stats',
         currentPage: 'stats',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering stats page:', error)
@@ -163,9 +165,9 @@ async function renderApp() {
     try {
       const vars = await webVars()
       res.render('search', {
+        ...vars,
         title: 'Search',
         currentPage: 'search',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering search page:', error)
@@ -176,9 +178,9 @@ async function renderApp() {
     try {
       const vars = await webVars()
       res.render('files', {
+        ...vars,
         title: 'Files',
         currentPage: 'files',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering files page:', error)
@@ -189,9 +191,9 @@ async function renderApp() {
     try {
       const vars = await webVars()
       res.render('files', {
+        ...vars,
         title: 'Files',
         currentPage: 'files',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering files page:', error)
@@ -202,9 +204,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('login', {
+        ...vars,
         title: 'Login',
         currentPage: 'login',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering login page:', error)
@@ -215,9 +217,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('register', {
+        ...vars,
         title: 'Register',
         currentPage: 'register',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering register page:', error)
@@ -228,9 +230,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('download', {
+        ...vars,
         title: 'Download',
         currentPage: 'download',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering download page:', error)
@@ -241,9 +243,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('dashboard', {
+        ...vars,
         title: 'Dashboard',
         currentPage: 'dashboard',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering dashboard page:', error)
@@ -254,9 +256,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('admin', {
+        ...vars,
         title: 'Admin',
         currentPage: 'admin',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering admin page:', error)
@@ -267,9 +269,9 @@ async function renderApp() {
     try {
       var vars = await webVars()
       res.render('404', {
+        ...vars,
         title: 'Not Found',
         currentPage: 'Not Found',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering 404 page:', error)
@@ -277,25 +279,21 @@ async function renderApp() {
     }
   })
 }
-// init the express app
 async function initApp() {
-  // set request variables
   app.use(setReqVars)
-  // use cors headers
   app.use(require('cors')())
-  // rate limiting
   app.use(
+    // @ts-ignore - no type declarations
     rateLimit({
       windowMs: RATE_LIMIT_WINDOW,
       max: RATE_LIMIT_MAX,
-      keyGenerator: rateLimit.ipKeyGenerator,
       validate: {
         trustProxy: false,
         xForwardedForHeader: false,
       },
     })
   )
-  // logging
+  // @ts-ignore - no type declarations
   require('morgan-body')(app, {
     noColors: false,
     prettify: true,
@@ -309,23 +307,13 @@ async function initApp() {
     theme: 'defaultTheme',
     immediateReqLog: true,
   })
-  // trust proxy
   app.set('trust proxy', true)
-  // parse cookies
-  //app.use(cookieParser())
-  // express useragent
+  app.use(require('cookie-parser')())
   app.use(require('express-useragent').express())
-  // robots.txt
-  app.use(
-    require('express-robots-txt')({
-      UserAgent: '*',
-      Disallow: '/',
-    })
-  )
-  // parse body
+  // @ts-ignore - no type declarations
+  app.use(require('express-robots-txt')({ UserAgent: '*', Disallow: '/' }))
   app.use(BodyParser.urlencoded({ extended: true }))
   app.use(BodyParser.json())
-  // session middleware
   app.use(
     session({
       secret: SESSION_SECRET,
@@ -341,7 +329,6 @@ async function initApp() {
       },
     })
   )
-  // security middleware
   app.use(
     require('lusca')({
       xframe: 'SAMEORIGIN',
@@ -359,21 +346,15 @@ async function initApp() {
       referrerPolicy: 'same-origin',
     })
   )
-  // jwt middleware
-  //app.use(jwtMiddleware)
-  // init passport
   app.use(passport.initialize())
   app.use(passport.session())
-  // view engine
   app.set('view engine', 'ejs')
   app.set('views', path.join(__dirname, 'views'))
-  // body parser
   app.use(
     express.json({
       type: 'application/json',
     })
   )
-  // security headers
   app.use((req, res, next) => {
     if (
       !req.path.match(
@@ -385,7 +366,6 @@ async function initApp() {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     next()
   })
-  // mount static files
   app.use(
     `${BASE_PATH}`,
     express.static(path.join(__dirname, 'public'), {
@@ -393,34 +373,37 @@ async function initApp() {
       lastModified: true,
       maxAge: '1y',
       redirect: true,
-      headers: {
-        'Cache-Control': 'public, max-age=31536000, immutable',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
       },
     })
   )
-  // special static files
   app.get(`/favicon.ico`, (req, res) => {
     res.setHeader('Content-Type', 'image/x-icon')
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     res.sendFile(path.join(__dirname, 'public', 'favicon.ico'))
   })
-  // trolling middleware
   app.use((req, res, next) => {
-    const uri = req.path + '?' + new URLSearchParams(req.query).toString()
+    const uri =
+      req.path +
+      '?' +
+      new URLSearchParams(
+        /** @type {Record<string, string>} */ (req.query)
+      ).toString()
     const chance = TROLLING_CHANCE
     const terms = TROLLING_TERMS
     const uriRickroll = uri.toLowerCase().includes('rickroll')
     if (Math.random() < chance || uriRickroll) {
-      if (isbot(req.useragent.source)) {
-        log.debug('Bot/crawler detected:', req.useragent.source)
+      if (isbot(req.useragent?.source ?? '')) {
+        log.debug('Bot/crawler detected:', req.useragent?.source)
         return next()
       }
-      log.debug('Sending troll to:', req.ip, req.useragent.source)
+      log.debug('Sending troll to:', req.ip, req.useragent?.source)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
     }
-    const containsBlockedTerm = terms.some((term) =>
+    const containsBlockedTerm = terms.some((/** @type {string} */ term) =>
       uri.toLowerCase().includes(term.toLowerCase())
     )
     if (containsBlockedTerm) {
@@ -431,10 +414,9 @@ async function initApp() {
     }
     next()
   })
-  // bot detection middleware
   app.use((req, res, next) => {
-    if (isbot(req.useragent.source)) {
-      log.debug('Bot/crawler detected:', req.useragent.source)
+    if (isbot(req.useragent?.source ?? '')) {
+      log.debug('Bot/crawler detected:', req.useragent?.source)
       if (res.headersSent) {
         return next()
       }
@@ -445,47 +427,53 @@ async function initApp() {
 async function setupRoutes() {
   try {
     app.use(`${BASE_PATH}`, require('./routes'))
-    console.log(chalk.green('✓ API routes mounted'))
+    log.info(chalk.green('✓ API routes mounted'))
   } catch (error) {
     log.error('Error mounting API routes:', error)
     throw error
   }
   await renderApp()
-  console.log(chalk.green('✓ Frontend routes mounted'))
+  log.info(chalk.green('✓ Frontend routes mounted'))
   app.use(async (req, res) => {
     log.debug('Page not found:', req.path)
     try {
       var vars = await webVars()
       res.status(404).render('404', {
+        ...vars,
         title: 'Not Found',
         currentPage: 'Not Found',
-        ...vars,
       })
     } catch (error) {
       log.error('Error rendering 404 page:', error)
       res.status(500).send('Error rendering page!')
     }
   })
-  app.use((error, req, res, next) => {
-    log.error('An error occured:', error.message)
-    log.error(error.stack)
-    if (res.headersSent) {
-      return next(error)
-    }
-    if (error && error.name === 'UnauthorizedError') {
-      return res.status(401).json({
-        message: 'Invalid or missing authentication token',
-        status: '401',
-        error: NODE_ENV === 'development' ? error.message : 'Unauthorized',
-      })
-    }
-    res.status(500).json({
-      message: 'Interal Server Error',
-      status: '500',
-      error:
-        NODE_ENV === 'development' ? error.message : 'Something went wrong.',
-    })
-  })
+  app.use(
+    /** @type {import('express').ErrorRequestHandler} */ (
+      (error, req, res, next) => {
+        log.error('An error occured:', error.message)
+        log.error(error.stack)
+        if (res.headersSent) {
+          return next(error)
+        }
+        if (error && error.name === 'UnauthorizedError') {
+          return res.status(401).json({
+            message: 'Invalid or missing authentication token',
+            status: '401',
+            error: NODE_ENV === 'development' ? error.message : 'Unauthorized',
+          })
+        }
+        res.status(500).json({
+          message: 'Interal Server Error',
+          status: '500',
+          error:
+            NODE_ENV === 'development'
+              ? error.message
+              : 'Something went wrong.',
+        })
+      }
+    )
+  )
 }
 // process handlers
 process.on('uncaughtException', (error) => {
@@ -500,25 +488,16 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('SIGTERM', () => {
   const store = sessionStore()
   if (store && typeof store.clear === 'function') {
-    store
-      .clear()
-      .then(() => {
-        console.log('All sessions cleared.')
-        server.close(() => {
-          console.log('Process terminated')
-        })
-      })
-      .catch((err) => {
-        log.error('Failed to clear sessions:', err)
-        server.close(() => {
-          console.log('Process terminated')
-        })
-      })
-  } else {
-    server.close(() => {
-      console.log('Process terminated')
-    })
+    try {
+      store.clear()
+      log.info('All sessions cleared.')
+    } catch (err) {
+      log.error('Failed to clear sessions:', err)
+    }
   }
+  server.close(() => {
+    log.info('Process terminated')
+  })
 })
 // verify the imported config
 async function verifyConfig() {
@@ -527,7 +506,7 @@ async function verifyConfig() {
     log.debug('Base directory accessible:', BASE_DIR)
   } catch (error) {
     log.error('Base directory inaccessible:', BASE_DIR)
-    log.error(error.stack)
+    log.error(error instanceof Error ? error.stack : String(error))
     process.exit(1)
   }
   try {
@@ -535,7 +514,7 @@ async function verifyConfig() {
     log.debug('Host available:', HOST)
   } catch (error) {
     log.error('Host unavailable', HOST)
-    log.error(error.stack)
+    log.error(error instanceof Error ? error.stack : String(error))
   }
 }
 // display the startup banner

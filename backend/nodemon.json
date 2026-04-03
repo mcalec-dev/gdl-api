@@ -13,8 +13,6 @@
     "count.js",
     "node_modules",
     "public",
-    "client",
-    "bot",
     "views"
   ]
 }

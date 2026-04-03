@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.2.41",
+  "version": "0.2.42",
   "description": "gdl-api express api server + frontend + bots",
   "author": "McAlec",
   "keywords": [
@@ -19,10 +19,14 @@
     "format": "prettier . --write",
     "minify": "set DEBUG=gdl-api:* && node -e 'import('./minify.js').processFiles'",
     "rollup": "set DEBUG=gdl-api:* && node rollup.js",
-    "build": "npm run lint && npm run format && npm run minify"
+    "build": "npm run lint && npm run format && npm run minify",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
-    "@ruffle-rs/ruffle": "^0.2.0-nightly.2026.2.3",
+    "@types/cookie-parser": "^1.4.10",
     "bcrypt": "^6.0.0",
     "bytes": "^3.1.2",
     "chalk": "^4.1.2",
@@ -31,7 +35,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "debug": "^4.4.1",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.3.1",
     "ejs": "^4.0.1",
     "encodeurl": "^2.0.0",
     "eslint-plugin-jsonc": "^2.21.0",
@@ -43,6 +47,7 @@
     "express-useragent": "^2.1.0",
     "fast-glob": "^3.3.3",
     "figlet": "^1.9.4",
+    "file-type": "^22.0.0",
     "fs-extra": "^11.3.3",
     "isbot": "^5.1.33",
     "js-yaml": "^4.1.1",
@@ -58,6 +63,7 @@
     "passport-discord-auth": "^1.2.0",
     "passport-github2": "^0.1.12",
     "passport-local": "^1.0.0",
+    "redis": "^5.11.0",
     "sanitize-filename": "^1.6.3",
     "sharp": "^0.34.5",
     "slash": "^5.1.0",
@@ -71,11 +77,21 @@
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^9.39.2",
     "@eslint/json": "^0.14.0",
+    "@types/bytes": "^3.1.5",
+    "@types/clean-css": "^4.2.11",
+    "@types/cors": "^2.8.19",
+    "@types/express-session": "^1.18.2",
     "@types/figlet": "^1.7.0",
-    "eslint": "^9.39.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/lusca": "^1.7.5",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^20.4.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "eslint": "^9.39.4",
     "eslint-plugin-json": "^4.0.1",
     "nodemon": "^3.1.11",
     "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "typescript": "^6.0.2"
   }
 }

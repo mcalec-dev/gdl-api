@@ -5,6 +5,7 @@ const CleanCSS = require('clean-css')
 const glob = require('fast-glob')
 const log = require('./utils/logHandler')
 const publicDir = path.join(__dirname, 'public')
+/** @param {string} filePath */
 const minifyJS = async (filePath) => {
   try {
     const code = await fs.readFile(filePath, 'utf8')
@@ -16,11 +17,13 @@ const minifyJS = async (filePath) => {
     const outputDir = path.join(publicDir, 'js', 'min', subDir)
     const outputPath = path.join(outputDir, fileName)
     await fs.mkdir(outputDir, { recursive: true })
+    if (minified.code === undefined) throw new Error(`Terser produced no output for: ${filePath}`)
     await fs.writeFile(outputPath, minified.code)
   } catch (error) {
     log.error('Error minifying JS file:', filePath, error)
   }
 }
+/** @param {string} filePath */
 const minifyCSS = async (filePath) => {
   try {
     const code = await fs.readFile(filePath, 'utf8')
@@ -47,11 +50,11 @@ async function processFiles() {
       .join(publicDir, 'css', '**', '*.css')
       .replace(/\\/g, '/')
     const cssFiles = glob.sync(cssPattern, { ignore: [`**/*.min.css`] })
-    log.debug(`Processing ${jsFiles.length} .js files`)
+    log.info(`Processing ${jsFiles.length} .js files`)
     for (const file of jsFiles) {
       await minifyJS(file)
     }
-    log.debug(`Processing ${cssFiles.length} .css files`)
+    log.info(`Processing ${cssFiles.length} .css files`)
     for (const file of cssFiles) {
       await minifyCSS(file)
     }

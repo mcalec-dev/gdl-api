@@ -57,7 +57,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
         author: req.user.username,
         modified: Date.now(),
       },
-      { new: true }
+      { returnDocument: 'after' }
     )
     if (!updatedAnnouncement) {
       return sendResponse(res, 404, 'Announcement not found')

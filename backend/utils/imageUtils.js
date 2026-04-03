@@ -227,14 +227,45 @@ async function resizeImage(
     return null
   }
 }
-async function convertImage(imagePath, format, { quality }) {
+async function convertImage(
+  imagePath,
+  format,
+  { quality, width, height, scale, kernel } = {}
+) {
   let transformer
   try {
     transformer = sharp(imagePath, {
       failOnError: false,
       useOriginalDate: true,
-      limitInputPixels: false,
+      limitInputPixels: true,
     })
+    if (scale || width || height) {
+      let resizeOptions = {}
+      if (scale) {
+        const metadata = await sharp(imagePath, {
+          failOnError: false,
+          useOriginalDate: true,
+          limitInputPixels: false,
+        }).metadata()
+        if (!metadata || !metadata.width || !metadata.height) {
+          log.warn('Could not read metadata for scaled conversion')
+          return null
+        }
+        width = Math.round(metadata.width * (scale / 100))
+        height = Math.round(metadata.height * (scale / 100))
+        resizeOptions = {
+          width,
+          height,
+          kernel: kernel || (scale > 100 ? 'lanczos3' : 'mitchell'),
+          fastShrink: scale < 100,
+        }
+      } else {
+        if (width) resizeOptions.width = width
+        if (height) resizeOptions.height = height
+        if (kernel) resizeOptions.kernel = kernel
+      }
+      transformer = transformer.resize(resizeOptions)
+    }
     switch (format.toLowerCase()) {
       case 'jpeg':
       case 'jpg':
@@ -261,6 +292,12 @@ async function convertImage(imagePath, format, { quality }) {
       case 'avif':
         transformer = transformer.avif({
           quality: quality,
+        })
+        break
+      case 'gif':
+        transformer = transformer.gif({
+          reoptimise: true,
+          effort: 3,
         })
         break
       default:

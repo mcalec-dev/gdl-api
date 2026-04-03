@@ -15,26 +15,14 @@ const containerWidthInput = document.getElementById('container-width-input')
 const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
 const resetSettingsButton = document.getElementById('reset-settings-button')
 const imageKernelSelect = document.getElementById('image-kernel-select')
-const defaults = {
-  theme: {
-    bg: 'auto',
-    color: 'match-bg',
-  },
-  oneko: false,
-  serverSort: true,
-  pagination: {
-    enabled: true,
-    limit: 100,
-  },
-  lang: 'en',
-  imageScale: {
-    max: 200,
-    default: 100,
-    min: 50,
-  },
-  containerWidth: 65,
-  imageKernel: 'lanczos3',
-  bytesBits: false,
+let defaults = {}
+async function loadDefaultSettings() {
+  try {
+    const res = await fetch('/json/default.json')
+    defaults = await res.json()
+  } catch {
+    return console.error('couldnt load default configurations for the settings')
+  }
 }
 function setCookie(name, value, expires = '') {
   let date = new Date()
@@ -316,6 +304,7 @@ async function updateSettings() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadDefaultSettings()
   await updateSettings()
   settingsButton.addEventListener('click', async () => {
     settingsContainer.hidden = !settingsContainer.hidden
@@ -326,4 +315,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsButton.hidden = !settingsButton.hidden
   })
 })
-export { setExportVals, defaults, settings }
+export {
+  setExportVals,
+  loadDefaultSettings,
+  updateSettings,
+  defaults,
+  settings,
+}

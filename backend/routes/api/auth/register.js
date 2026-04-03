@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
             log.error('Error saving session after registration login:', saveErr)
             return sendResponse(res, 500)
           }
-          log.debug('Login after registration succeeded:', user)
+          log.info('Login after registration succeeded:', user.username)
           return sendResponse(
             res,
             201,

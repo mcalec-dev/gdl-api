@@ -1,4 +1,7 @@
 const chalk = require('chalk')
+const util = require('util')
+const config = require('../config')
+/** @typedef {'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL'} LogLevel */
 const LOG_LEVELS = {
   DEBUG: 0,
   INFO: 1,
@@ -6,63 +9,76 @@ const LOG_LEVELS = {
   ERROR: 3,
   FATAL: 4,
 }
-let currentLogLevel = LOG_LEVELS.DEBUG
-const timestamp = new Date().toISOString()
+/**
+ * @param {string | number | null | undefined} level
+ * @returns {number}
+ */
+function parseLevel(level) {
+  if (level === undefined || level === null || level === '')
+    return LOG_LEVELS.DEBUG
+  const n = Number(level)
+  if (Number.isInteger(n) && n >= 0 && n <= 4) return n
+  return (
+    LOG_LEVELS[/** @type {LogLevel} */ (String(level).toUpperCase())] ??
+    LOG_LEVELS.DEBUG
+  )
+}
+let currentLogLevel = parseLevel(
+  /** @type {string | number | null | undefined} */ (config.LOG_LEVEL)
+)
+/**
+ * @param {unknown[]} args
+ */
+function formatArgs(args) {
+  return args.map((arg) =>
+    arg instanceof Error ? arg.stack || arg.message : arg
+  )
+}
+/**
+ * @param {LogLevel} level
+ * @param {'debug' | 'info' | 'warn' | 'error'} method
+ * @param {(str: string) => string} color
+ * @param {unknown[]} args
+ */
+function writeLog(level, method, color, args) {
+  if (currentLogLevel > LOG_LEVELS[level]) {
+    return
+  }
+  const timestamp = new Date().toISOString()
+  if (!args.length) {
+    console[method](chalk.gray(timestamp), color(`[${level}]`))
+    return
+  }
+  console[method](
+    chalk.gray(timestamp),
+    color(`[${level}]`),
+    util.format(...formatArgs(args))
+  )
+}
 const logger = {
+  /** @param {string | number | null | undefined} level */
   setLevel(level) {
-    if (LOG_LEVELS[level] !== undefined) {
-      currentLogLevel = LOG_LEVELS[level]
-    }
+    currentLogLevel = parseLevel(level)
   },
-  debug(message, data = null) {
-    if (currentLogLevel <= LOG_LEVELS.DEBUG) {
-      console.log(
-        chalk.gray(timestamp),
-        chalk.cyan('[DEBUG]'),
-        message,
-        data || ''
-      )
-    }
+  /** @param {...unknown} args */
+  debug(...args) {
+    writeLog('DEBUG', 'debug', chalk.cyan, args)
   },
-  info(message, data = null) {
-    if (currentLogLevel <= LOG_LEVELS.INFO) {
-      console.log(
-        chalk.gray(timestamp),
-        chalk.green('[INFO]'),
-        message,
-        data || ''
-      )
-    }
+  /** @param {...unknown} args */
+  info(...args) {
+    writeLog('INFO', 'info', chalk.green, args)
   },
-  warn(message, data = null) {
-    if (currentLogLevel <= LOG_LEVELS.WARN) {
-      console.log(
-        chalk.gray(timestamp),
-        chalk.yellow('[WARN]'),
-        message,
-        data || ''
-      )
-    }
+  /** @param {...unknown} args */
+  warn(...args) {
+    writeLog('WARN', 'warn', chalk.yellow, args)
   },
-  error(message, data = null) {
-    if (currentLogLevel <= LOG_LEVELS.ERROR) {
-      console.log(
-        chalk.gray(timestamp),
-        chalk.red('[ERROR]'),
-        message,
-        data || ''
-      )
-    }
+  /** @param {...unknown} args */
+  error(...args) {
+    writeLog('ERROR', 'error', chalk.red, args)
   },
-  fatal(message, data = null) {
-    if (currentLogLevel <= LOG_LEVELS.FATAL) {
-      console.log(
-        chalk.gray(timestamp),
-        chalk.magenta('[FATAL]'),
-        message,
-        data || ''
-      )
-    }
+  /** @param {...unknown} args */
+  fatal(...args) {
+    writeLog('FATAL', 'error', chalk.magenta, args)
   },
 }
 module.exports = logger

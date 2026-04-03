@@ -25,7 +25,7 @@ router.post(
       const fileId = await uploadFile(req.file.buffer, req.file.originalname, {
         contentType: req.file.mimetype,
       })
-      log.debug(`File uploaded: ${req.file.originalname} (ID: ${fileId})`)
+      log.info(`File uploaded: ${req.file.originalname} (ID: ${fileId})`)
       res.status(201).json({
         success: true,
         fileId: fileId.toString(),

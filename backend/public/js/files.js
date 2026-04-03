@@ -5,11 +5,7 @@ import {
   PAGINATION,
   IMAGE_KERNEL,
 } from '../min/settings.min.js'
-import {
-  setupViewerEvents,
-  setupFileClickHandlers,
-  loadViewerIcons,
-} from '../min/viewer.min.js'
+import { initViewer, setupFileClickHandlers } from '../min/viewer.min.js'
 import {
   setupFileItemContextMenu,
   setContextIcons,
@@ -881,8 +877,7 @@ async function init() {
     await loadIcons()
     setContextIcons(icons)
     setContextBasePaths(frontendBasePath, apiBasePath)
-    await loadViewerIcons()
-    await setupViewerEvents()
+    await initViewer({ fileListSelector: '#file-list' })
     getSortFromQuery()
     setupFileItemContextMenu()
   } catch (error) {

@@ -20,6 +20,7 @@ const {
   isAudioFile,
   isSwfFile,
   isDisallowedExtension,
+  isSidecarFile,
   getFileMime,
   maybeUpsertAccessed,
   sortContents,
@@ -35,7 +36,11 @@ const {
   validateRequestParams,
   isSubPath,
 } = require('../../utils/pathUtils')
-const { resizeImage, applyMetadata } = require('../../utils/imageUtils')
+const {
+  resizeImage,
+  convertImage,
+  applyMetadata,
+} = require('../../utils/imageUtils')
 if (AUTO_SCAN === true) initializeDatabaseSync()
 else if (!AUTO_SCAN || AUTO_SCAN === false)
   log.debug('Skipping full database sync')
@@ -115,6 +120,7 @@ router.get('/', requireRole('user'), async (req, res) => {
               ...entry,
               uuid: dbMeta?.uuid || null,
               hash: dbMeta?.hash || null,
+              sidecar: dbMeta?.sidecar || null,
             }
           }
           return entry
@@ -183,7 +189,14 @@ router.get(
     const relativePath = path
       .relative(normalizedDir, realPath)
       .replace(/\\/g, '/')
-    if (await isExcluded(relativePath)) {
+    const isDirectSidecarRequest = isSidecarFile(realPath)
+    if (isDirectSidecarRequest) {
+      log.debug(
+        'Bypassing disallowed checks for direct sidecar request:',
+        relativePath
+      )
+    }
+    if (!isDirectSidecarRequest && (await isExcluded(relativePath))) {
       log.debug(`Access denied to: ${relativePath}`)
       return sendResponse(res, 404)
     }
@@ -271,6 +284,7 @@ router.get(
                 ...entry,
                 uuid: dbMeta?.uuid || null,
                 hash: dbMeta?.hash || null,
+                sidecar: dbMeta?.sidecar || null,
               }
             }
             return entry
@@ -282,15 +296,33 @@ router.get(
       res.json(paginated)
     } else {
       if (
-        !hasAllowedExtension(realPath) ||
-        DISALLOWED_FILES.includes(path.basename(realPath)) ||
-        isDisallowedExtension(path.basename(realPath))
+        !isDirectSidecarRequest &&
+        (!hasAllowedExtension(realPath) ||
+          DISALLOWED_FILES.includes(path.basename(realPath)) ||
+          isDisallowedExtension(path.basename(realPath)))
       ) {
         log.debug(`Access denied to file: ${realPath}`)
         return sendResponse(res, 404)
       }
       if (isImageFile(realPath) === true) {
         try {
+          const gifParam = req.query.gif
+          let shouldConvertToGif = false
+          if (gifParam !== undefined) {
+            if (typeof gifParam !== 'string') {
+              log.debug('Invalid gif parameter type provided:', typeof gifParam)
+              return sendResponse(res, 400, 'Invalid gif parameter')
+            }
+            const normalizedGifParam = gifParam.trim().toLowerCase()
+            if (normalizedGifParam === 'true') {
+              shouldConvertToGif = true
+            } else if (normalizedGifParam === 'false') {
+              shouldConvertToGif = false
+            } else {
+              log.debug('Invalid gif parameter value provided:', gifParam)
+              return sendResponse(res, 400, 'Invalid gif parameter')
+            }
+          }
           const qualityParam =
             typeof req.query.quality === 'string'
               ? req.query.quality
@@ -310,12 +342,14 @@ router.get(
                 : undefined
           const scale = parseFloat(scaleParam) || undefined
           const rawParam = req.query.raw === 'true' || req.query.raw === ''
-          if (rawParam && (scale || kernel)) {
-            log.debug('Raw parameter cannot be used with scale or kernel')
+          if (rawParam && (scale || kernel || shouldConvertToGif)) {
+            log.debug(
+              'Raw parameter cannot be used with scale, kernel, or gif conversion'
+            )
             return sendResponse(
               res,
               400,
-              'raw cannot be used with scale or kernel'
+              'raw cannot be used with scale, kernel, or gif'
             )
           }
           if (rawParam) {
@@ -331,6 +365,22 @@ router.get(
           if (!scale && scaleParam) {
             log.debug('Invalid scale parameter provided:', scaleParam)
             return sendResponse(res, 400, 'Invalid scale parameter')
+          }
+          if (shouldConvertToGif) {
+            log.debug('Converting image to gif')
+            const convertedTransformer = await convertImage(realPath, 'gif', {
+              quality,
+              scale,
+              kernel,
+            })
+            if (!convertedTransformer) {
+              log.debug('Failure converting image to gif')
+              return sendResponse(res, 500, 'Failed to convert image to gif')
+            }
+            res.type('gif')
+            await maybeUpsertAccessed(realPath, false)
+            convertedTransformer.pipe(res)
+            return
           }
           if (scale) resizeOptions.scale = scale
           if (kernel) resizeOptions.kernel = kernel

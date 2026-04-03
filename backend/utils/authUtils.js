@@ -6,7 +6,7 @@ function requireRole(role) {
   }
   return (req, res, next) => {
     if (!req.user) {
-      log.debug('Unauthorized access attempt')
+      log.warn('Unauthorized access attempt')
       return res.status(401).json({
         message: 'Unauthorized',
         status: 401,
@@ -18,13 +18,11 @@ function requireRole(role) {
       req.user.roles &&
       req.user.roles.includes(role)
     ) {
-      log.debug('User,', req.user.username, 'has role(s):', role)
+      log.debug(`${req.user.username} has role(s):`, role)
       return next()
     }
-    log.debug(
-      'User,',
-      req.user ? req.user.username : 'unknown',
-      'does not have role(s):',
+    log.warn(
+      `${req.user ? req.user.username : 'unknown'}, doesn't have role(s):`,
       role
     )
     return res.status(403).json({
@@ -41,7 +39,7 @@ function requireAnyRole(roles) {
     ) {
       return next()
     }
-    log.debug('User does not have any of the roles:' + roles)
+    log.warn('User does not have any of the roles:' + roles)
     return res.status(403).json({
       message: 'Forbidden',
       status: 403,
@@ -50,23 +48,21 @@ function requireAnyRole(roles) {
 }
 function requireAuth(req, res, next) {
   if (!req.isAuthenticated()) {
-    log.debug(
-      'Unauthorized access attempt: user not authenticated via passport'
-    )
+    log.warn('Unauthorized access attempt: user not authenticated via passport')
     return res.status(401).json({
       message: 'Unauthorized',
       status: 401,
     })
   }
   if (!req.user) {
-    log.debug('Unauthorized access attempt: no user object in request')
+    log.warn('Unauthorized access attempt: no user object in request')
     return res.status(401).json({
       message: 'Unauthorized',
       status: 401,
     })
   }
   if (!req.session) {
-    log.debug(
+    log.warn(
       'Unauthorized access attempt: no session found for user:',
       req.user.username
     )
@@ -76,7 +72,7 @@ function requireAuth(req, res, next) {
     })
   }
   if (req.session.expires && new Date(req.session.expires) < new Date()) {
-    log.debug('Session expired for user:', req.user.username)
+    log.warn('Session expired for user:', req.user.username)
     return res.status(401).json({
       message: 'Unauthorized',
       status: 401,

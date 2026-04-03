@@ -18,6 +18,7 @@ module.exports = mongoose.model(
       modified: { type: Date, required: true, index: true },
       tags: { type: Array, required: true, index: true },
       meta: { type: Object, required: false, index: false },
+      sidecar: { type: Object, required: false, index: false },
       hash: { type: String, required: true, index: true },
       uuid: { type: String, required: true, index: true, unique: true },
     },

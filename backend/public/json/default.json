@@ -1,0 +1,21 @@
+{
+  "theme": {
+    "bg": "auto",
+    "color": "bg" 
+  },
+  "oneko": false,
+  "serverSort": true,
+  "pagination": {
+    "enabled": true,
+    "limit": 100
+  },
+  "lang": "en",
+  "imageScale": {
+    "max": 200,
+    "default": 100,
+    "min": 50
+  },
+  "containerWidth": 65,
+  "imageKernel": "lanczos3",
+  "bytesBits": false
+}

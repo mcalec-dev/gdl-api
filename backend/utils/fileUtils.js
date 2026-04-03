@@ -21,13 +21,50 @@ const {
   AUTO_SCAN,
   UPSERT_ON_ACCESS,
   HASH_ALGORITHM,
-} = require('../config')
+  STAT_DIRECTORY_SIZE,
+  STAT_FILE_SIZE,
+  SIDECAR_FILE,
+  SIDECAR_FILE_EXTENSION,
+} = /** @type {any} */ (require('../config'))
 const { getImageMeta } = require('./imageUtils')
 const Directory = require('../models/Directory')
 const File = require('../models/File')
 const uuid = require('uuid')
+/** @type {((buffer: Uint8Array) => Promise<{mime: string, ext: string} | undefined>) | null} */
+let fileTypeFromBufferResolver = null
+function shouldIncludeSize(isDirectory = false) {
+  return isDirectory ? STAT_DIRECTORY_SIZE === true : STAT_FILE_SIZE === true
+}
+/**
+ * @param {import('fs').Stats | null | undefined} stats
+ * @param {boolean} [isDirectory]
+ */
+function getDisplaySize(stats, isDirectory = false) {
+  if (!shouldIncludeSize(isDirectory)) return null
+  const size = stats?.size
+  return Number.isFinite(size) ? size : null
+}
+/**
+ * @param {import('fs').Stats | null | undefined} stats
+ * @param {boolean} [isDirectory]
+ */
+function getStoredSize(stats, isDirectory = false) {
+  const size = getDisplaySize(stats, isDirectory)
+  return Number.isFinite(size) ? size : 0
+}
+/**
+ * @param {{ size?: number } | null | undefined} item
+ * @param {boolean} [isDirectory]
+ */
+function getStoredItemSize(item, isDirectory = false) {
+  if (!shouldIncludeSize(isDirectory)) return 0
+  const size = item?.size
+  return Number.isFinite(size) ? size : 0
+}
+/** @param {string} filePath */
 function hasAllowedExtension(filePath) {
   if (!filePath) return false
+  if (isSidecarFile(filePath)) return false
   const ext = path.extname(filePath).toLowerCase()
   const extNoDot = ext.startsWith('.') ? ext.slice(1) : ext
   const isDisallowed = Array.isArray(DISALLOWED_EXTENSIONS)
@@ -42,6 +79,7 @@ function hasAllowedExtension(filePath) {
     : false
   return !isDisallowed
 }
+/** @param {string | null | undefined} param */
 function allowedQualityParams(param) {
   if (!param) return null
   const ALLOWED_PARAMS = {
@@ -52,7 +90,7 @@ function allowedQualityParams(param) {
     3: 'high',
   }
   if (param === undefined) return undefined
-  if (param.includes(ALLOWED_PARAMS)) {
+  if (param.includes(/** @type {any} */ (ALLOWED_PARAMS))) {
     return param
   } else {
     log.warn('quality parameter doesnt include set params')
@@ -63,9 +101,10 @@ const safeDisallowedDirs = Array.isArray(DISALLOWED_DIRS) ? DISALLOWED_DIRS : []
 const safeDisallowedFiles = Array.isArray(DISALLOWED_FILES)
   ? DISALLOWED_FILES
   : []
+/** @param {string} dirName @param {boolean} [isRoot] */
 async function isExcluded(dirName, isRoot = false) {
   if (!dirName) return true
-  const normalizeForDir = (s) =>
+  const normalizeForDir = (/** @type {string} */ s) =>
     normalizeString(s)
       .replace(/^\.*|\.*$|^\/|\/$/g, '')
       .toLowerCase()
@@ -94,55 +133,156 @@ async function isExcluded(dirName, isRoot = false) {
     return true
   return false
 }
+/** @param {string} filename */
 function isDocFile(filename) {
   if (!filename) return false
   const ext = ['.doc', '.docx']
   return ext.some((e) => filename.toLowerCase().endsWith(e))
 }
+/** @param {string} filename */
 function isImageFile(filename) {
   if (!filename) return false
   const ext = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
   if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
   else return false
 }
+/** @param {string} filename */
 function isVideoFile(filename) {
   if (!filename) return false
   const ext = ['.mp4', '.mkv', '.webm', '.avi', '.mov']
   if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
   else return false
 }
+/** @param {string} filename */
 function isAudioFile(filename) {
   if (!filename) return false
   const ext = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
   if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
   else return false
 }
+/** @param {string} filename */
 function isSwfFile(filename) {
   if (!filename) return false
   const ext = ['.swf']
   if (ext.some((e) => filename.toLowerCase().endsWith(e))) return true
   else return false
 }
+/** @param {string} filename */
 function isDisallowedExtension(filename) {
   if (!filename) return false
   const ext = path.extname(filename).toLowerCase()
   return DISALLOWED_EXTENSIONS.some(
-    (disallowedExt) =>
+    (/** @type {string} */ disallowedExt) =>
       ext === disallowedExt.toLowerCase() ||
       ext === `.${disallowedExt.toLowerCase()}`
   )
 }
-function getFileMime(file) {
+/** @param {unknown} extension */
+function normalizeSidecarExtension(extension) {
+  if (typeof extension !== 'string' || !extension.trim()) return '.json'
+  const normalized = extension.trim().toLowerCase()
+  return normalized.startsWith('.') ? normalized : `.${normalized}`
+}
+/** @param {string} filePath */
+function isSidecarFile(filePath) {
+  if (!SIDECAR_FILE || !filePath) return false
+  const sidecarExtension = normalizeSidecarExtension(SIDECAR_FILE_EXTENSION)
+  return filePath.toLowerCase().endsWith(sidecarExtension.toLowerCase())
+}
+/** @param {string} filePath */
+function getSidecarPath(filePath) {
+  if (!filePath || isSidecarFile(filePath)) return null
+  return `${filePath}${normalizeSidecarExtension(SIDECAR_FILE_EXTENSION)}`
+}
+/** @param {unknown} value */
+function isSidecarObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+/** @param {string} filePath */
+async function readSidecarFile(filePath) {
+  if (!SIDECAR_FILE || !filePath || isSidecarFile(filePath)) return null
+  const sidecarPath = getSidecarPath(filePath)
+  if (!sidecarPath) return null
+  try {
+    const sidecarData = await fs.readFile(sidecarPath, 'utf8')
+    const parsed = JSON.parse(sidecarData)
+    if (!isSidecarObject(parsed)) {
+      log.warn('Sidecar file must contain a JSON object:', sidecarPath)
+      return null
+    }
+    return parsed
+  } catch (/** @type {any} */ error) {
+    if (error?.code === 'ENOENT') {
+      return null
+    }
+    log.warn('Failed to parse sidecar file:', {
+      path: sidecarPath,
+      error: error.message,
+    })
+    return null
+  }
+}
+/** @param {string | null | undefined} type */
+function normalizeMimeType(type) {
+  if (!type) return null
+  return type.replace('application/mp4', 'video/mp4')
+}
+async function loadFileTypeFromBuffer() {
+  if (fileTypeFromBufferResolver) return fileTypeFromBufferResolver
+  try {
+    const fileTypeModule = await import('file-type')
+    fileTypeFromBufferResolver = fileTypeModule.fileTypeFromBuffer
+    return fileTypeFromBufferResolver
+  } catch {
+    log.warn('Unable to load file-type module, falling back to extension mime')
+    return null
+  }
+}
+/**
+ * @param {string} filePath
+ * @param {number} [maxBytes]
+ */
+async function readFileHeaderBuffer(filePath, maxBytes = 4100) {
+  let handle
+  try {
+    handle = await fs.open(filePath, 'r')
+    const buffer = Buffer.alloc(maxBytes)
+    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0)
+    return bytesRead > 0 ? buffer.subarray(0, bytesRead) : null
+  } catch {
+    return null
+  } finally {
+    if (handle) {
+      await handle.close()
+    }
+  }
+}
+/** @param {string} file */
+async function getFileMime(file) {
   if (!file) return null
   const ext = path.extname(file).toLowerCase()
-  let type = require('mime-types').lookup(ext)
-  if (type === false) return null
-  if (type) {
-    type = type.replace('application/mp4', 'video/mp4')
-    return type
+  const fallbackType = require('mime-types').lookup(ext)
+  const fileTypeFn = await loadFileTypeFromBuffer()
+  if (fileTypeFn) {
+    const header = await readFileHeaderBuffer(file)
+    if (header) {
+      try {
+        const detectedType = await fileTypeFn(header)
+        if (detectedType?.mime) {
+          return normalizeMimeType(detectedType.mime)
+        }
+      } catch (/** @type {any} */ error) {
+        log.warn('Magic number mime detection failed, using fallback:', {
+          path: file,
+          error: error.message,
+        })
+      }
+    }
   }
-  return null
+  if (fallbackType === false || !fallbackType) return null
+  return normalizeMimeType(fallbackType)
 }
+/** @param {string} filePath */
 async function calculateFileHash(filePath) {
   if (!filePath || !HASH_ALGORITHM) return null
   try {
@@ -152,7 +292,7 @@ async function calculateFileHash(filePath) {
       hash.update(chunk)
     }
     return hash.digest('hex')
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     log.error('Error calculating file hash:', {
       path: filePath,
       error: error.message,
@@ -160,6 +300,7 @@ async function calculateFileHash(filePath) {
     return null
   }
 }
+/** @param {any} dirObj */
 async function upsertDirectoryEntry(dirObj) {
   if (!dirObj || !dirObj.paths || !dirObj.paths.relative) {
     log.debug('Invalid directory object for upsert:', dirObj)
@@ -190,21 +331,21 @@ async function upsertDirectoryEntry(dirObj) {
           $set: {
             ...dirObj,
             paths: {
-              local: dirObj.paths.local || existing.paths.local || null,
+              local: dirObj.paths.local || existing.paths?.local || null,
               relative:
-                dirObj.paths.relative || existing.paths.relative || null,
-              remote: dirObj.paths.remote || existing.paths.remote || null,
+                dirObj.paths.relative || existing.paths?.relative || null,
+              remote: dirObj.paths.remote || existing.paths?.remote || null,
             },
             uuid: existing.uuid || uuid.v4() || null,
             size: dirObj.size || existing.size || 0,
             modified: dirObj.modified || existing.modified || new Date(),
           },
         },
-        { new: true }
+        { returnDocument: 'after' }
       )
       return { result: existing, isNew: false }
     }
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     log.error('Error upserting directory entry:', {
       path: dirObj.paths?.relative,
       error: error.message,
@@ -212,6 +353,7 @@ async function upsertDirectoryEntry(dirObj) {
     return { result: null, isNew: false }
   }
 }
+/** @param {any} fileObj */
 async function upsertFileEntry(fileObj) {
   if (!fileObj || !fileObj.paths || !fileObj.paths.relative) {
     log.debug('Invalid file object for upsert:', fileObj)
@@ -224,7 +366,7 @@ async function upsertFileEntry(fileObj) {
     if (!hash) {
       try {
         hash = await calculateFileHash(fileObj.paths.local)
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         log.error('Failed to generate hash for file:', {
           path: fileObj.paths?.relative,
           error: error.message,
@@ -250,6 +392,7 @@ async function upsertFileEntry(fileObj) {
         created: fileObj.created || null,
         modified: fileObj.modified || null,
         meta: { ...fileObj.meta },
+        sidecar: isSidecarObject(fileObj.sidecar) ? fileObj.sidecar : null,
       })
       log.debug('Upserted new file entry:', fileObj.paths.relative)
       await newFile.save()
@@ -261,10 +404,10 @@ async function upsertFileEntry(fileObj) {
           $set: {
             ...fileObj,
             paths: {
-              local: fileObj.paths.local || existing.paths.local || null,
+              local: fileObj.paths.local || existing.paths?.local || null,
               relative:
-                fileObj.paths.relative || existing.paths.relative || null,
-              remote: fileObj.paths.remote || existing.paths.remote || null,
+                fileObj.paths.relative || existing.paths?.relative || null,
+              remote: fileObj.paths.remote || existing.paths?.remote || null,
             },
             uuid: existing.uuid || uuid.v4() || null,
             size: fileObj.size || existing.size || 0,
@@ -274,20 +417,24 @@ async function upsertFileEntry(fileObj) {
             hash: hash || existing.hash || null,
             modified: fileObj.modified || existing.modified || null,
             meta: { ...fileObj.meta, ...existing.meta },
+            sidecar: isSidecarObject(fileObj.sidecar)
+              ? fileObj.sidecar
+              : existing.sidecar || null,
           },
         },
-        { new: true }
+        { returnDocument: 'after' }
       )
       log.debug('Updated existing file entry:', fileObj.paths.relative)
       return existing
     }
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     log.error('Error upserting file entry:', {
       path: fileObj.paths?.relative,
       error: error.message,
     })
   }
 }
+/** @param {string} realPath */
 async function upsertAccessedItem(realPath) {
   if (!realPath) {
     log.debug('No path provided for upsert')
@@ -300,8 +447,8 @@ async function upsertAccessedItem(realPath) {
       .relative(path.resolve(BASE_DIR), realPath)
       .replace(/\\/g, '/')
     const paths = buildPaths(BASE_DIR, relative, BASE_PATH)
-    let remote = paths.remote
-    let local = paths.local || normalizeLocalPath(realPath)
+    let remote = paths?.remote
+    let local = paths?.local || normalizeLocalPath(realPath)
     let result = null
     if (stats.isDirectory()) {
       try {
@@ -313,7 +460,7 @@ async function upsertAccessedItem(realPath) {
             relative,
             remote,
           },
-          size: stats.size,
+          size: getStoredSize(stats, true),
           type: 'directory',
           collection,
           author,
@@ -321,7 +468,7 @@ async function upsertAccessedItem(realPath) {
           created: stats.birthtime,
           modified: stats.mtime,
         })
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         log.error('Failed to upsert directory:', {
           path: relative,
           error: error.message,
@@ -329,11 +476,11 @@ async function upsertAccessedItem(realPath) {
       }
     }
     if (stats.isFile()) {
-      let meta = {}
+      let meta = /** @type {any} */ ({})
       if (isImageFile(realPath) === true) {
         try {
           meta = await getImageMeta(realPath)
-        } catch (error) {
+        } catch (/** @type {any} */ error) {
           log.error('Error getting image meta for upsert:', {
             path: relative,
             error: error.message,
@@ -343,7 +490,7 @@ async function upsertAccessedItem(realPath) {
       let hash = null
       try {
         hash = await calculateFileHash(realPath)
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         log.error('Error calculating file hash for upsert:', {
           path: relative,
           error: error.message,
@@ -353,6 +500,7 @@ async function upsertAccessedItem(realPath) {
         const pathParts = relative ? relative.split('/').filter(Boolean) : []
         const collection = pathParts.length > 0 ? pathParts[0] : ''
         const author = pathParts.length > 1 ? pathParts[1] : ''
+        const sidecar = await readSidecarFile(realPath)
         result = await upsertFileEntry({
           name,
           paths: {
@@ -360,17 +508,18 @@ async function upsertAccessedItem(realPath) {
             relative,
             remote,
           },
-          size: stats.size,
+          size: getStoredSize(stats, false),
           type: 'file',
           collection: collection,
           author: author,
-          mime: getFileMime(name),
+          mime: await getFileMime(realPath),
           created: stats.birthtime,
           modified: stats.mtime,
           hash,
           meta,
+          sidecar,
         })
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         log.error('Failed to upsert file:', {
           path: relative,
           error: error.message,
@@ -378,13 +527,17 @@ async function upsertAccessedItem(realPath) {
       }
     }
     return result
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     log.error('Error accessing or upserting item:', {
       path: realPath,
       error: error.message,
     })
   }
 }
+/**
+ * @param {string} realPath
+ * @param {boolean} [isDirectory]
+ */
 async function maybeUpsertAccessed(realPath, isDirectory = false) {
   if (!UPSERT_ON_ACCESS) return
   if (UPSERT_ON_ACCESS === 'file' && isDirectory) return
@@ -397,6 +550,11 @@ async function maybeUpsertAccessed(realPath, isDirectory = false) {
     }
   }
 }
+/**
+ * @param {any[]} contents
+ * @param {string} [sortBy]
+ * @param {string} [direction]
+ */
 function sortContents(contents, sortBy = 'name', direction = 'none') {
   if (!Array.isArray(contents)) return []
   if (!direction || direction === 'none') {
@@ -413,7 +571,9 @@ function sortContents(contents, sortBy = 'name', direction = 'none') {
         comparison = a.name.localeCompare(b.name, undefined, { numeric: true })
         break
       case 'modified':
-        comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
+        comparison =
+          new Date(a.modified || 0).getTime() -
+          new Date(b.modified || 0).getTime()
         break
       case 'type': {
         const extA = (a.name.split('.').pop() || '').toLowerCase()
@@ -425,7 +585,9 @@ function sortContents(contents, sortBy = 'name', direction = 'none') {
         comparison = (a.size || 0) - (b.size || 0)
         break
       case 'created':
-        comparison = new Date(a.created || 0) - new Date(b.created || 0)
+        comparison =
+          new Date(a.created || 0).getTime() -
+          new Date(b.created || 0).getTime()
         break
       default:
         comparison = a.name.localeCompare(b.name, undefined, { numeric: true })
@@ -433,6 +595,7 @@ function sortContents(contents, sortBy = 'name', direction = 'none') {
     return direction === 'asc' ? comparison : -comparison
   })
 }
+/** @param {any} query */
 function parseSortQuery(query) {
   const allowed = ['name', 'modified', 'type', 'size', 'created']
   if (!query) return { sortBy: 'name', direction: 'none' }
@@ -445,6 +608,10 @@ function parseSortQuery(query) {
   }
   return { sortBy: 'name', direction: 'none' }
 }
+/**
+ * @param {string} dirPath
+ * @param {string} [relativePath]
+ */
 async function scanAndSyncDirectory(dirPath, relativePath = '') {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
@@ -457,6 +624,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
       if (
         (await isExcluded(entry.name)) ||
         (await isExcluded(entryRelativePath)) ||
+        (entry.isFile() && isSidecarFile(entry.name)) ||
         DISALLOWED_DIRS.includes(entry.name) ||
         (entry.isFile() &&
           (DISALLOWED_FILES.includes(entry.name) ||
@@ -465,18 +633,13 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         log.debug(`Skipping excluded item: ${entryRelativePath}`)
         continue
       }
-      let size = 0
       let mtime = new Date()
       let ctime = new Date()
+      let stats
       try {
-        const stats = await fs.stat(entryPath)
+        stats = await fs.stat(entryPath)
         mtime = stats.mtime
         ctime = stats.birthtime
-        if (entry.isDirectory()) {
-          size = null
-        } else {
-          size = stats.size
-        }
       } catch (statError) {
         log.error(`Error getting stats for ${entryPath}:`, statError)
         continue
@@ -487,7 +650,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         const upsertResult = await upsertDirectoryEntry({
           name: entry.name,
           paths,
-          size: size,
+          size: getStoredSize(stats, true),
           collection,
           author,
           tags: [],
@@ -510,7 +673,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           )
           continue
         }
-        let metadata = {}
+        let metadata = /** @type {any} */ ({})
         if (isImageFile(entryPath)) {
           metadata = await getImageMeta(entryPath)
         } else {
@@ -519,26 +682,28 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         let hash = null
         try {
           hash = await calculateFileHash(entryPath)
-        } catch (error) {
+        } catch (/** @type {any} */ error) {
           log.error('Error calculating file hash in scanAndSyncDirectory:', {
             path: entryRelativePath,
             error: error.message,
           })
         }
         const { collection, author } = deriveCollectionAuthor(entryRelativePath)
-        const mime = await getFileMime(entry.name)
+        const mime = await getFileMime(entryPath)
+        const sidecar = await readSidecarFile(entryPath)
         await upsertFileEntry({
           name: entry.name,
           paths,
           author,
           collection,
-          size,
+          size: getStoredSize(stats, false),
           type: 'file',
           created: ctime,
           modified: mtime,
           mime,
           meta: metadata,
           hash,
+          sidecar,
         })
       }
     }
@@ -564,7 +729,7 @@ async function syncAllFilesToDatabase() {
       message: 'All files and directories synced to database',
       stats: dirStats,
     }
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     log.error('Error during database sync:', error)
     return {
       success: false,
@@ -580,6 +745,14 @@ async function initializeDatabaseSync() {
     log.error('Failed to initialize database sync:', error)
   }
 }
+/**
+ * @param {import('fs').Dirent} entry
+ * @param {string} baseDir
+ * @param {string} normalizedDir
+ * @param {import('express').Request} req
+ * @param {boolean} [includeMime]
+ * @param {Record<string, any> | null} [fileMetadataMap]
+ */
 async function formatListingEntry(
   entry,
   baseDir,
@@ -592,6 +765,7 @@ async function formatListingEntry(
   try {
     if (
       (await isExcluded(entry.name)) ||
+      (entry.isFile() && isSidecarFile(entry.name)) ||
       DISALLOWED_DIRS.includes(entry.name) ||
       (entry.isFile() &&
         (DISALLOWED_FILES.includes(entry.name) ||
@@ -608,22 +782,26 @@ async function formatListingEntry(
     } catch {
       return null
     }
-    const size = entry.isDirectory() ? null : stats.size
+    const size = getDisplaySize(stats, entry.isDirectory())
     const mtime = stats.mtime
     const ctime = stats.birthtime
     const relativePath = path
       .relative(normalizedDir, entryPath)
       .replace(/\\/g, '/')
     const { collection, author } = deriveCollectionAuthor(relativePath)
-    const paths = buildPaths(baseDir, relativePath, BASE_PATH) || {}
+    const paths = /** @type {any} */ (
+      buildPaths(baseDir, relativePath, BASE_PATH) || {}
+    )
     let fullPath =
       paths.remote || safeApiPath(`${BASE_PATH}/api/files`, relativePath)
     const url = (await getHostUrl(req)) + fullPath
     let fileUuid = null
     let fileHash = null
+    let fileSidecar = null
     if (!entry.isDirectory() && fileMetadataMap) {
       fileUuid = fileMetadataMap[relativePath]?.uuid || null
       fileHash = fileMetadataMap[relativePath]?.hash || null
+      fileSidecar = fileMetadataMap[relativePath]?.sidecar || null
     }
     const result = {
       name: entry.name,
@@ -635,10 +813,12 @@ async function formatListingEntry(
       url,
       collection,
       author,
-      ...(entry.isDirectory() ? {} : { uuid: fileUuid, hash: fileHash }),
+      ...(entry.isDirectory()
+        ? {}
+        : { uuid: fileUuid, hash: fileHash, sidecar: fileSidecar }),
     }
     if (includeMime && !entry.isDirectory()) {
-      result.mime = await getFileMime(entry.name)
+      ;/** @type {any} */ (result).mime = await getFileMime(entryPath)
     }
     return result
   } catch (error) {
@@ -646,6 +826,7 @@ async function formatListingEntry(
     return null
   }
 }
+/** @param {string[]} relativePaths */
 async function batchFetchFileMetadata(relativePaths) {
   if (!Array.isArray(relativePaths) || relativePaths.length === 0) {
     return {}
@@ -654,14 +835,15 @@ async function batchFetchFileMetadata(relativePaths) {
     log.debug('Batch fetching file metadata for paths:', relativePaths)
     const files = await File.find(
       { 'paths.relative': { $in: relativePaths } },
-      { 'paths.relative': 1, uuid: 1, hash: 1 }
+      { 'paths.relative': 1, uuid: 1, hash: 1, sidecar: 1 }
     ).lean()
-    const metadataMap = {}
-    files.forEach((file) => {
-      if (file.paths.relative) {
+    const metadataMap = /** @type {Record<string, any>} */ ({})
+    files.forEach((/** @type {any} */ file) => {
+      if (file.paths?.relative) {
         metadataMap[file.paths.relative] = {
           uuid: file.uuid,
           hash: file.hash,
+          sidecar: file.sidecar || null,
         }
       }
     })
@@ -671,14 +853,18 @@ async function batchFetchFileMetadata(relativePaths) {
     return {}
   }
 }
+/**
+ * @param {any[]} items
+ * @param {string} [parentPath]
+ */
 async function createDbEntriesForContents(items, parentPath = '') {
   try {
     let dirStats = { created: 0, updated: 0 }
     for (const item of items) {
       const relPath = parentPath ? `${parentPath}/${item.name}` : item.name
       const paths = buildPaths(BASE_DIR, relPath, BASE_PATH)
-      const localPath = paths.local
-      let metadata = {}
+      const localPath = paths?.local ?? ''
+      let metadata = /** @type {any} */ ({})
       if (isImageFile(localPath)) {
         metadata = await getImageMeta(localPath)
       } else {
@@ -689,7 +875,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
         const upsertResult = await upsertDirectoryEntry({
           name: item.name,
           paths,
-          size: item.size || 0,
+          size: getStoredItemSize(item, true),
           collection: item.collection || collection,
           author: item.author || author,
           tags: item.tags || [],
@@ -708,10 +894,13 @@ async function createDbEntriesForContents(items, parentPath = '') {
         }
       }
       if (item.type === 'file') {
+        if (isSidecarFile(item.name)) {
+          continue
+        }
         let hash = null
         try {
           hash = await calculateFileHash(localPath)
-        } catch (error) {
+        } catch (/** @type {any} */ error) {
           log.error(
             'Error calculating file hash in createDbEntriesForContents:',
             {
@@ -724,7 +913,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
           name: item.name,
           paths,
           mime: item.mime || null,
-          size: item.size || 0,
+          size: getStoredItemSize(item, false),
           type: item.type || null,
           collection: item.collection || null,
           author: item.author || null,
@@ -732,6 +921,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
           modified: item.modified || null,
           hash,
           meta: { ...metadata },
+          sidecar: await readSidecarFile(localPath),
         })
       }
     }
@@ -750,6 +940,7 @@ module.exports = {
   isAudioFile,
   isSwfFile,
   isDisallowedExtension,
+  isSidecarFile,
   getFileMime,
   calculateFileHash,
   maybeUpsertAccessed,

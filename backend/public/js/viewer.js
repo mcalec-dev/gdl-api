@@ -1,16 +1,29 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-import scroll from 'https://cdn.mcalec.dev/scroll.js/scroll.min.js'
 import {
   IMAGE_SCALE,
   MAX_IMAGE_SCALE,
   IMAGE_KERNEL,
 } from '../min/settings.min.js'
+import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
+/** @type {number} Current index in the item list being viewed */
 let currentItemIndex = 0
+/** @type {Array<Object>} List of media items available for viewing */
 let currentItemList = []
+
+/** @type {Map<Element, AbortController>} Map of elements to their corresponding abort controllers for load cancellation */
 let itemLoadControllers = new Map()
+/** @type {Object} Set of loaded icon SVG strings for viewer UI */
 let icons
+
+/** @type {boolean} Tracks whether the viewer modal is currently open */
 let isViewerOpen = false
+/**
+ * Loads viewer-specific icons from the utility icons collection.
+ * Sets the icons object with exit, navigation, and action icons.
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadViewerIcons() {
   const icon = await utils.getIcons()
   icons = {
@@ -22,6 +35,14 @@ async function loadViewerIcons() {
     download: icon.nav.download,
   }
 }
+/**
+ * Constructs the full media URL for a given item.
+ * Handles both absolute HTTP URLs and relative API paths.
+ * @param {Object} item - The media item object
+ * @param {string} item.previewSrc - Optional preview source URL
+ * @param {string} item.encodedPath - Encoded file path for fallback URL construction
+ * @returns {string} The full media URL
+ */
 function getMediaUrl(item) {
   if (item.previewSrc) {
     return item.previewSrc.startsWith('http')
@@ -30,6 +51,13 @@ function getMediaUrl(item) {
   }
   return `${document.location.origin}/api/files/${item.encodedPath}`
 }
+/**
+ * Preloads media content to improve perceived loading performance.
+ * Skips preloading for video files.
+ * @param {Object} item - The media item to preload
+ * @param {string} item.type - Media type (image, video, audio, text)
+ * @returns {void}
+ */
 function preloadMedia(item) {
   if (!item || item.type === 'video') return
   const preloadImg = document.createElement('img')
@@ -38,6 +66,13 @@ function preloadMedia(item) {
       ? utils.upscaleImage(getMediaUrl(item), IMAGE_SCALE, IMAGE_KERNEL)
       : getMediaUrl(item)
 }
+/**
+ * Displays a media item in the viewer modal at the specified index.
+ * Handles all media types (image, video, audio, text) and manages UI state.
+ * Preloads adjacent items for smooth navigation.
+ * @param {number} index - The index of the item to display from currentItemList
+ * @returns {void}
+ */
 function showViewer(index) {
   if (!isViewerOpen) {
     scroll.lock()
@@ -59,29 +94,13 @@ function showViewer(index) {
   const openNewTab = document.getElementById('open-new-tab')
   const downloadFile = document.getElementById('download-file')
   const copyLink = document.getElementById('copy-link')
-  if (
-    !fileViewer ||
-    !viewerImage ||
-    !viewerVideo ||
-    !viewerAudio ||
-    !viewerEmbed
-  ) {
-    console.error('Viewer HTML elements not found in DOM')
-    return
-  }
   const btnStyle = 'w-5 h-5 m-0 items-center'
-  if (closePopup)
-    closePopup.innerHTML = `<span class="${btnStyle}">${icons.exit}</span>`
-  if (openNewTab)
-    openNewTab.innerHTML = `<span class="${btnStyle}">${icons.link}</span>`
-  if (downloadFile)
-    downloadFile.innerHTML = `<span class="${btnStyle}">${icons.download}</span>`
-  if (copyLink)
-    copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
-  if (nextButton)
-    nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
-  if (prevButton)
-    prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
+  closePopup.innerHTML = `<span class="${btnStyle}">${icons.exit}</span>`
+  openNewTab.innerHTML = `<span class="${btnStyle}">${icons.link}</span>`
+  downloadFile.innerHTML = `<span class="${btnStyle}">${icons.download}</span>`
+  copyLink.innerHTML = `<span class="${btnStyle}">${icons.copy}</span>`
+  nextButton.innerHTML = `<span class="${btnStyle}">${icons.next}</span>`
+  prevButton.innerHTML = `<span class="${btnStyle}">${icons.prev}</span>`
   viewerImage.style.display = 'none'
   viewerVideo.style.display = 'none'
   viewerAudio.style.display = 'none'
@@ -121,47 +140,39 @@ function showViewer(index) {
     viewerEmbed.style.height = '85vh'
     viewerEmbed.style.border = 'none'
   }
-  if (viewerTitle) viewerTitle.textContent = item.name
-  if (viewerModified)
-    viewerModified.textContent = item.modified
-      ? `Modified: ${utils.formatDate(item.modified)}`
-      : ''
-  if (viewerSize) viewerSize.textContent = utils.formatSize(item.size) || ''
-  if (viewerCounter)
-    viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
-
-  if (prevButton) {
-    prevButton.disabled = index === 0
-    if (prevButton.disabled) {
-      prevButton.classList.add(
-        'opacity-50',
-        'cursor-not-allowed',
-        'pointer-events-none'
-      )
-    } else {
-      prevButton.classList.remove(
-        'opacity-50',
-        'cursor-not-allowed',
-        'pointer-events-none'
-      )
-    }
+  viewerTitle.textContent = item.name
+  viewerModified.textContent = item.modified
+    ? `Modified: ${utils.formatDate(item.modified)}`
+    : ''
+  viewerSize.textContent = utils.formatSize(item.size) || ''
+  viewerCounter.textContent = `${index + 1} / ${currentItemList.length}`
+  prevButton.disabled = index === 0
+  nextButton.disabled = index === currentItemList.length - 1
+  if (prevButton.disabled) {
+    prevButton.classList.add(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  } else {
+    prevButton.classList.remove(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
   }
-
-  if (nextButton) {
-    nextButton.disabled = index === currentItemList.length - 1
-    if (nextButton.disabled) {
-      nextButton.classList.add(
-        'opacity-50',
-        'cursor-not-allowed',
-        'pointer-events-none'
-      )
-    } else {
-      nextButton.classList.remove(
-        'opacity-50',
-        'cursor-not-allowed',
-        'pointer-events-none'
-      )
-    }
+  if (nextButton.disabled) {
+    nextButton.classList.add(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
+  } else {
+    nextButton.classList.remove(
+      'opacity-50',
+      'cursor-not-allowed',
+      'pointer-events-none'
+    )
   }
   fileViewer.style.display = 'flex'
   fileViewer.classList.remove('hidden')
@@ -173,6 +184,13 @@ function showViewer(index) {
     preloadMedia(currentItemList[index + 1])
   }
 }
+/**
+ * Initializes event listeners for the viewer modal.
+ * Sets up handlers for navigation, closing, media actions, keyboard controls, and image zoom.
+ * Returns control functions if markup is present; returns stub handlers otherwise.
+ * @async
+ * @returns {Promise<Object>} Event handler object with closeViewer, next, prev, and isZoomed methods
+ */
 async function setupViewerEvents() {
   const fileViewer = document.getElementById('file-viewer')
   const closeButton = document.getElementById('close-popup')
@@ -192,7 +210,9 @@ async function setupViewerEvents() {
     !viewerAudio ||
     !viewerEmbed
   ) {
-    console.warn('Viewer elements not found - skipping event setup')
+    console.warn(
+      'Viewer markup not found in DOM. Ensure viewer.ejs partial is included in the template.'
+    )
     return {
       closeViewer: () => {},
       next: () => {},
@@ -244,53 +264,39 @@ async function setupViewerEvents() {
       showViewer(currentItemIndex - 1)
     }
   }
-  if (newTabButton) {
-    newTabButton.addEventListener('click', () => {
-      const item = currentItemList[currentItemIndex]
-      const fullUrl = getMediaUrl(item)
-      window.open(fullUrl, '_blank')
-    })
-  }
-  if (downloadButton) {
-    downloadButton.addEventListener('click', () => {
-      const item = currentItemList[currentItemIndex]
-      if (!item.uuid) {
-        utils.handleError('File UUID not available')
-        return
-      }
-      const a = document.createElement('a')
-      a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
-      a.download = ''
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    })
-  }
-  if (copyLinkButton) {
-    copyLinkButton.addEventListener('click', () => {
-      const item = currentItemList[currentItemIndex]
-      const fileUrl = getMediaUrl(item)
-      navigator.clipboard.writeText(fileUrl)
-    })
-  }
-  if (closeButton) {
-    closeButton.addEventListener('click', async () => {
+  newTabButton.addEventListener('click', () => {
+    const item = currentItemList[currentItemIndex]
+    const fullUrl = getMediaUrl(item)
+    window.open(fullUrl, '_blank')
+  })
+  downloadButton.addEventListener('click', () => {
+    const item = currentItemList[currentItemIndex]
+    if (!item.uuid) {
+      utils.handleError('File UUID not available')
+      return
+    }
+    const a = document.createElement('a')
+    a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
+    a.download = ''
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  })
+  copyLinkButton.addEventListener('click', () => {
+    const item = currentItemList[currentItemIndex]
+    const fileUrl = getMediaUrl(item)
+    navigator.clipboard.writeText(fileUrl)
+  })
+  closeButton.addEventListener('click', async () => {
+    closeViewer()
+  })
+  fileViewer.addEventListener('click', async (e) => {
+    if (e.target === fileViewer) {
       closeViewer()
-    })
-  }
-  if (fileViewer) {
-    fileViewer.addEventListener('click', async (e) => {
-      if (e.target === fileViewer) {
-        closeViewer()
-      }
-    })
-  }
-  if (nextButton) {
-    nextButton.addEventListener('click', next)
-  }
-  if (prevButton) {
-    prevButton.addEventListener('click', prev)
-  }
+    }
+  })
+  nextButton.addEventListener('click', next)
+  prevButton.addEventListener('click', prev)
   if (typeof window.MutationObserver !== 'undefined') {
     const observer = new window.MutationObserver(() => {})
     observer.observe(fileViewer, {
@@ -386,11 +392,9 @@ async function setupViewerEvents() {
     viewerImage.style.transformOrigin = `${boundedX * 100}% ${boundedY * 100}%`
     viewerImage.style.transform = 'scale(2)'
   }
-  if (viewerImage) {
-    viewerImage.addEventListener('click', async (e) => {
-      await handleZoom(e.clientX, e.clientY)
-    })
-  }
+  viewerImage.addEventListener('click', async (e) => {
+    await handleZoom(e.clientX, e.clientY)
+  })
   window.addEventListener('beforeunload', () => {
     if (isViewerOpen) {
       scroll.unlock()
@@ -414,6 +418,13 @@ async function setupViewerEvents() {
     isZoomed: () => isZoomed,
   }
 }
+/**
+ * Attaches click handlers to file list items to open them in the viewer.
+ * Builds the current item list from all file items matching the selector.
+ * @async
+ * @param {string} [fileListSelector='#fileList'] - CSS selector for the file list container
+ * @returns {Promise<void>}
+ */
 async function setupFileClickHandlers(fileListSelector = '#fileList') {
   const fileList = document.querySelector(fileListSelector)
   if (!fileList) return
@@ -470,6 +481,25 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
     }
   })
 }
+/**
+ * Initializes the viewer module and returns the public API.
+ * Loads icons, sets up event handlers, and attaches file click handlers.
+ * @async
+ * @param {Object} [options={}] - Initialization options
+ * @param {string} [options.fileListSelector] - CSS selector for the file list container
+ * @returns {Promise<Object>} Public API object with viewer control methods
+ * @returns {Function} returns.showViewer - Display media at specified index
+ * @returns {Function} returns.closeViewer - Close the viewer modal
+ * @returns {Function} returns.next - Navigate to next item in list
+ * @returns {Function} returns.prev - Navigate to previous item in list
+ * @returns {Function} returns.isZoomed - Check if image zoom is active
+ * @returns {Function} returns.setItemList - Set the media items list
+ * @returns {Function} returns.getCurrentItemList - Get current media items list
+ * @returns {Function} returns.getCurrentItemIndex - Get index of currently viewed item
+ * @returns {Function} returns.preloadMedia - Preload media content for smooth viewing
+ * @returns {Function} returns.getMediaUrl - Get full URL for a media item
+ * @returns {Function} returns.loadViewerIcons - Reload viewer UI icons
+ */
 async function initViewer({ fileListSelector } = {}) {
   await loadViewerIcons()
   const events = await setupViewerEvents()
@@ -489,6 +519,11 @@ async function initViewer({ fileListSelector } = {}) {
     loadViewerIcons,
   }
 }
+/**
+ * Cancels all pending media load operations.
+ * Aborts fetch requests and clears load controller tracking.
+ * @returns {void}
+ */
 function cancelImageLoads() {
   itemLoadControllers.forEach((controller, element) => {
     controller.abort()
@@ -500,12 +535,33 @@ function cancelImageLoads() {
   })
   itemLoadControllers.clear()
 }
+/**
+ * Sets the current item list for the viewer.
+ * @param {Array<Object>} itemList - Array of media item objects
+ * @param {string} itemList[].name - File name
+ * @param {string} itemList[].path - File path
+ * @param {string} itemList[].type - Media type (image, video, audio, text)
+ * @param {string} [itemList[].uuid] - Unique identifier for download
+ * @param {number} [itemList[].size] - File size in bytes
+ * @param {string} [itemList[].modified] - Last modified timestamp
+ * @param {string} itemList[].encodedPath - URL-encoded file path
+ * @param {string} [itemList[].previewSrc] - Preview source URL
+ * @returns {void}
+ */
 function setItemList(itemList) {
   currentItemList = itemList
 }
+/**
+ * Gets the current item list.
+ * @returns {Array<Object>} The current list of media items
+ */
 function getCurrentItemList() {
   return currentItemList
 }
+/**
+ * Gets the current item index being viewed.
+ * @returns {number} The index of the currently viewed item
+ */
 function getCurrentItemIndex() {
   return currentItemIndex
 }
