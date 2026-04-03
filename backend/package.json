@@ -12,14 +12,14 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "dev": "set DEBUG=gdl-api:* && nodemon .",
-    "start": "set DEBUG=gdl-api:* && node server.js",
-    "server": "set DEBUG=gdl-api:* && node server.js",
+    "dev": "nodemon .",
+    "start": "node server.js",
     "lint": "eslint .",
-    "format": "prettier . --write",
-    "minify": "set DEBUG=gdl-api:* && node -e 'import('./minify.js').processFiles'",
-    "rollup": "set DEBUG=gdl-api:* && node rollup.js",
-    "build": "npm run lint && npm run format && npm run minify",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
+    "minify": "node -e 'import('./minify.js').processFiles'",
+    "build": "npm run typecheck && npm run lint:fix && npm run format:fix && npm run minify",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

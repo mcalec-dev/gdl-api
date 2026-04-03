@@ -41,7 +41,7 @@ paths:
       summary: Get API information and available endpoints
       description: Retrieve general API information, version, and list of available endpoints
       responses:
-        "200":
+        '200':
           description: API information with available endpoint URLs
           content:
             application/json:
@@ -92,7 +92,7 @@ paths:
       summary: Get auth API information
       description: Get available authentication endpoints
       responses:
-        "200":
+        '200':
           description: Auth endpoints
           content:
             application/json:
@@ -119,7 +119,7 @@ paths:
       summary: Check user authentication status
       description: Check if the current user is authenticated and retrieve their authentication details
       responses:
-        "200":
+        '200':
           description: Authentication status and user information
           content:
             application/json:
@@ -136,7 +136,7 @@ paths:
                       type: string
                   oauth:
                     type: object
-        "500":
+        '500':
           description: Internal server error
   /auth/login/:
     post:
@@ -163,7 +163,7 @@ paths:
               required:
                 - password
       responses:
-        "201":
+        '201':
           description: User successfully logged in
           content:
             application/json:
@@ -174,11 +174,11 @@ paths:
                     type: boolean
                   user:
                     type: object
-        "400":
+        '400':
           description: Missing credentials, user not found, or invalid password
-        "403":
+        '403':
           description: User already logged in
-        "500":
+        '500':
           description: Internal server error
   /auth/logout/:
     post:
@@ -187,11 +187,11 @@ paths:
       summary: User logout
       description: Log out the authenticated user and destroy their session
       responses:
-        "201":
+        '201':
           description: User successfully logged out
-        "401":
+        '401':
           description: User is not logged in
-        "500":
+        '500':
           description: Internal server error
   /auth/register/:
     post:
@@ -220,13 +220,13 @@ paths:
                 - username
                 - password
       responses:
-        "201":
+        '201':
           description: User successfully registered and logged in
-        "400":
+        '400':
           description: Missing required fields or invalid email format
-        "409":
+        '409':
           description: Username or email already exists
-        "500":
+        '500':
           description: Internal server error
   /auth/provider/:
     get:
@@ -235,7 +235,7 @@ paths:
       summary: Get OAuth provider endpoints
       description: Get available OAuth provider endpoints for callback, login, link, and unlink operations
       responses:
-        "200":
+        '200':
           description: OAuth provider URLs
           content:
             application/json:
@@ -268,11 +268,11 @@ paths:
             enum: [github, discord]
           description: OAuth provider name
       responses:
-        "302":
+        '302':
           description: Redirect to provider authentication
-        "400":
+        '400':
           description: Invalid provider
-        "500":
+        '500':
           description: Authentication error
   /auth/provider/callback/{provider}:
     get:
@@ -295,7 +295,7 @@ paths:
             type: string
           description: Authorization code from provider
       responses:
-        "302":
+        '302':
           description: Redirect to dashboard on success
   /auth/provider/link/{provider}:
     get:
@@ -312,11 +312,11 @@ paths:
             enum: [github, discord]
           description: OAuth provider name
       responses:
-        "302":
+        '302':
           description: Redirect to provider authentication
-        "400":
+        '400':
           description: Invalid provider or provider already linked
-        "401":
+        '401':
           description: User not authenticated
   /auth/provider/unlink/{provider}:
     get:
@@ -333,11 +333,11 @@ paths:
             enum: [github, discord]
           description: OAuth provider name
       responses:
-        "200":
+        '200':
           description: Provider unlinked successfully
-        "400":
+        '400':
           description: Invalid provider or cannot unlink (no other auth method)
-        "401":
+        '401':
           description: User not authenticated
   /files/:
     get:
@@ -374,13 +374,13 @@ paths:
             type: boolean
           description: Include extended file metadata (uuid, hash, sidecar)
       responses:
-        "200":
+        '200':
           description: List of files and directories
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "500":
+        '500':
           description: Internal server error
   /files/{collection}/:
     get:
@@ -408,11 +408,11 @@ paths:
             enum: [asc, desc]
           description: Sort direction
       responses:
-        "200":
+        '200':
           description: List of files in collection
-        "400":
+        '400':
           description: Invalid path parameters
-        "404":
+        '404':
           description: Collection not found
   /files/{collection}/{author}/:
     get:
@@ -434,9 +434,9 @@ paths:
             type: string
           description: Author/subdirectory name
       responses:
-        "200":
+        '200':
           description: List of files from author directory
-        "404":
+        '404':
           description: Path not found
   /download/:
     get:
@@ -452,17 +452,17 @@ paths:
             type: string
           description: The UUID of the file to download
       responses:
-        "200":
+        '200':
           description: File content as binary data
-        "400":
+        '400':
           description: Missing or invalid uuid parameter
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "404":
+        '404':
           description: File not found or not accessible
-        "500":
+        '500':
           description: Internal server error
     post:
       tags:
@@ -482,17 +482,17 @@ paths:
               required:
                 - uuid
       responses:
-        "200":
+        '200':
           description: File content as binary data
-        "400":
+        '400':
           description: Missing or invalid uuid parameter
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "404":
+        '404':
           description: File not found or not accessible
-        "500":
+        '500':
           description: Internal server error
 
   /upload/:
@@ -515,7 +515,7 @@ paths:
               required:
                 - file
       responses:
-        "201":
+        '201':
           description: File uploaded successfully
           content:
             application/json:
@@ -534,13 +534,13 @@ paths:
                   uploadDate:
                     type: string
                     format: date-time
-        "400":
+        '400':
           description: No file provided or file too large
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "500":
+        '500':
           description: File upload failed
   /uuid/{uuid}/{type}:
     get:
@@ -563,17 +563,17 @@ paths:
             enum: [file, directory]
           description: The type of the entry to retrieve (file or directory)
       responses:
-        "200":
+        '200':
           description: File or directory information retrieved successfully
-        "400":
+        '400':
           description: Invalid UUID or type parameter
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "404":
+        '404':
           description: File or directory not found
-        "500":
+        '500':
           description: Internal server error
   /random:
     get:
@@ -582,7 +582,7 @@ paths:
       summary: Retrieve a random file
       description: Retrieve a random file from the database with metadata
       responses:
-        "200":
+        '200':
           description: Random file metadata
           content:
             application/json:
@@ -613,13 +613,13 @@ paths:
                     type: string
                   uuid:
                     type: string
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "404":
+        '404':
           description: No file found in database
-        "500":
+        '500':
           description: Internal server error
   /random/:
     get:
@@ -628,7 +628,7 @@ paths:
       summary: Retrieve a random file (with trailing slash)
       description: Retrieve a random file from the database with metadata
       responses:
-        "200":
+        '200':
           description: Random file metadata
           content:
             application/json:
@@ -659,13 +659,13 @@ paths:
                     type: string
                   uuid:
                     type: string
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "404":
+        '404':
           description: No file found in database
-        "500":
+        '500':
           description: Internal server error
   /search/:
     get:
@@ -688,7 +688,7 @@ paths:
             enum: [file, directory]
           description: Filter by type (file or directory)
       responses:
-        "200":
+        '200':
           description: Search results with relevancy ranking
           content:
             application/json:
@@ -703,11 +703,11 @@ paths:
                     type: array
                     items:
                       type: object
-        "400":
+        '400':
           description: Empty search query
-        "401":
+        '401':
           description: User not authenticated
-        "500":
+        '500':
           description: Internal server error
   /stats/:
     get:
@@ -716,7 +716,7 @@ paths:
       summary: Retrieve API and file statistics
       description: Retrieve statistics about the API, collections, file storage, and file types
       responses:
-        "200":
+        '200':
           description: API and collection statistics
           content:
             application/json:
@@ -729,11 +729,11 @@ paths:
                   collections:
                     type: object
                     description: Collection statistics including totals and file types
-        "401":
+        '401':
           description: User not authenticated
-        "403":
+        '403':
           description: Insufficient permissions
-        "500":
+        '500':
           description: Internal server error
   /health/:
     get:
@@ -742,7 +742,7 @@ paths:
       summary: Health check endpoint
       description: Check the health status of the API (future implementation)
       responses:
-        "501":
+        '501':
           description: Not Implemented - This endpoint is planned for future implementation
   /user/:
     get:
@@ -751,7 +751,7 @@ paths:
       summary: Get user API information
       description: Get current authenticated user information and available user endpoints
       responses:
-        "200":
+        '200':
           description: User information and available endpoints
           content:
             application/json:
@@ -774,7 +774,7 @@ paths:
       summary: Retrieve user dashboard information
       description: Retrieve dashboard information for the authenticated user including profile and sessions
       responses:
-        "200":
+        '200':
           description: User dashboard data
           content:
             application/json:
@@ -815,11 +815,11 @@ paths:
                           type: string
                         useragent:
                           type: string
-        "401":
+        '401':
           description: User not authenticated
-        "404":
+        '404':
           description: User not found
-        "500":
+        '500':
           description: Internal server error
   /user/session/:
     get:
@@ -828,7 +828,7 @@ paths:
       summary: Retrieve user sessions
       description: Get a list of all active sessions for the authenticated user
       responses:
-        "200":
+        '200':
           description: List of user sessions
           content:
             application/json:
@@ -846,9 +846,9 @@ paths:
                       type: string
                     useragent:
                       type: string
-        "401":
+        '401':
           description: User not authenticated
-        "500":
+        '500':
           description: Internal server error
   /user/session/{uuid}:
     delete:
@@ -864,13 +864,13 @@ paths:
             type: string
           description: Session UUID to delete
       responses:
-        "204":
+        '204':
           description: Session deleted successfully
-        "400":
+        '400':
           description: Missing or invalid UUID
-        "401":
+        '401':
           description: User not authenticated
-        "500":
+        '500':
           description: Internal server error
   /user/announcements:
     get:
@@ -879,7 +879,7 @@ paths:
       summary: Retrieve public announcements
       description: Get a list of announcements for all users, sorted by creation date
       responses:
-        "200":
+        '200':
           description: List of announcements
           content:
             application/json:
@@ -907,7 +907,7 @@ paths:
                       format: date-time
                     uuid:
                       type: string
-        "500":
+        '500':
           description: Internal server error
   /admin/:
     get:
@@ -916,7 +916,7 @@ paths:
       summary: Get admin dashboard statistics
       description: Retrieve comprehensive admin statistics including uptime, user counts, and storage usage
       responses:
-        "200":
+        '200':
           description: Admin statistics
           content:
             application/json:
@@ -945,9 +945,9 @@ paths:
                     properties:
                       announcements:
                         type: string
-        "401":
+        '401':
           description: User not authenticated or not an admin
-        "500":
+        '500':
           description: Internal server error
   /admin/users:
     get:
@@ -956,7 +956,7 @@ paths:
       summary: List all users
       description: Get a list of all registered users (not yet implemented)
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/user/{id}:
     get:
@@ -972,7 +972,7 @@ paths:
             type: string
           description: User ID
       responses:
-        "501":
+        '501':
           description: Not implemented
     put:
       tags:
@@ -987,7 +987,7 @@ paths:
             type: string
           description: User ID
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/user/{id}/action:
     post:
@@ -1016,9 +1016,9 @@ paths:
                   type: string
                   description: Optional IP address to ban
       responses:
-        "501":
+        '501':
           description: Not implemented
-        "401":
+        '401':
           description: User not authorized
   /admin/roles:
     get:
@@ -1027,7 +1027,7 @@ paths:
       summary: List all available roles
       description: Get a list of all user roles in the system
       responses:
-        "200":
+        '200':
           description: List of roles
   /admin/tags:
     get:
@@ -1036,7 +1036,7 @@ paths:
       summary: List all tags
       description: Get all file/content tags (not yet implemented)
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/tags/{id}:
     post:
@@ -1050,7 +1050,7 @@ paths:
           schema:
             type: string
       responses:
-        "201":
+        '201':
           description: Tag created successfully
     put:
       tags:
@@ -1063,7 +1063,7 @@ paths:
           schema:
             type: string
       responses:
-        "501":
+        '501':
           description: Not implemented
     delete:
       tags:
@@ -1076,7 +1076,7 @@ paths:
           schema:
             type: string
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/dmca:
     get:
@@ -1085,14 +1085,14 @@ paths:
       summary: List DMCA/takedown requests
       description: Get all DMCA and takedown requests (not yet implemented)
       responses:
-        "501":
+        '501':
           description: Not implemented
     post:
       tags:
         - Admin
       summary: Create a DMCA/takedown request
       responses:
-        "201":
+        '201':
           description: Takedown request created
   /admin/dmca/{id}:
     put:
@@ -1106,7 +1106,7 @@ paths:
           schema:
             type: string
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/file/duplicates:
     get:
@@ -1115,7 +1115,7 @@ paths:
       summary: Find duplicate files
       description: Search for duplicate files in the system (not yet implemented)
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/file/uri-check:
     get:
@@ -1124,7 +1124,7 @@ paths:
       summary: Check file URIs
       description: Validate and check file URIs (not yet implemented)
       responses:
-        "501":
+        '501':
           description: Not implemented
   /admin/cache/purge:
     post:
@@ -1133,7 +1133,7 @@ paths:
       summary: Purge server caches
       description: Clear all server caches (not yet implemented)
       responses:
-        "201":
+        '201':
           description: Caches purged successfully
   /admin/announcements:
     get:
@@ -1142,7 +1142,7 @@ paths:
       summary: Get all announcements
       description: Retrieve all announcements for administrators
       responses:
-        "200":
+        '200':
           description: List of announcements
     post:
       tags:
@@ -1166,9 +1166,9 @@ paths:
               required:
                 - title
       responses:
-        "201":
+        '201':
           description: Announcement created successfully
-        "400":
+        '400':
           description: Title is required
   /admin/announcements/{uuid}:
     put:
@@ -1200,11 +1200,11 @@ paths:
               required:
                 - severity
       responses:
-        "204":
+        '204':
           description: Announcement updated successfully
-        "400":
+        '400':
           description: Invalid UUID or severity not provided
-        "404":
+        '404':
           description: Announcement not found
     delete:
       tags:
@@ -1219,13 +1219,13 @@ paths:
             type: string
           description: Announcement UUID
       responses:
-        "204":
+        '204':
           description: Announcement deleted successfully
-        "400":
+        '400':
           description: Invalid UUID
-        "401":
+        '401':
           description: User not authorized as admin
-        "404":
+        '404':
           description: Announcement not found
 components:
   schemas:

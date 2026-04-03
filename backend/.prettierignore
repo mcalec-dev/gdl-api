@@ -5,9 +5,13 @@ dist/
 .github/
 node_modules/
 
+tsconfig.json
+eslint.config.js
+
 *.config.js
 *.json
 *.md
 *.txt
 *.html
 *.ejs
+*.log

@@ -29,20 +29,20 @@
   stroke: #cc8323;
 }
 .file-icon.image {
-  color: #2AA198;
-  stroke: #2AA198;
+  color: #2aa198;
+  stroke: #2aa198;
 }
 .file-icon.text {
-  color: #7A869A;
-  stroke: #7A869A;
+  color: #7a869a;
+  stroke: #7a869a;
 }
 .file-icon.video {
-  color: #6C5CE7;
-  stroke: #6C5CE7;
+  color: #6c5ce7;
+  stroke: #6c5ce7;
 }
 .file-icon.other {
-  color: #95A5A6;
-  stroke: #95A5A6;
+  color: #95a5a6;
+  stroke: #95a5a6;
 }
 
 /* Image Preview Styles */

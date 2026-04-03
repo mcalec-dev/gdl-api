@@ -17,7 +17,8 @@ const minifyJS = async (filePath) => {
     const outputDir = path.join(publicDir, 'js', 'min', subDir)
     const outputPath = path.join(outputDir, fileName)
     await fs.mkdir(outputDir, { recursive: true })
-    if (minified.code === undefined) throw new Error(`Terser produced no output for: ${filePath}`)
+    if (minified.code === undefined)
+      throw new Error(`Terser produced no output for: ${filePath}`)
     await fs.writeFile(outputPath, minified.code)
   } catch (error) {
     log.error('Error minifying JS file:', filePath, error)

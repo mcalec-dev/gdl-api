@@ -11,5 +11,5 @@
     "types": ["node"]
   },
   "include": ["utils/","api/**/*.js","models/","server.js","config.js","minify.js"],
-  "exclude": ["views/**/*","public/**/*"]
+  "exclude": ["node_modules/**/*","views/**/*","public/**/*"]
 }

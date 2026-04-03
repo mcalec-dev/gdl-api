@@ -1,15 +1,17 @@
 /* no scrollbars */
-html, body {
+html,
+body {
   scrollbar-width: none;
 }
-html::-webkit-scrollbar, body::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
   display: none;
 }
 
 /* lexend */
 @font-face {
   font-family: lexend;
-  src: url("/font/Lexend.ttf") format('truetype');
+  src: url('/font/Lexend.ttf') format('truetype');
   font-style: normal;
   font-display: swap;
 }
@@ -17,13 +19,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 /* montserrat */
 @font-face {
   font-family: montserrat;
-  src: url("/font/Montserrat.ttf") format('truetype');
+  src: url('/font/Montserrat.ttf') format('truetype');
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: montserrat;
-  src: url("/font/Montserrat-Italic.ttf") format('truetype');
+  src: url('/font/Montserrat-Italic.ttf') format('truetype');
   font-style: italic;
   font-display: swap;
 }
@@ -31,13 +33,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 /* OpenSans */
 @font-face {
   font-family: opensans;
-  src: url("/font/OpenSans.ttf") format('truetype');
+  src: url('/font/OpenSans.ttf') format('truetype');
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: opensans;
-  src: url("/font/OpenSans-Italic.ttf") format('truetype');
+  src: url('/font/OpenSans-Italic.ttf') format('truetype');
   font-style: italic;
   font-display: swap;
 }
@@ -45,13 +47,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 /* Roboto */
 @font-face {
   font-family: roboto;
-  src: url("/font/roboto.ttf") format('truetype');
+  src: url('/font/roboto.ttf') format('truetype');
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: roboto;
-  src: url("/font/Roboto-Italic.ttf") format('truetype');
+  src: url('/font/Roboto-Italic.ttf') format('truetype');
   font-style: italic;
   font-display: swap;
 }
@@ -59,13 +61,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 /* UbuntuSans */
 @font-face {
   font-family: ubuntusans;
-  src: url("/font/Roboto.ttf") format('truetype');
+  src: url('/font/Roboto.ttf') format('truetype');
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: ubuntusans;
-  src: url("/font/Roboto-Italic.ttf") format('truetype');
+  src: url('/font/Roboto-Italic.ttf') format('truetype');
   font-style: italic;
   font-display: swap;
 }

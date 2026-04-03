@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -35,6 +35,8 @@ jobs:
         run: npm run lint
       - name: Format
         run: npm run format
+      - name: Type Check
+        run: npm run typecheck
       - name: Commit Changes
         if: github.event_name == 'push'
         uses: stefanzweifel/git-auto-commit-action@v5

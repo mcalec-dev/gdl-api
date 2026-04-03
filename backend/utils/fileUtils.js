@@ -818,7 +818,7 @@ async function formatListingEntry(
         : { uuid: fileUuid, hash: fileHash, sidecar: fileSidecar }),
     }
     if (includeMime && !entry.isDirectory()) {
-      ;/** @type {any} */ (result).mime = await getFileMime(entryPath)
+      /** @type {any} */ result.mime = await getFileMime(entryPath)
     }
     return result
   } catch (error) {

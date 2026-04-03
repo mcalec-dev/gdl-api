@@ -9,7 +9,12 @@ module.exports = mongoose.model(
       modified: { type: Date, required: true, index: true },
       tags: { type: Array, required: false, index: true },
       files: [
-        { type: mongoose.Schema.Types.ObjectId, ref: 'File', required: true, index: true }
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'File',
+          required: true,
+          index: true,
+        },
       ],
       uuid: { type: String, required: true, index: true, unique: true },
     },
