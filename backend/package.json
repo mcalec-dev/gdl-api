@@ -16,16 +16,15 @@
     "start": "npm run build && node server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier . --check",
-    "format:fix": "prettier . --write",
-    "tailwind:build": "tailwindcss -c ./tailwind.config.js -o ./public/css/tailwind.css --minify",
-    "tailwind:watch": "tailwindcss -c ./tailwind.config.js -o ./public/css/tailwind.css --watch",
+    "format:check": "prettier . --check --config .prettierrc",
+    "format:fix": "prettier . --write --config .prettierrc",
+    "tailwind:minify": "tailwindcss -c ./tailwind.config.js -o ./public/css/min/tailwind.min.css --minify",
     "minify": "node -e 'import(\"./minify.js\").processFiles()'",
-    "build": "npm run lint:fix && npm run format:fix && npm run tailwind:build && npm run minify",
+    "build": "npm run lint:fix && npm run format:fix && npm run tailwind:minify && npm run minify",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -95,7 +94,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/lusca": "^1.7.5",
     "@types/mime-types": "^3.0.1",
-    "@types/node": "^20.4.1",
+    "@types/node": "^22",
     "@types/passport": "^1.0.17",
     "@types/passport-github2": "^1.2.9",
     "@types/passport-local": "^1.0.38",
