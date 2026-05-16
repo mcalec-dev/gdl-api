@@ -12,13 +12,13 @@
   justify-content: center;
   color: #66b3ff;
 }
-.grid-view .file-icon svg {
-  left: 50%;
-  top: 50%;
-  width: 100px;
-  height: 100px;
+.grid-view .file-icon-placeholder svg {
+  width: 64px;
+  height: 64px;
+  display: block;
+  margin: 0 auto;
   fill: currentColor;
-  transform: translate(-50%, -75%);
+  transform: none;
 }
 .file-icon.directory {
   color: #66b3ff;

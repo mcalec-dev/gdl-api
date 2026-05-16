@@ -2,11 +2,12 @@ const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
 const passport = require('../../../utils/passport')
-const { BASE_PATH, OAUTH_PROVIDERS } = require('../../../config')
+const { OAUTH_PROVIDERS } = require('../../../config')
 const sendResponse = require('../../../utils/resUtils')
+const { getHostUrl } = require('../../../utils/urlUtils')
 router.get('/', async (req, res) => {
-  const baseURL = req.protocol + '://' + req.hostname + BASE_PATH + '/api'
-  return res.json({
+  const baseURL = (await getHostUrl(req)) + '/api'
+  return sendResponse.json(res, 200, {
     urls: {
       callback: baseURL + '/auth/provider/callback/:provider',
       login: baseURL + '/auth/provider/login/:provider',

@@ -4,6 +4,7 @@ const { NAME, BASE_PATH, HOST } = require('../../config')
 const log = require('../../utils/logHandler')
 const pathUtils = require('../../utils/pathUtils')
 const { getHostUrl } = require('../../utils/urlUtils')
+const sendResponse = require('../../utils/resUtils')
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache')
   req.utils = {
@@ -27,6 +28,8 @@ try {
   router.use('/health', require('./health'))
   log.debug('Mounting random route')
   router.use('/random', require('./random'))
+  log.debug('Mounting pool route')
+  router.use('/pool', require('./pool'))
   log.debug('Mounting search route')
   router.use('/search', require('./search'))
   log.debug('Mounting stats route')
@@ -40,7 +43,7 @@ try {
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
-  return res.json({
+  return sendResponse.json(res, 200, {
     name: String(NAME),
     version: String(pkg.version),
     description: String(pkg.description),
@@ -57,6 +60,7 @@ router.get('/', async (req, res) => {
       files: String(baseURL + '/files'),
       health: String(baseURL + '/health'),
       random: String(baseURL + '/random'),
+      pool: String(baseURL + '/pool'),
       search: String(baseURL + '/search'),
       stats: String(baseURL + '/stats'),
     },

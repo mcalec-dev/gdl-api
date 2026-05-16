@@ -25,13 +25,13 @@ router.get(
           log.debug('File not found for UUID:', uuid)
           return sendResponse(res, 404)
         }
-        return res.json(fileEntry)
+        return sendResponse.json(res, 200, fileEntry)
       } else if (type === 'directory') {
         if (!directoryEntry) {
           log.debug('Directory not found for UUID:', uuid)
           return sendResponse(res, 404)
         }
-        return res.json(directoryEntry)
+        return sendResponse.json(res, 200, directoryEntry)
       } else {
         log.debug('Invalid type parameter value:', type)
         return sendResponse(res, 400, 'Invalid type parameter value')

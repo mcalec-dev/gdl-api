@@ -2,7 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const { uploadFile } = require('../../utils/gridfsUtils')
 const { requireRole } = require('../../utils/authUtils')
-const { FILE_UPLOAD_LIMIT } = require('../../config')
+const { FILE_UPLOAD_LIMIT } = /** @type {any} */ (require('../../config'))
 const router = express.Router()
 const log = require('../../utils/logHandler')
 const sendResponse = require('../../utils/resUtils')
@@ -26,7 +26,7 @@ router.post(
         contentType: req.file.mimetype,
       })
       log.info(`File uploaded: ${req.file.originalname} (ID: ${fileId})`)
-      res.status(201).json({
+      return sendResponse.json(res, 201, {
         success: true,
         fileId: fileId.toString(),
         filename: req.file.originalname,

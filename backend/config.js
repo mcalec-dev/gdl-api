@@ -39,6 +39,7 @@ function checkHostOnline(host) {
 }
 /** @returns {Promise<string | undefined>} */
 async function getHost() {
+  const log = require('./utils/logHandler')
   const host = process.env.HOST
   const altHost = process.env.ALT_HOST
   if (!host) return undefined
@@ -49,15 +50,15 @@ async function getHost() {
   const altHostOnline = await checkHostOnline(altHost)
   try {
     if (hostOnline) {
-      console.debug('Primary host is online:', host)
+      log.debug('Primary host is online:', host)
       return host
     }
     if (altHostOnline) {
-      console.debug('Alternate host is online:', altHost)
+      log.debug('Alternate host is online:', altHost)
       return altHost
     }
   } catch (error) {
-    console.warn('Both hosts are offline:', error)
+    log.warn('Both hosts are offline:', error)
     return undefined
   }
 }
@@ -351,6 +352,26 @@ const schema = {
         : v
     },
     type: ['string', 'number'],
+  },
+  DISCORD_CLIENT_ID: {
+    env: 'DISCORD_CLIENT_ID',
+    parse: parseOptionalTrimmedString,
+    type: 'string',
+  },
+  DISCORD_CLIENT_SECRET: {
+    env: 'DISCORD_CLIENT_SECRET',
+    parse: parseOptionalTrimmedString,
+    type: 'string',
+  },
+  GITHUB_CLIENT_ID: {
+    env: 'GITHUB_CLIENT_ID',
+    parse: parseOptionalTrimmedString,
+    type: 'string',
+  },
+  GITHUB_CLIENT_SECRET: {
+    env: 'GITHUB_CLIENT_SECRET',
+    parse: parseOptionalTrimmedString,
+    type: 'string',
   },
 }
 /** @type {Record<string, unknown>} */

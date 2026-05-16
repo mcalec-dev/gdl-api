@@ -3,15 +3,21 @@ const session = require('express-session')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
 const { setReqVars } = require('./utils/requestUtils')
-const { initDbCacheLayer } = require('./utils/dbUtils')
+const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
-const sessionStore = require('./utils/sessionStore')
+const {
+  initSessionStore,
+  getSessionStoreKind,
+  shutdownSessionStore,
+} = require('./utils/sessionStore')
 const passport = require('./utils/passport')
 const path = require('path')
 const chalk = require('chalk')
 const server = require('http').createServer(app)
 const swaggerUi = require('swagger-ui-express')
+const helmet = require('helmet').default
 const log = require('./utils/logHandler')
+const sendResponse = require('./utils/resUtils')
 const BodyParser = require('body-parser')
 const rateLimit = require('express-rate-limit')
 const {
@@ -41,7 +47,7 @@ async function initSwagger() {
     swaggerSpec.servers = [
       {
         url: `https://${await HOST}${BASE_PATH}`,
-        description: 'production server',
+        description: 'production',
       },
     ]
     swaggerSpec.info.version = process.env.npm_package_version
@@ -59,17 +65,17 @@ if (BASE_PATH) {
     res.redirect(307, `${BASE_PATH}/`)
   })
 }
-// init database and session store
 async function initDB() {
   initDbCacheLayer()
-  const store = sessionStore()
+  await initSessionStore()
+  const sessionStoreKind = getSessionStoreKind()
   const cookieMaxAgeMs = COOKIE_MAX_AGE
   try {
     const connection = await require('mongoose').connect(MONGODB_URL)
     log.info('MongoDB connected')
     const gridfsUtils = require('./utils/gridfsUtils')
     gridfsUtils.initGridFS()
-    if (store) {
+    if (sessionStoreKind === 'mongo') {
       const db = connection.connection.db
       if (!db) throw new Error('Database connection unavailable')
       const sessions = db.collection('sessions')
@@ -90,26 +96,28 @@ async function initDB() {
         ],
       })
       log.info(`Expired sessions cleaned up (${result.deletedCount} removed)`)
-      const User = require('./models/User')
-      const userResult = await User.updateMany(
-        {},
-        {
-          $pull: {
-            sessions: {
-              expires: { $lt: cutoffDate },
-            },
-          },
-        }
-      )
-      log.info(
-        `User sessions cleaned up (${userResult.modifiedCount} users updated)`
-      )
+    } else {
+      log.info('Redis-backed session store enabled')
     }
+    const cutoffDate = new Date(Date.now() - cookieMaxAgeMs)
+    const User = require('./models/User')
+    const userResult = await User.updateMany(
+      {},
+      {
+        $pull: {
+          sessions: {
+            expires: { $lt: cutoffDate },
+          },
+        },
+      }
+    )
+    log.info(
+      `User sessions cleaned up (${userResult.modifiedCount} users updated)`
+    )
   } catch (error) {
     log.error('Database initialization failed:', error)
   }
 }
-// common template variables
 async function webVars() {
   return {
     title: NAME,
@@ -120,7 +128,6 @@ async function webVars() {
     image: '/svg/nodejs.svg',
   }
 }
-// render the app with ejs
 async function renderApp() {
   app.get(`${BASE_PATH}/`, async (req, res) => {
     try {
@@ -280,6 +287,7 @@ async function renderApp() {
   })
 }
 async function initApp() {
+  const store = await initSessionStore()
   app.use(setReqVars)
   app.use(require('cors')())
   app.use(
@@ -317,16 +325,21 @@ async function initApp() {
   app.use(
     session({
       secret: SESSION_SECRET,
-      resave: true,
-      saveUninitialized: true,
+      resave: false,
+      saveUninitialized: false,
       rolling: true,
-      store: sessionStore(),
+      store,
       cookie: {
         secure: NODE_ENV === 'production',
         maxAge: COOKIE_MAX_AGE,
         path: '/',
         httpOnly: true,
       },
+    })
+  )
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
     })
   )
   app.use(
@@ -378,11 +391,10 @@ async function initApp() {
       },
     })
   )
-  app.get(`/favicon.ico`, (req, res) => {
-    res.setHeader('Content-Type', 'image/x-icon')
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-    res.sendFile(path.join(__dirname, 'public', 'favicon.ico'))
-  })
+  app.use(
+    // @ts-ignore - no type declarations
+    require('serve-favicon')(path.join(__dirname, 'public', 'favicon.ico'))
+  )
   app.use((req, res, next) => {
     const uri =
       req.path +
@@ -424,16 +436,25 @@ async function initApp() {
     next()
   })
 }
-async function setupRoutes() {
+async function initRoutes() {
+  app.use(
+    `${BASE_PATH}`,
+    require('express-openapi-validator').middleware({
+      apiSpec: path.join(__dirname, 'openapi.yaml'),
+      validateRequests: true,
+      validateResponses: true,
+      ignoreUndocumented: true,
+    })
+  )
   try {
     app.use(`${BASE_PATH}`, require('./routes'))
-    log.info(chalk.green('✓ API routes mounted'))
+    log.info('API routes mounted')
   } catch (error) {
     log.error('Error mounting API routes:', error)
     throw error
   }
   await renderApp()
-  log.info(chalk.green('✓ Frontend routes mounted'))
+  log.info('Frontend routes mounted')
   app.use(async (req, res) => {
     log.debug('Page not found:', req.path)
     try {
@@ -457,13 +478,20 @@ async function setupRoutes() {
           return next(error)
         }
         if (error && error.name === 'UnauthorizedError') {
-          return res.status(401).json({
+          return sendResponse.json(res, 401, {
             message: 'Invalid or missing authentication token',
             status: '401',
             error: NODE_ENV === 'development' ? error.message : 'Unauthorized',
           })
         }
-        res.status(500).json({
+        if (error?.status && error?.message) {
+          return sendResponse.json(res, error.status, {
+            message: 'Validation error',
+            status: String(error.status),
+            error: error.message,
+          })
+        }
+        return sendResponse.json(res, 500, {
           message: 'Interal Server Error',
           status: '500',
           error:
@@ -475,7 +503,6 @@ async function setupRoutes() {
     )
   )
 }
-// process handlers
 process.on('uncaughtException', (error) => {
   log.error('Uncaught Exception:', error)
   process.exit(1)
@@ -484,22 +511,17 @@ process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled Rejection at:', promise, 'reason:', reason)
   process.exit(1)
 })
-// gracefully shutdown
-process.on('SIGTERM', () => {
-  const store = sessionStore()
-  if (store && typeof store.clear === 'function') {
-    try {
-      store.clear()
-      log.info('All sessions cleared.')
-    } catch (err) {
-      log.error('Failed to clear sessions:', err)
-    }
+process.on('SIGTERM', async () => {
+  try {
+    await shutdownSessionStore()
+    log.info('Session store shut down')
+  } catch (error) {
+    log.error('Failed to shut down session store:', error)
   }
   server.close(() => {
     log.info('Process terminated')
   })
 })
-// verify the imported config
 async function verifyConfig() {
   try {
     await require('fs').promises.access(BASE_DIR)
@@ -517,50 +539,44 @@ async function verifyConfig() {
     log.error(error instanceof Error ? error.stack : String(error))
   }
 }
-// display the startup banner
-const displayBanner = async () => {
-  console.log(chalk.dim('━'.repeat(50)))
-  console.log(
-    chalk.cyan(
-      require('figlet').textSync(NAME, {
-        font: 'Standard',
-        horizontalLayout: 'full',
-        verticalLayout: 'default',
-      })
-    )
+const banner = async () => {
+  log.info(chalk.dim('━'.repeat(50)))
+  log.info(
+    '\n' +
+      chalk.cyan(
+        require('figlet').textSync(NAME, {
+          font: 'Standard',
+          horizontalLayout: 'full',
+          verticalLayout: 'default',
+        })
+      ) +
+      '\n'
   )
-  console.log(chalk.dim('━'.repeat(50)))
-  console.log(chalk.gray('⚡ Status:'), chalk.green('Online'))
-  console.log(chalk.gray('✨ Mode:'), chalk.green(NODE_ENV))
-  console.log(chalk.gray('🔗 URL:'), chalk.green((await HOST) + BASE_PATH))
-  console.log(chalk.gray('⚙️ Port:'), chalk.green(PORT))
-  console.log(chalk.gray('📂 Directory:'), chalk.green(BASE_DIR))
-  console.log(chalk.dim('━'.repeat(50)))
+  log.info(chalk.dim('━'.repeat(50)))
+  log.info(chalk.gray('Status:'), chalk.green('Online'))
+  log.info(chalk.gray('Mode:'), chalk.green(NODE_ENV))
+  log.info(chalk.gray('URL:'), chalk.green((await HOST) + BASE_PATH))
+  log.info(chalk.gray('Port:'), chalk.green(PORT))
+  log.info(chalk.gray('Directory:'), chalk.green(BASE_DIR))
+  log.info(chalk.dim('━'.repeat(50)))
 }
-// init the server
-async function initServer() {
+async function main() {
   try {
     await verifyConfig()
-    console.log(chalk.green('✓ Verified config'))
-    await initDB()
-    console.log(chalk.green('✓ Database initialized'))
-    await initApp()
-    console.log(chalk.green('✓ Express app initialized'))
-    await initSwagger()
-    console.log(chalk.green('✓ Swagger docs initialized'))
     await processFiles()
-    console.log(chalk.green('✓ Files processed'))
-    await setupRoutes()
-    console.log(chalk.green('✓ Routes setup complete'))
+    await initDB()
+    await initApp()
+    await initSwagger()
+    await initRoutes()
     app.listen(PORT, () => {
       log.info(`Server is listening on port ${PORT}`)
       log.info(`Server is running in ${NODE_ENV} mode`)
-      displayBanner()
+      banner()
     })
   } catch (error) {
     log.error('Failed to start server:', error)
     process.exit(1)
   }
 }
-initServer()
+main()
 module.exports = app

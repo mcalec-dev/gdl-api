@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
+const sendResponse = require('../../../utils/resUtils')
 try {
   log.debug('Mounting check route')
   router.use('/check', require('./check'))
@@ -17,7 +18,7 @@ try {
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
-  return res.json({
+  return sendResponse.json(res, 200, {
     urls: {
       check: baseURL + '/auth/check',
       login: baseURL + '/auth/login',

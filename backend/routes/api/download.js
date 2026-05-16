@@ -4,6 +4,10 @@ const { requireRole } = require('../../utils/authUtils')
 const File = require('../../models/File')
 const fs = require('fs').promises
 const sendResponse = require('../../utils/resUtils')
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 async function handleDownload(req, res) {
   let uuid = req.query.uuid || req.body?.uuid
   if (!uuid) {
@@ -20,7 +24,11 @@ async function handleDownload(req, res) {
     const filename = decodeURIComponent(
       (file.name || '').replace(/[^a-zA-Z0-9.-]/g, '_')
     )
-    const filePath = file.paths.local
+    const filePath = file?.paths?.local
+    if (!filePath) {
+      log.error('File path not found for uuid:', uuid)
+      return sendResponse(res, 404)
+    }
     try {
       await fs.access(filePath)
     } catch (error) {

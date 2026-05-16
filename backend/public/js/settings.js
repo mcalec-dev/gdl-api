@@ -15,11 +15,45 @@ const containerWidthInput = document.getElementById('container-width-input')
 const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
 const resetSettingsButton = document.getElementById('reset-settings-button')
 const imageKernelSelect = document.getElementById('image-kernel-select')
-let defaults = {}
+const FALLBACK_DEFAULTS = {
+  theme: {
+    bg: 'auto',
+    color: 'bg',
+  },
+  oneko: false,
+  serverSort: true,
+  pagination: {
+    enabled: true,
+    limit: 100,
+  },
+  lang: 'en',
+  imageScale: {
+    max: 200,
+    default: 100,
+    min: 50,
+  },
+  containerWidth: 65,
+  imageKernel: 'lanczos3',
+  bytesBits: false,
+}
+let defaults = { ...FALLBACK_DEFAULTS }
 async function loadDefaultSettings() {
   try {
     const res = await fetch('/json/default.json')
-    defaults = await res.json()
+    const fetchedDefaults = await res.json()
+    defaults = {
+      ...FALLBACK_DEFAULTS,
+      ...fetchedDefaults,
+      theme: { ...FALLBACK_DEFAULTS.theme, ...fetchedDefaults.theme },
+      pagination: {
+        ...FALLBACK_DEFAULTS.pagination,
+        ...fetchedDefaults.pagination,
+      },
+      imageScale: {
+        ...FALLBACK_DEFAULTS.imageScale,
+        ...fetchedDefaults.imageScale,
+      },
+    }
   } catch {
     return console.error('couldnt load default configurations for the settings')
   }
@@ -48,11 +82,23 @@ function getCookie(name) {
   return ''
 }
 function loadSettings() {
+  const baseSettings = {
+    theme: { ...defaults.theme },
+    oneko: defaults.oneko,
+    serverSort: defaults.serverSort,
+    pagination: { ...defaults.pagination },
+    lang: defaults.lang,
+    imageScale: { ...defaults.imageScale },
+    containerWidth: defaults.containerWidth,
+    bytesBits: defaults.bytesBits,
+    imageKernel: defaults.imageKernel,
+  }
   const saved = getCookie('settings')
-  if (!saved) return { ...defaults }
+  if (!saved) return baseSettings
   try {
     const parsed = JSON.parse(saved)
     return {
+      ...baseSettings,
       theme: { ...defaults.theme, ...parsed.theme },
       oneko: typeof parsed.oneko === 'boolean' ? parsed.oneko : defaults.oneko,
       serverSort:
@@ -131,12 +177,17 @@ function setContainerWidth(width) {
   CONTAINER_WIDTH = width
   const container = document.getElementById('container')
   if (container) {
-    const classArray = Array.from(container.classList)
-    const newClassArray = classArray.filter(
-      (cls) => !cls.match(/^md:max-w-\[\d+%\]$/)
-    )
-    newClassArray.push(`md:max-w-[${width}%]`)
-    container.className = newClassArray.join(' ')
+    const applyWidth = () => {
+      const isDesktop = window.matchMedia('(min-width: 48rem)').matches
+      container.style.maxWidth = isDesktop ? `${CONTAINER_WIDTH}%` : ''
+    }
+    applyWidth()
+    if (!container._containerWidthListener) {
+      container._containerWidthListener = () => {
+        applyWidth()
+      }
+      window.addEventListener('resize', container._containerWidthListener)
+    }
   }
   return CONTAINER_WIDTH
 }
@@ -280,12 +331,14 @@ async function updateSettings() {
   if (containerWidthInput) {
     containerWidthInput.value = String(settings.containerWidth)
     setContainerWidth(settings.containerWidth)
-    containerWidthInput.addEventListener('change', (e) => {
+    const applyContainerWidth = (e) => {
       const v = parseInt(e.target.value, 10)
       settings.containerWidth = isNaN(v) ? defaults.containerWidth : v
       setContainerWidth(settings.containerWidth)
       saveSettings(settings)
-    })
+    }
+    containerWidthInput.addEventListener('change', applyContainerWidth)
+    containerWidthInput.addEventListener('input', applyContainerWidth)
   }
   if (bytesBitsToggle) {
     bytesBitsToggle.checked = settings.bytesBits
@@ -305,6 +358,7 @@ async function updateSettings() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
   await loadDefaultSettings()
+  Object.assign(settings, loadSettings())
   await updateSettings()
   settingsButton.addEventListener('click', async () => {
     settingsContainer.hidden = !settingsContainer.hidden

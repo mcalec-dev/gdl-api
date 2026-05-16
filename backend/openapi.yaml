@@ -33,6 +33,8 @@ tags:
     description: User profile and settings
   - name: Admin
     description: Administrative operations
+  - name: Pools
+    description: File pool management
 paths:
   /:
     get:
@@ -84,6 +86,10 @@ paths:
                       search:
                         type: string
                       stats:
+                        type: string
+                      upload:
+                        type: string
+                      pool:
                         type: string
   /auth/:
     get:
@@ -665,6 +671,275 @@ paths:
           description: Insufficient permissions
         '404':
           description: No file found in database
+        '500':
+          description: Internal server error
+  /pool:
+    get:
+      tags:
+        - Pools
+      summary: List all file pools
+      description: Retrieve a paginated list of all file pools for the authenticated user
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of pools to return
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+      responses:
+        '200':
+          description: List of pools with pagination info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Total number of pools
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pool'
+        '401':
+          description: User not authenticated
+        '500':
+          description: Internal server error
+    post:
+      tags:
+        - Pools
+      summary: Create a new file pool
+      description: Create a new pool to group files together with optional description and tags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the pool (required)
+                description:
+                  type: string
+                  description: Optional description of the pool
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional array of tags
+                files:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional array of file UUIDs to include in the pool
+              required:
+                - name
+      responses:
+        '201':
+          description: Pool created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pool'
+        '400':
+          description: Invalid pool name or request parameters
+        '401':
+          description: User not authenticated
+        '500':
+          description: Internal server error
+  /pool/{uuid}:
+    get:
+      tags:
+        - Pools
+      summary: Retrieve a specific pool
+      description: Get detailed information about a specific pool by UUID
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+        - in: query
+          name: includeFiles
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include full file details in the response
+      responses:
+        '200':
+          description: Pool information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pool'
+        '400':
+          description: Invalid UUID parameter
+        '401':
+          description: User not authenticated
+        '404':
+          description: Pool not found
+        '500':
+          description: Internal server error
+    put:
+      tags:
+        - Pools
+      summary: Update a file pool
+      description: Update pool properties such as name, description, tags, or files
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New pool name
+                description:
+                  type: string
+                  description: New pool description
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Updated tags array
+                files:
+                  type: array
+                  items:
+                    type: string
+                  description: Updated file UUIDs array
+      responses:
+        '200':
+          description: Pool updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pool'
+        '400':
+          description: Invalid UUID or request parameters
+        '401':
+          description: User not authenticated
+        '404':
+          description: Pool not found
+        '500':
+          description: Internal server error
+    delete:
+      tags:
+        - Pools
+      summary: Delete a file pool
+      description: Remove a pool and its associations (files are not deleted)
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+      responses:
+        '204':
+          description: Pool deleted successfully
+        '400':
+          description: Invalid UUID parameter
+        '401':
+          description: User not authenticated
+        '404':
+          description: Pool not found
+        '500':
+          description: Internal server error
+  /pool/{uuid}/files:
+    get:
+      tags:
+        - Pools
+      summary: Get files in a pool
+      description: Retrieve all files that are members of a specific pool
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+      responses:
+        '200':
+          description: Array of files in the pool
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+        '400':
+          description: Invalid UUID parameter
+        '401':
+          description: User not authenticated
+        '404':
+          description: Pool not found
+        '500':
+          description: Internal server error
+    post:
+      tags:
+        - Pools
+      summary: Add files to a pool
+      description: Add one or more files to an existing pool by their UUIDs
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of file UUIDs to add to the pool (required)
+              required:
+                - files
+      responses:
+        '200':
+          description: Files added to pool successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
+                    description: Total number of files in the pool after operation
+        '400':
+          description: Invalid UUID or empty files array
+        '401':
+          description: User not authenticated
+        '404':
+          description: Pool or files not found
         '500':
           description: Internal server error
   /search/:
@@ -1333,6 +1608,38 @@ components:
         modified:
           type: string
           format: date-time
+    Pool:
+      type: object
+      properties:
+        _id:
+          type: string
+        uuid:
+          type: string
+          description: Unique identifier for the pool
+        name:
+          type: string
+          description: Name of the pool
+        description:
+          type: string
+          description: Optional description of the pool
+        tags:
+          type: array
+          items:
+            type: string
+          description: Array of tags associated with the pool
+        files:
+          type: array
+          items:
+            type: string
+          description: Array of file UUIDs contained in the pool
+        created:
+          type: string
+          format: date-time
+          description: Timestamp when pool was created
+        modified:
+          type: string
+          format: date-time
+          description: Timestamp when pool was last modified
   securitySchemes:
     cookieAuth:
       type: apiKey

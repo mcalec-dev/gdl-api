@@ -365,17 +365,6 @@ export function setupFileItemContextMenu() {
     const fileUrl = `${apiBasePath}/${encodedPath}`
     const dirUrl = `${frontendBasePath}/${itemPath}`
     const menuItems = []
-    menuItems.push({
-      label: 'Copy URL',
-      icon: icons?.nav?.copy || '',
-      handler: () => {
-        try {
-          navigator.clipboard.writeText(fileUrl)
-        } catch (error) {
-          utils.handleError(error)
-        }
-      },
-    })
     if (fileType === 'directory') {
       menuItems.push({
         label: 'Open in New Tab',
@@ -402,20 +391,6 @@ export function setupFileItemContextMenu() {
           }
         },
       })
-      if (fileType === 'image') {
-        menuItems.push({
-          label: 'Copy Image',
-          icon: icons?.nav?.copy || '',
-          handler: async () => {
-            if (!fileUrl) return
-            try {
-              await utils.copyImage(fileUrl)
-            } catch (error) {
-              utils.handleError(error)
-            }
-          },
-        })
-      }
       menuItems.push({
         label: 'Download',
         icon: icons?.nav?.download || '',
@@ -435,12 +410,60 @@ export function setupFileItemContextMenu() {
         },
       })
       menuItems.push({
+        label: 'Add to Pool',
+        icon: icons?.nav?.next || '',
+        handler: async () => {
+          const uuid = String(itemElem.dataset.uuid || '').trim()
+          if (!uuid || uuid === 'null' || uuid === 'undefined') {
+            const error = new Error(
+              'This file is missing a UUID and cannot be added to a pool'
+            )
+            utils.statusMessage(error.message, true)
+            utils.handleError(error)
+            return
+          }
+          try {
+            await utils.openAddToPoolModal(uuid)
+          } catch (error) {
+            utils.handleError(error)
+          }
+        },
+      })
+      menuItems.push({
         divider: true,
       })
       menuItems.push({
         label: 'Copy',
         icon: icons?.nav?.copy || '',
         submenu: [
+          {
+            label: 'URL',
+            icon: icons?.nav?.copy || '',
+            handler: () => {
+              if (!fileUrl) return
+              try {
+                navigator.clipboard.writeText(fileUrl)
+              } catch (error) {
+                utils.handleError(error)
+              }
+            },
+          },
+          ...(fileType === 'image'
+            ? [
+                {
+                  label: 'Image',
+                  icon: icons?.nav?.copy || '',
+                  handler: async () => {
+                    if (!fileUrl) return
+                    try {
+                      await utils.copyImage(fileUrl)
+                    } catch (error) {
+                      utils.handleError(error)
+                    }
+                  },
+                },
+              ]
+            : []),
           {
             label: 'Hash',
             icon: icons?.nav?.copy || '',

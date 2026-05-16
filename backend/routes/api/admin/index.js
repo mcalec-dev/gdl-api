@@ -36,7 +36,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
       (fileStorage[0]?.total || 0) + (dirStorage[0]?.total || 0)
     // Flags
     const flags = 0
-    return res.json({
+    return sendResponse.json(res, 200, {
       stats: {
         uptime,
         totalUsers,
@@ -74,7 +74,7 @@ router.put('/user/:id', requireRole('admin'), (req, res) => {
 })
 // Role permissions management
 router.get('/roles', requireRole('admin'), (req, res) => {
-  return sendResponse(res, 200, [
+  return sendResponse.json(res, 200, [
     'admin',
     'moderator',
     'user',

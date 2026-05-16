@@ -7,38 +7,44 @@ router.post('/', async (req, res) => {
     log.debug('User is not logged in')
     return sendResponse(res, 401, 'Not logged in')
   }
-  log.debug('Logging out user:', req.user.username)
-  if (req.session) {
-    log.debug('req.session:', req.session)
-    const findUserAgent = await User.findOne({
-      username: req.user.username,
-      'sessions.uuid': req.session.uuid,
-    })
-    if (findUserAgent) {
-      await User.updateOne(
-        { username: req.user.username },
-        { $pull: { sessions: { uuid: req.session.uuid } } }
+  const user = /** @type {any} */ (req.user)
+  const sessionUuid = /** @type {any} */ (req.session)?.uuid
+  log.debug('Logging out user:', user.username)
+  try {
+    if (sessionUuid) {
+      const result = await User.updateOne(
+        { _id: user._id },
+        { $pull: { sessions: { uuid: sessionUuid } } }
       )
-      log.debug('Removed session from user:', req.user.username)
+      if (result.modifiedCount > 0) {
+        log.debug('Removed current session from user:', user.username)
+      } else {
+        log.debug('Current session was not found on user:', user.username)
+      }
     } else {
-      log.debug('User uuid does not match session uuid:', req.user.username)
+      log.debug('No current session UUID found during logout')
     }
+  } catch (error) {
+    log.error('Failed to remove current session from user:', error)
+    return sendResponse(res, 500)
   }
-  if (req.session) {
-    req.logout((error) => {
-      if (error) {
-        log.error('Failed to logout a user:', error)
+  req.logout((error) => {
+    if (error) {
+      log.error('Failed to logout a user:', error)
+      return sendResponse(res, 500)
+    }
+    if (!req.session) {
+      res.clearCookie('connect.sid')
+      return sendResponse(res, 201, 'Logged out successfully')
+    }
+    req.session.destroy((destroyError) => {
+      if (destroyError) {
+        log.error('Failed to destroy session:', destroyError)
         return sendResponse(res, 500)
       }
-      req.session.destroy((error) => {
-        if (error) {
-          log.error('Failed to destroy session:', error)
-          return sendResponse(res, 500)
-        }
-        res.clearCookie('connect.sid')
-        return sendResponse(res, 201, 'Logged out successfully')
-      })
+      res.clearCookie('connect.sid')
+      return sendResponse(res, 201, 'Logged out successfully')
     })
-  }
+  })
 })
 module.exports = router

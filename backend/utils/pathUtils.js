@@ -1,14 +1,32 @@
 const path = require('path')
 const log = require('./logHandler')
 const sanitizeFilename = require('sanitize-filename')
+/** @param {string} str */
 const normalizeString = (str) => {
   if (typeof str !== 'string') return ''
   return str.trim().normalize('NFC')
 }
+/** @param {unknown} pathStr */
 const normalizePath = (pathStr) => {
   if (typeof pathStr !== 'string') return ''
   return pathStr.replace(/\\/g, '/').replace(/\/+/g, '/').trim()
 }
+/** @param {unknown} rawPath */
+const sanitizePathSegments = (rawPath) => {
+  if (!rawPath) return null
+  const pathParts = String(rawPath).split('/').filter(Boolean)
+  const sanitizedParts = pathParts
+    .map((part) => sanitizePathComponent(part))
+    .filter((part) => part !== null)
+  if (
+    sanitizedParts.length === 0 ||
+    sanitizedParts.length !== pathParts.length
+  ) {
+    return null
+  }
+  return sanitizedParts
+}
+/** @param {string} pathStr */
 const normalizeAndEncodePath = (pathStr) => {
   if (typeof pathStr !== 'string') return ''
   const normalized = normalizePath(pathStr)
@@ -18,6 +36,7 @@ const normalizeAndEncodePath = (pathStr) => {
     .map((segment) => encodeURIComponent(segment))
     .join('/')
 }
+/** @param {string} childPath @param {string} parentPath */
 const isSubPath = (childPath, parentPath) => {
   const normalizedChild = path.resolve(childPath).replace(/\\/g, '/')
   const normalizedParent = path.resolve(parentPath).replace(/\\/g, '/')
@@ -29,6 +48,7 @@ const isSubPath = (childPath, parentPath) => {
     normalizedChild === normalizedParent
   )
 }
+/** @param {unknown} userInput */
 const sanitizePathComponent = (userInput) => {
   if (!userInput || typeof userInput !== 'string') {
     return null
@@ -56,6 +76,7 @@ const sanitizePathComponent = (userInput) => {
   }
   return sanitized
 }
+/** @param {unknown} baseDir @param {...unknown} pathComponents */
 const safePath = (baseDir, ...pathComponents) => {
   try {
     if (!baseDir || typeof baseDir !== 'string') {
@@ -92,6 +113,7 @@ const safePath = (baseDir, ...pathComponents) => {
     return null
   }
 }
+/** @param {string} targetPath @param {string} baseDir */
 const isPathSafe = (targetPath, baseDir) => {
   try {
     if (
@@ -110,6 +132,7 @@ const isPathSafe = (targetPath, baseDir) => {
     return false
   }
 }
+/** @param {Record<string, unknown> | null | undefined} params */
 const validateRequestParams = (params) => {
   if (!params || typeof params !== 'object') {
     return {
@@ -122,15 +145,10 @@ const validateRequestParams = (params) => {
   const collection = sanitizePathComponent(params.collection)
   const author = sanitizePathComponent(params.author)
   let additionalPath = null
-  if (params[0]) {
-    const pathParts = String(params[0]).split('/').filter(Boolean)
-    const sanitizedParts = pathParts
-      .map((part) => sanitizePathComponent(part))
-      .filter((part) => part !== null)
-    if (
-      sanitizedParts.length > 0 &&
-      sanitizedParts.length === pathParts.length
-    ) {
+  const firstParam = params['0']
+  if (firstParam) {
+    const sanitizedParts = sanitizePathSegments(firstParam)
+    if (sanitizedParts) {
       additionalPath = sanitizedParts.join('/')
     }
   }
@@ -142,6 +160,7 @@ const validateRequestParams = (params) => {
   }
   return result
 }
+/** @param {string} baseApiPath @param {unknown} relativePath */
 const safeApiPath = (baseApiPath, relativePath) => {
   if (!relativePath) return baseApiPath
   const normalized = normalizePath(relativePath)
@@ -153,6 +172,7 @@ const safeApiPath = (baseApiPath, relativePath) => {
   const path = `${baseApiPath}/${encoded}`.replace(/\/+/g, '/')
   return path.endsWith('/') ? path : path + '/'
 }
+/** @param {string} filename @param {string[]} [allowedExtensions=[]] */
 const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
   if (!filename || typeof filename !== 'string') return false
   if (!Array.isArray(allowedExtensions) || allowedExtensions.length === 0)
@@ -165,10 +185,11 @@ const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
     return ext === normalizedAllowed
   })
 }
+/** @param {string} p */
 const normalizeLocalPath = (p) => {
-  if (!p || typeof p !== 'string') return ''
-  return p.replace(/\\/g, '/').replace(/\/+/g, '/').trim()
+  return normalizePath(p)
 }
+/** @param {string} localBase @param {string} relativePath @param {string} [baseApiPath=''] */
 const buildPaths = (localBase, relativePath, baseApiPath = '') => {
   try {
     if (!localBase || typeof localBase !== 'string') {
@@ -176,10 +197,7 @@ const buildPaths = (localBase, relativePath, baseApiPath = '') => {
       return null
     }
     const rel = relativePath ? normalizePath(relativePath) : ''
-    if (
-      rel &&
-      !rel.split('/').every((seg) => sanitizePathComponent(seg) !== null)
-    ) {
+    if (rel && !sanitizePathSegments(rel)) {
       log.debug('Invalid path segments in buildPaths:', rel)
       return null
     }
@@ -201,6 +219,7 @@ const buildPaths = (localBase, relativePath, baseApiPath = '') => {
     return null
   }
 }
+/** @param {string} relativePath */
 const deriveCollectionAuthor = (relativePath) => {
   try {
     if (!relativePath || typeof relativePath !== 'string') {

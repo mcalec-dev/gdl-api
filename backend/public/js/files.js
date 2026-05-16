@@ -51,6 +51,7 @@ async function loadIcons() {
       link: icon.nav.link,
       copy: icon.nav.copy,
       download: icon.nav.download,
+      refresh: icon.arrow.refresh,
     },
   }
 }
@@ -134,8 +135,10 @@ function renderSortToolbar() {
   const sortToolbar = document.getElementById('sort-toolbar')
   sortToolbar.classList.remove('invisible')
   const sortButtonStyle =
-    'flex items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl pointer text-white transition'
+    'flex cursor-pointer items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
   const sortStateStyle = 'w-4 h-4 align-middle font-white'
+  const actionButtonStyle =
+    'flex cursor-pointer items-center justify-center px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
   const isRootDirectory =
     !currentDirectoryData || currentDirectoryData.path === ''
   const goBackButton = isRootDirectory
@@ -147,27 +150,34 @@ function renderSortToolbar() {
     </button>
   `
   const sortToolbarHtml = `
-    ${goBackButton}
-    <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
-      <span>Name</span>
-      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
-    </button>
-    <button id="sortByModified" class="${sortButtonStyle}" data-sort="modified">
-      <span>Modified</span>
-      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.modified)}</span>
-    </button>
-    <button id="sortByType" class="${sortButtonStyle}" data-sort="type">
-      <span>Type</span>
-      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.type)}</span>
-    </button>
-    <button id="sortBySize" class="${sortButtonStyle}" data-sort="size">
-      <span>Size</span>
-      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.size)}</span>
-    </button>
-    <button id="sortByCreated" class="${sortButtonStyle}" data-sort="created">
-      <span>Created</span>
-      <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.created)}</span>
-    </button>
+    <div class="flex w-full items-center justify-between gap-3">
+      <div class="flex min-w-0 flex-1 flex-wrap gap-3">
+        ${goBackButton}
+        <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
+          <span>Name</span>
+          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
+        </button>
+        <button id="sortByModified" class="${sortButtonStyle}" data-sort="modified">
+          <span>Modified</span>
+          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.modified)}</span>
+        </button>
+        <button id="sortByType" class="${sortButtonStyle}" data-sort="type">
+          <span>Type</span>
+          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.type)}</span>
+        </button>
+        <button id="sortBySize" class="${sortButtonStyle}" data-sort="size">
+          <span>Size</span>
+          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.size)}</span>
+        </button>
+        <button id="sortByCreated" class="${sortButtonStyle}" data-sort="created">
+          <span>Created</span>
+          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.created)}</span>
+        </button>
+      </div>
+      <button id="refreshDirectory" class="${actionButtonStyle} flex-shrink-0 self-start" title="Refresh directory" aria-label="Refresh directory">
+        <span class="${sortStateStyle}">${icons?.nav?.refresh || ''}</span>
+      </button>
+    </div>
   `
   sortToolbar.innerHTML = sortToolbarHtml
 }
@@ -335,11 +345,12 @@ function setupLazyLoading() {
     (entries) => {
       entries.forEach((entry) => {
         const element = entry.target
+        const hasSource = Boolean(element.getAttribute('src'))
         if (entry.isIntersecting) {
           if (
             element.classList.contains('loading') &&
             element.dataset.src &&
-            !element.src
+            !hasSource
           ) {
             const loadImage = () => {
               const tempImage = new window.Image()
@@ -536,6 +547,16 @@ function setupSortButtons() {
       }
     })
   })
+  const refreshButton = document.getElementById('refreshDirectory')
+  if (refreshButton) {
+    refreshButton.addEventListener('click', () => {
+      loadDirectory(
+        currentDirectoryData ? currentDirectoryData.path : '',
+        null,
+        true
+      )
+    })
+  }
 }
 async function renderDirectory(contents, path) {
   const hasFiles = contents.some((item) => item.type === 'file')
@@ -594,6 +615,20 @@ async function renderDirectory(contents, path) {
     const itemPath = path ? `${path}/${item.name}` : item.name
     const itemType =
       item.type === 'directory' ? 'directory' : getFileType(item.mime)
+    const itemUuid =
+      typeof item.uuid === 'string' &&
+      item.uuid.trim() &&
+      item.uuid.trim() !== 'null' &&
+      item.uuid.trim() !== 'undefined'
+        ? item.uuid.trim()
+        : ''
+    const itemHash =
+      typeof item.hash === 'string' &&
+      item.hash.trim() &&
+      item.hash.trim() !== 'null' &&
+      item.hash.trim() !== 'undefined'
+        ? item.hash.trim()
+        : ''
     let previewUrl = null
     if (
       item.type === 'file' &&
@@ -616,12 +651,12 @@ async function renderDirectory(contents, path) {
     if (item.type === 'directory') {
       cursorClass = 'cursor-pointer'
     } else {
-      cursorClass = 'cursor-help'
+      cursorClass = 'cursor-pointer'
     }
     if (itemType === 'directory') {
       if (hasDirectories && !hasFiles) {
         html += `
-        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${item.uuid}" data-hash="${item.hash}" data-modified="${item.modified}">
+        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
           <div class="flex-1 min-w- overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
@@ -635,7 +670,7 @@ async function renderDirectory(contents, path) {
       `
       } else {
         html += `
-        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${item.uuid}" data-hash="${item.hash}" data-modified="${item.modified}">
+        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
             <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
@@ -653,7 +688,7 @@ async function renderDirectory(contents, path) {
       previewUrl
     ) {
       html += `
-        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${item.uuid}" data-hash="${item.hash}" data-modified="${item.modified}">
+        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="w-full h-full">
             ${(() => {
               const iconPlaceholder = `<div class="file-icon-placeholder absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${(icons && icons[itemType]) || (icons && icons.other) || ''}</span></div>`
@@ -661,7 +696,7 @@ async function renderDirectory(contents, path) {
                 return `
                   ${iconPlaceholder}
                   <div class="audio-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
+                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
                   </div>
                 `
               }
@@ -677,7 +712,7 @@ async function renderDirectory(contents, path) {
                 return `
                   ${iconPlaceholder}
                   <div class="video-preview-container aspect-video h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src) { this.play(); this.muted=false; }" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
+                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
                   </div>
                 `
               }
@@ -702,7 +737,7 @@ async function renderDirectory(contents, path) {
       `
     } else {
       html += `
-        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size || 0}" data-uuid="${item.uuid}" data-hash="${item.hash}" data-modified="${item.modified}">
+        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size || 0}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="flex items-center w-full gap-3">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${icons?.[itemType] || icons?.other || ''}</div>
             <div class="file-details flex-1 min-w-0">
@@ -731,7 +766,10 @@ async function renderDirectory(contents, path) {
       if (!audio) return
       item.addEventListener('mouseenter', function () {
         if (audio.src) {
-          audio.play()
+          const playPromise = audio.play()
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {})
+          }
         }
       })
       item.addEventListener('mouseleave', function () {

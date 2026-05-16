@@ -1,90 +1,91 @@
-const { connection } = require('mongoose')
 const log = require('./logHandler')
+const { countActiveSessions: countStoreSessions } = require('./sessionStore')
+/** @param {import('express').Response} res @param {number} status @param {string} message */
+function sendAuthError(res, status, message) {
+  return res.status(status).json({
+    message,
+    status,
+  })
+}
+/** @param {any} user @param {string} role */
+function userHasRole(user, role) {
+  return Boolean(user && Array.isArray(user.roles) && user.roles.includes(role))
+}
+/** @param {string} role */
 function requireRole(role) {
   if (!role) {
     throw new Error('Role is required for requireRole middleware')
   }
+  /** @type {import('express').RequestHandler} */
   return (req, res, next) => {
-    if (!req.user) {
+    const reqAny = /** @type {any} */ (req)
+    if (!req.user || !req.isAuthenticated()) {
       log.warn('Unauthorized access attempt')
-      return res.status(401).json({
-        message: 'Unauthorized',
-        status: 401,
-      })
+      return sendAuthError(res, 401, 'Unauthorized')
     }
-    if (
-      req.isAuthenticated() &&
-      req.user &&
-      req.user.roles &&
-      req.user.roles.includes(role)
-    ) {
-      log.debug(`${req.user.username} has role(s):`, role)
+    if (userHasRole(req.user, role)) {
+      log.debug(`${reqAny.user?.username || 'unknown'} has role(s):`, role)
       return next()
     }
     log.warn(
-      `${req.user ? req.user.username : 'unknown'}, doesn't have role(s):`,
+      `${reqAny.user?.username || 'unknown'}, doesn't have role(s):`,
       role
     )
-    return res.status(403).json({
-      message: 'Forbidden',
-      status: 403,
-    })
+    return sendAuthError(res, 403, 'Forbidden')
   }
 }
+/** @param {string[]} roles */
 function requireAnyRole(roles) {
+  const requiredRoles = Array.isArray(roles) ? roles : []
+  /** @type {import('express').RequestHandler} */
   return (req, res, next) => {
+    const reqAny = /** @type {any} */ (req)
     if (
       req.isAuthenticated() &&
-      (req.user || roles.some((r) => req.user.roles.includes(r)))
+      req.user &&
+      Array.isArray(reqAny.user?.roles) &&
+      requiredRoles.some((r) => reqAny.user.roles.includes(r))
     ) {
       return next()
     }
-    log.warn('User does not have any of the roles:' + roles)
-    return res.status(403).json({
-      message: 'Forbidden',
-      status: 403,
-    })
+    log.warn('User does not have any of the roles:' + requiredRoles.join(','))
+    return sendAuthError(res, 403, 'Forbidden')
   }
 }
+/** @type {import('express').RequestHandler} */
 function requireAuth(req, res, next) {
+  const reqAny = /** @type {any} */ (req)
   if (!req.isAuthenticated()) {
     log.warn('Unauthorized access attempt: user not authenticated via passport')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    return sendAuthError(res, 401, 'Unauthorized')
   }
   if (!req.user) {
     log.warn('Unauthorized access attempt: no user object in request')
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    return sendAuthError(res, 401, 'Unauthorized')
   }
   if (!req.session) {
     log.warn(
       'Unauthorized access attempt: no session found for user:',
-      req.user.username
+      reqAny.user?.username || 'unknown'
     )
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+    return sendAuthError(res, 401, 'Unauthorized')
   }
-  if (req.session.expires && new Date(req.session.expires) < new Date()) {
-    log.warn('Session expired for user:', req.user.username)
-    return res.status(401).json({
-      message: 'Unauthorized',
-      status: 401,
-    })
+  if (
+    reqAny.session?.expires &&
+    new Date(reqAny.session.expires) < new Date()
+  ) {
+    log.warn('Session expired for user:', reqAny.user?.username || 'unknown')
+    return sendAuthError(res, 401, 'Unauthorized')
   }
-  log.debug('User,', req.user.username, 'authenticated with valid session')
+  log.debug(
+    'User,',
+    reqAny.user?.username || 'unknown',
+    'authenticated with valid session'
+  )
   return next()
 }
 async function countActiveSessions() {
-  return connection.collection('sessions').countDocuments({
-    expires: { $gt: new Date() },
-  })
+  return countStoreSessions()
 }
 module.exports = {
   requireRole,

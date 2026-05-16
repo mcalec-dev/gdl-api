@@ -12,7 +12,7 @@ router.get('/', requireRole('user'), async (req, res) => {
       return sendResponse(res, 404)
     }
     const randomImage = getRandomImage[0]
-    return res.json({
+    return sendResponse.json(res, 200, {
       file: String(randomImage.name),
       path: String(randomImage.paths.remote),
       collection: String(randomImage.collection),

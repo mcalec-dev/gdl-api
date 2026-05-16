@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Pools Explorer</title>
+		<style>
+			:root {
+				--bg0: #0b0f14;
+				--bg1: #121924;
+				--bg2: #1a2432;
+				--line: rgba(185, 211, 245, 0.2);
+				--text: #e8f0ff;
+				--muted: #9db1cc;
+				--accent: #42d6a4;
+				--accent-2: #37a8ff;
+				--warn: #ffc86a;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				color: var(--text);
+				font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+				background:
+					radial-gradient(circle at 12% 20%, rgba(55, 168, 255, 0.2), transparent 40%),
+					radial-gradient(circle at 90% 15%, rgba(66, 214, 164, 0.18), transparent 35%),
+					linear-gradient(160deg, var(--bg0), var(--bg1) 45%, var(--bg2));
+				min-height: 100vh;
+			}
+
+			.page {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 24px 16px 40px;
+			}
+
+			.header {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: space-between;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 18px;
+			}
+
+			h1 {
+				margin: 0;
+				font-size: clamp(1.4rem, 3vw, 2.2rem);
+				letter-spacing: 0.02em;
+				font-weight: 700;
+			}
+
+			.hint {
+				margin: 0;
+				color: var(--muted);
+				font-size: 0.95rem;
+			}
+
+			.toolbar {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				align-items: center;
+			}
+
+			button {
+				border: 1px solid var(--line);
+				color: var(--text);
+				background: rgba(18, 25, 36, 0.75);
+				padding: 8px 14px;
+				border-radius: 10px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+
+			button:hover {
+				border-color: rgba(66, 214, 164, 0.5);
+			}
+
+			.status {
+				margin: 12px 0;
+				padding: 10px 12px;
+				border-radius: 12px;
+				border: 1px solid var(--line);
+				background: rgba(12, 17, 25, 0.68);
+				color: var(--muted);
+			}
+
+			.status.error {
+				border-color: rgba(255, 120, 120, 0.5);
+				color: #ffb8b8;
+			}
+
+			.status.warn {
+				border-color: rgba(255, 200, 106, 0.5);
+				color: var(--warn);
+			}
+
+			.pool-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+				gap: 14px;
+			}
+
+			.pool-card {
+				border: 1px solid var(--line);
+				background: rgba(13, 19, 28, 0.85);
+				border-radius: 16px;
+				overflow: hidden;
+				display: grid;
+				grid-template-rows: 150px auto;
+				cursor: pointer;
+				transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+				animation: cardIn 260ms ease both;
+			}
+
+			.pool-card:hover {
+				transform: translateY(-4px);
+				border-color: rgba(66, 214, 164, 0.55);
+				box-shadow: 0 10px 28px rgba(2, 8, 20, 0.42);
+			}
+
+			.preview {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 1px;
+				background: rgba(157, 177, 204, 0.2);
+				height: 150px;
+				overflow: hidden;
+				position: relative;
+			}
+
+			.preview img,
+			.preview .cell {
+				width: 100%;
+				height: 100%;
+				min-width: 0;
+				min-height: 0;
+				object-fit: cover;
+				display: block;
+				background: linear-gradient(135deg, rgba(55, 168, 255, 0.2), rgba(66, 214, 164, 0.15));
+			}
+
+			.preview .cell {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: rgba(232, 240, 255, 0.75);
+				font-size: 1.3rem;
+			}
+
+			.pool-meta {
+				padding: 12px;
+				position: relative;
+				z-index: 1;
+				min-width: 0;
+				background: rgba(7, 12, 20, 0.92);
+			}
+
+			.pool-title {
+				margin: 0 0 6px;
+				font-size: 1rem;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.pool-sub {
+				margin: 0;
+				color: var(--muted);
+				font-size: 0.85rem;
+			}
+
+			.tags {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+				margin-top: 10px;
+			}
+
+			.tag {
+				font-size: 0.72rem;
+				color: #bbe9db;
+				border: 1px solid rgba(66, 214, 164, 0.35);
+				border-radius: 999px;
+				padding: 2px 8px;
+			}
+
+			.overlay {
+				position: fixed;
+				inset: 0;
+				display: grid;
+				place-items: center;
+				background: rgba(4, 8, 13, 0.62);
+				backdrop-filter: blur(4px);
+				z-index: 30;
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 180ms ease;
+			}
+
+			.overlay.show {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			.explorer {
+				width: min(1100px, calc(100vw - 24px));
+				height: min(84vh, 780px);
+				border: 1px solid var(--line);
+				border-radius: 16px;
+				background: rgba(10, 15, 22, 0.96);
+				display: grid;
+				grid-template-rows: auto auto 1fr;
+				overflow: hidden;
+				transform: translateY(12px) scale(0.99);
+				opacity: 0;
+				transition: transform 220ms ease, opacity 220ms ease;
+			}
+
+			.overlay.show .explorer {
+				transform: translateY(0) scale(1);
+				opacity: 1;
+			}
+
+			.explorer-head {
+				border-bottom: 1px solid var(--line);
+				padding: 10px 12px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.explorer-head h2 {
+				margin: 0;
+				font-size: 1.05rem;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.crumbs {
+				border-bottom: 1px solid var(--line);
+				color: var(--muted);
+				padding: 8px 12px;
+				font-size: 0.85rem;
+			}
+
+			.explorer-body {
+				min-height: 0;
+				display: grid;
+				grid-template-columns: 240px 1fr;
+			}
+
+			.sidebar {
+				border-right: 1px solid var(--line);
+				padding: 10px;
+				overflow: auto;
+			}
+
+			.folder-item {
+				padding: 7px 9px;
+				border-radius: 8px;
+				margin-bottom: 6px;
+				color: var(--muted);
+				cursor: pointer;
+				border: 1px solid transparent;
+			}
+
+			.folder-item:hover,
+			.folder-item.active {
+				color: var(--text);
+				border-color: rgba(55, 168, 255, 0.45);
+				background: rgba(55, 168, 255, 0.08);
+			}
+
+			.content {
+				display: grid;
+				grid-template-rows: auto 1fr;
+				min-height: 0;
+			}
+
+			.content-tools {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				border-bottom: 1px solid var(--line);
+				padding: 8px 10px;
+				gap: 10px;
+			}
+
+			.mode-group {
+				display: flex;
+				gap: 6px;
+			}
+
+			.mode-group button.active {
+				border-color: rgba(66, 214, 164, 0.7);
+				color: #bbf8e5;
+			}
+
+			.sort-group {
+				display: flex;
+				gap: 6px;
+				align-items: center;
+			}
+
+			.sort-select {
+				border: 1px solid var(--line);
+				color: var(--text);
+				background: rgba(18, 25, 36, 0.75);
+				padding: 8px 10px;
+				border-radius: 10px;
+				font-weight: 600;
+				font-size: 0.875rem;
+				font-family: inherit;
+				cursor: pointer;
+				outline: none;
+				appearance: none;
+			}
+
+			.sort-select:hover {
+				border-color: rgba(66, 214, 164, 0.5);
+			}
+
+			.sort-select option {
+				background: #121924;
+			}
+
+			.sort-dir-active {
+				border-color: rgba(55, 168, 255, 0.55);
+				color: #9ed0ff;
+			}
+
+			.file-zone {
+				overflow: auto;
+				min-height: 0;
+				padding: 10px;
+			}
+
+			.file-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+				gap: 10px;
+			}
+
+			.file-tile {
+				border: 1px solid var(--line);
+				border-radius: 12px;
+				overflow: hidden;
+				background: rgba(20, 28, 40, 0.5);
+				display: grid;
+				grid-template-rows: 116px auto;
+				cursor: pointer;
+				transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+			}
+
+			.file-tile:hover {
+				transform: translateY(-3px);
+				border-color: rgba(55, 168, 255, 0.5);
+				box-shadow: 0 8px 22px rgba(1, 9, 24, 0.38);
+			}
+
+			.thumb {
+				height: 116px;
+				background: linear-gradient(140deg, rgba(66, 214, 164, 0.15), rgba(55, 168, 255, 0.2));
+				display: grid;
+				place-items: center;
+				overflow: hidden;
+				position: relative;
+			}
+
+			.thumb img {
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+				display: block;
+			}
+
+			.file-meta {
+				padding: 8px;
+				background: rgba(5, 10, 18, 0.88);
+				position: relative;
+				z-index: 1;
+				min-width: 0;
+			}
+
+			.file-name {
+				margin: 0 0 4px;
+				display: block;
+				width: 100%;
+				max-width: 100%;
+				font-size: 0.85rem;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.file-sub {
+				margin: 0;
+				color: var(--muted);
+				font-size: 0.76rem;
+			}
+
+			.file-sub.missing {
+				color: #ffb8b8;
+			}
+
+			.file-table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			.file-table th,
+			.file-table td {
+				text-align: left;
+				padding: 8px;
+				border-bottom: 1px solid rgba(185, 211, 245, 0.12);
+				font-size: 0.86rem;
+			}
+
+			.file-table th {
+				color: var(--muted);
+				font-weight: 600;
+			}
+
+			.empty {
+				color: var(--muted);
+				text-align: center;
+				padding: 28px 8px;
+			}
+
+			.file-preview-overlay {
+				position: fixed;
+				inset: 0;
+				display: grid;
+				place-items: center;
+				z-index: 45;
+				background: rgba(3, 6, 11, 0.72);
+				backdrop-filter: blur(4px);
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 180ms ease;
+			}
+
+			.file-preview-overlay.show {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			.file-preview-panel {
+				width: min(860px, calc(100vw - 24px));
+				height: min(88vh, 900px);
+				overflow: hidden;
+				background: rgba(8, 12, 20, 0.98);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				display: grid;
+				grid-template-rows: auto minmax(0, 1fr) auto;
+				transform: translateY(10px) scale(0.99);
+				opacity: 0;
+				transition: transform 220ms ease, opacity 220ms ease;
+			}
+
+			.file-preview-overlay.show .file-preview-panel {
+				transform: translateY(0) scale(1);
+				opacity: 1;
+			}
+
+			.file-preview-head {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 10px;
+				padding: 10px 12px;
+				border-bottom: 1px solid var(--line);
+			}
+
+			.file-preview-head-actions {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+
+			.action-link {
+				border: 1px solid var(--line);
+				color: var(--text);
+				background: rgba(18, 25, 36, 0.75);
+				padding: 8px 14px;
+				border-radius: 10px;
+				text-decoration: none;
+				font-weight: 600;
+				font-size: 0.9rem;
+			}
+
+			.action-link:hover {
+				border-color: rgba(66, 214, 164, 0.5);
+			}
+
+			.action-link.disabled {
+				opacity: 0.5;
+				pointer-events: none;
+			}
+
+			.file-preview-stage {
+				min-height: 0;
+				display: grid;
+				place-items: center;
+				padding: 10px;
+				background: #04070d;
+				overflow: hidden;
+			}
+
+			.file-preview-stage img,
+			.file-preview-stage video {
+				width: auto;
+				height: auto;
+				max-width: calc(100% - 2px);
+				max-height: calc(100% - 2px);
+				min-width: 0;
+				min-height: 0;
+				object-fit: contain;
+				display: block;
+				border-radius: 10px;
+			}
+
+			.file-preview-details {
+				padding: 12px;
+				background: rgba(1, 4, 10, 0.96);
+				border-top: 1px solid rgba(185, 211, 245, 0.15);
+				max-height: 320px;
+				overflow: auto;
+				opacity: 1;
+				transition: max-height 220ms ease, opacity 180ms ease, padding 180ms ease;
+			}
+
+			.file-preview-details.collapsed {
+				max-height: 0;
+				opacity: 0;
+				padding-top: 0;
+				padding-bottom: 0;
+				overflow: hidden;
+				border-top: 0;
+			}
+
+			.file-detail-row {
+				display: grid;
+				grid-template-columns: 120px 1fr;
+				gap: 10px;
+				padding: 5px 0;
+				font-size: 0.86rem;
+			}
+
+			.file-detail-row strong {
+				color: #b8c9e6;
+			}
+
+			.file-detail-row span {
+				word-break: break-word;
+			}
+
+			@keyframes cardIn {
+				from {
+					opacity: 0;
+					transform: translateY(6px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			@media (max-width: 900px) {
+				.explorer-body {
+					grid-template-columns: 1fr;
+					grid-template-rows: auto 1fr;
+				}
+
+				.sidebar {
+					border-right: 0;
+					border-bottom: 1px solid var(--line);
+					max-height: 130px;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<main class="page">
+			<header class="header">
+				<div>
+					<h1>Pools Explorer</h1>
+					<p class="hint">Browse pools, preview images, and open each pool in explorer mode.</p>
+				</div>
+				<div class="toolbar">
+					<button id="reload-button" type="button">Reload Pools</button>
+				</div>
+			</header>
+
+			<div id="status" class="status">Loading pools...</div>
+			<section id="pool-grid" class="pool-grid" aria-live="polite"></section>
+		</main>
+
+		<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-label="Pool Explorer">
+			<section class="explorer">
+				<header class="explorer-head">
+					<h2 id="explorer-title">Pool</h2>
+					<button id="close-overlay" type="button">Close</button>
+				</header>
+				<div class="crumbs" id="crumbs">Pools</div>
+				<div class="explorer-body">
+					<aside class="sidebar">
+						<div class="folder-item active" data-filter="all">All files</div>
+						<div class="folder-item" data-filter="image">Images</div>
+						<div class="folder-item" data-filter="video">Videos</div>
+						<div class="folder-item" data-filter="other">Other</div>
+					</aside>
+					<div class="content">
+						<div class="content-tools">
+							<small id="file-count" style="color: var(--muted)">0 files</small>
+							<div style="display: flex; gap: 8px; align-items: center;">
+								<div class="sort-group">
+									<select id="sort-by" class="sort-select" title="Sort by">
+										<option value="name">Name</option>
+										<option value="modified">Modified</option>
+										<option value="created">Created</option>
+										<option value="size">Size</option>
+										<option value="type">Type</option>
+									</select>
+									<button type="button" id="sort-dir" title="Toggle sort direction">↑</button>
+								</div>
+								<div class="mode-group">
+									<button type="button" id="mode-grid" class="active">Grid</button>
+									<button type="button" id="mode-list">List</button>
+								</div>
+							</div>
+						</div>
+						<div id="file-zone" class="file-zone"></div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<div id="file-preview-overlay" class="file-preview-overlay" role="dialog" aria-modal="true" aria-label="File Preview">
+			<section class="file-preview-panel">
+				<header class="file-preview-head">
+					<strong id="file-preview-title">File Preview</strong>
+					<div class="file-preview-head-actions">
+						<a id="open-file-new-tab" class="action-link disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Open in New Tab</a>
+						<button id="toggle-file-details" type="button" aria-expanded="true" aria-controls="file-preview-details">Hide Details</button>
+						<button id="close-file-preview" type="button">Close</button>
+					</div>
+				</header>
+				<div id="file-preview-stage" class="file-preview-stage"></div>
+				<div id="file-preview-details" class="file-preview-details"></div>
+			</section>
+		</div>
+
+		<script>
+			const state = {
+				pools: [],
+				openPool: null,
+				files: [],
+				filteredFiles: [],
+				previewIndex: -1,
+				mode: 'grid',
+				filter: 'all',
+				sortBy: 'name',
+				sortDir: 'asc',
+			}
+
+			const statusEl = document.getElementById('status')
+			const poolGridEl = document.getElementById('pool-grid')
+			const overlayEl = document.getElementById('overlay')
+			const explorerTitleEl = document.getElementById('explorer-title')
+			const fileZoneEl = document.getElementById('file-zone')
+			const fileCountEl = document.getElementById('file-count')
+			const crumbsEl = document.getElementById('crumbs')
+			const filePreviewOverlayEl = document.getElementById('file-preview-overlay')
+			const filePreviewStageEl = document.getElementById('file-preview-stage')
+			const filePreviewDetailsEl = document.getElementById('file-preview-details')
+			const filePreviewTitleEl = document.getElementById('file-preview-title')
+			const fileDetailsToggleEl = document.getElementById('toggle-file-details')
+			const openFileNewTabEl = document.getElementById('open-file-new-tab')
+			const sortByEl = document.getElementById('sort-by')
+			const sortDirEl = document.getElementById('sort-dir')
+
+			function setStatus(message, type = '') {
+				statusEl.textContent = message
+				statusEl.className = type ? `status ${type}` : 'status'
+			}
+
+			function formatDate(value) {
+				const parsed = new Date(value)
+				if (Number.isNaN(parsed.getTime())) return 'Unknown date'
+				return parsed.toLocaleString()
+			}
+
+			function formatBytes(bytes) {
+				const value = Number(bytes)
+				if (!Number.isFinite(value) || value < 1) return '0 B'
+				const units = ['B', 'KB', 'MB', 'GB', 'TB']
+				let size = value
+				let idx = 0
+				while (size >= 1024 && idx < units.length - 1) {
+					size /= 1024
+					idx += 1
+				}
+				return `${size.toFixed(size < 10 && idx > 0 ? 1 : 0)} ${units[idx]}`
+			}
+
+			function escapeHtml(text) {
+				return String(text ?? '').replace(/[&<>'"]/g, (char) => {
+					const map = {
+						'&': '&amp;',
+						'<': '&lt;',
+						'>': '&gt;',
+						"'": '&#39;',
+						'"': '&quot;',
+					}
+					return map[char] || char
+				})
+			}
+
+			function getFileUrl(file) {
+				if (file?.paths?.remote) return String(file.paths.remote)
+				if (file?.url) return String(file.url)
+				return ''
+			}
+
+			function buildTransformedImageUrl(file, profile = 'thumb') {
+				const base = getFileUrl(file)
+				if (!base || !isImageFile(file)) return base
+				const [pathname, hashPart = ''] = base.split('#')
+				const [pathPart, queryPart = ''] = pathname.split('?')
+				const params = new URLSearchParams(queryPart)
+
+				if (profile === 'viewer') {
+					params.set('x', '90')
+					params.set('q', '92')
+					params.set('kernel', 'lanczos3')
+				} else if (profile === 'preview') {
+					params.set('x', '24')
+					params.set('q', '46')
+					params.set('kernel', 'nearest')
+				} else {
+					params.set('x', '30')
+					params.set('q', '52')
+					params.set('kernel', 'nearest')
+				}
+
+				params.delete('raw')
+				const query = params.toString()
+				const hash = hashPart ? `#${hashPart}` : ''
+				return `${pathPart}${query ? `?${query}` : ''}${hash}`
+			}
+
+			function isImageFile(file) {
+				const mime = String(file?.mime || '').toLowerCase()
+				const type = String(file?.type || '').toLowerCase()
+				return mime.startsWith('image/') || type.includes('image')
+			}
+
+			function isVideoFile(file) {
+				const mime = String(file?.mime || '').toLowerCase()
+				const type = String(file?.type || '').toLowerCase()
+				return mime.startsWith('video/') || type.includes('video')
+			}
+
+			function getPreviewFiles(files) {
+				const imageFiles = files.filter(isImageFile)
+				const source = imageFiles.length ? imageFiles : files
+				return source.slice(0, 4)
+			}
+
+			function formatDetailValue(value, fallback = '-') {
+				if (value === null || value === undefined || value === '') return fallback
+				return String(value)
+			}
+
+			function setFileDetailsCollapsed(collapsed) {
+				filePreviewDetailsEl.classList.toggle('collapsed', collapsed)
+				fileDetailsToggleEl.setAttribute('aria-expanded', String(!collapsed))
+				fileDetailsToggleEl.textContent = collapsed ? 'Show Details' : 'Hide Details'
+			}
+
+			async function fetchJson(url) {
+				const response = await fetch(url, { credentials: 'include' })
+				const payload = await response.json().catch(() => null)
+				if (!response.ok) {
+					const message = payload?.message || `${response.status} ${response.statusText}`
+					throw new Error(message)
+				}
+				return payload
+			}
+
+			async function loadPools() {
+				setStatus('Loading pools...')
+				poolGridEl.innerHTML = ''
+				try {
+					const payload = await fetchJson('/api/pool?limit=200')
+					const pools = Array.isArray(payload?.results)
+						? payload.results
+						: Array.isArray(payload)
+							? payload
+							: []
+
+					const detailed = await Promise.all(
+						pools.map(async (pool) => {
+							try {
+								const [fullPool, rawPool] = await Promise.all([
+									fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}?includeFiles=true`),
+									fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}`),
+								])
+								const fileDocs = Array.isArray(fullPool?.files) ? fullPool.files : []
+								const fileRefs = Array.isArray(rawPool?.files) ? rawPool.files : []
+								return {
+									...pool,
+									files: fileDocs,
+									fileRefs,
+									totalFiles: fileRefs.length || fileDocs.length,
+								}
+							} catch {
+								return {
+									...pool,
+									files: [],
+									fileRefs: [],
+									totalFiles: 0,
+								}
+							}
+						})
+					)
+
+					state.pools = detailed
+					renderPools()
+					if (!state.pools.length) {
+						setStatus('No pools found. Create one and reload this page.', 'warn')
+					} else {
+						setStatus(`Loaded ${state.pools.length} pools.`)
+					}
+				} catch (error) {
+					setStatus(`Failed to load pools: ${error.message}`, 'error')
+				}
+			}
+
+			function renderPools() {
+				if (!state.pools.length) {
+					poolGridEl.innerHTML = ''
+					return
+				}
+
+				poolGridEl.innerHTML = state.pools
+					.map((pool) => {
+						const files = Array.isArray(pool.files) ? pool.files : []
+						const totalFiles = Number.isFinite(Number(pool.totalFiles)) ? Number(pool.totalFiles) : files.length
+						const missingCount = Math.max(totalFiles - files.length, 0)
+						const previewItems = getPreviewFiles(files)
+						const previewHtml = new Array(4).fill(0).map((_, idx) => {
+							const item = previewItems[idx]
+							if (!item) return '<div class="cell">+</div>'
+							const url = buildTransformedImageUrl(item, 'preview')
+							if (url && isImageFile(item)) {
+								return `<img src="${escapeHtml(url)}" alt="Preview" loading="lazy" decoding="async" />`
+							}
+							return '<div class="cell">FILE</div>'
+						}).join('')
+
+						const tags = Array.isArray(pool.tags) ? pool.tags.slice(0, 4) : []
+						const tagsHtml = tags.length
+							? `<div class="tags">${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+							: ''
+
+						return `
+							<article class="pool-card" data-pool-uuid="${escapeHtml(pool.uuid)}">
+								<div class="preview">${previewHtml}</div>
+								<div class="pool-meta">
+									<h3 class="pool-title">${escapeHtml(pool.name || 'Untitled Pool')}</h3>
+									<p class="pool-sub">${totalFiles} file(s)${missingCount ? ` • ${missingCount} unavailable` : ''} • Updated ${escapeHtml(formatDate(pool.modified || pool.created))}</p>
+									${tagsHtml}
+								</div>
+							</article>
+						`
+					})
+					.join('')
+
+				poolGridEl.querySelectorAll('.pool-card').forEach((card) => {
+					card.addEventListener('click', () => {
+						const uuid = card.getAttribute('data-pool-uuid')
+						const pool = state.pools.find((entry) => String(entry.uuid) === String(uuid))
+						if (pool) openExplorer(pool)
+					})
+				})
+			}
+
+			function applyFilter(files) {
+				if (state.filter === 'image') return files.filter(isImageFile)
+				if (state.filter === 'video') return files.filter(isVideoFile)
+				if (state.filter === 'other') return files.filter((file) => !isImageFile(file) && !isVideoFile(file))
+				return files
+			}
+
+			function applySort(files) {
+				const arr = files.slice()
+				const dir = state.sortDir === 'asc' ? 1 : -1
+				arr.sort((a, b) => {
+					switch (state.sortBy) {
+						case 'modified': {
+							const ta = new Date(a.modified || a.created || 0).getTime()
+							const tb = new Date(b.modified || b.created || 0).getTime()
+							return dir * (ta - tb)
+						}
+						case 'created': {
+							const ta = new Date(a.created || a.modified || 0).getTime()
+							const tb = new Date(b.created || b.modified || 0).getTime()
+							return dir * (ta - tb)
+						}
+						case 'size':
+							return dir * ((Number(a.size) || 0) - (Number(b.size) || 0))
+						case 'type': {
+							const ta = String(a.type || a.mime || '').toLowerCase()
+							const tb = String(b.type || b.mime || '').toLowerCase()
+							return dir * ta.localeCompare(tb)
+						}
+						default: {
+							const na = String(a.name || '').toLowerCase()
+							const nb = String(b.name || '').toLowerCase()
+							return dir * na.localeCompare(nb)
+						}
+					}
+				})
+				return arr
+			}
+
+			function renderExplorerFiles() {
+				const filtered = applySort(applyFilter(state.files))
+				state.filteredFiles = filtered
+				fileCountEl.textContent = `${filtered.length} file(s)`
+
+				if (!filtered.length) {
+					fileZoneEl.innerHTML = '<p class="empty">No files in this view.</p>'
+					return
+				}
+
+				if (state.mode === 'list') {
+					fileZoneEl.innerHTML = `
+						<table class="file-table">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Type</th>
+									<th>Size</th>
+									<th>Collection</th>
+									<th>Modified</th>
+								</tr>
+							</thead>
+							<tbody>
+								${filtered.map((file) => `
+									<tr>
+										<td>${escapeHtml(file.name || 'Unknown')}</td>
+										<td>${escapeHtml(file.type || file.mime || 'unknown')}</td>
+										<td>${escapeHtml(formatBytes(file.size))}</td>
+										<td>${escapeHtml(file.collection || '-')}</td>
+										<td>${escapeHtml(formatDate(file.modified || file.created))}</td>
+									</tr>
+								`).join('')}
+							</tbody>
+						</table>
+					`
+					return
+				}
+
+				fileZoneEl.innerHTML = `
+					<div class="file-grid">
+						${filtered.map((file, index) => {
+							const url = buildTransformedImageUrl(file, 'thumb')
+							const thumb = url && isImageFile(file)
+								? `<img src="${escapeHtml(url)}" alt="${escapeHtml(file.name || 'file')}" loading="lazy" decoding="async" />`
+								: `<span>${escapeHtml((file.type || 'file').toUpperCase())}</span>`
+
+							return `
+								<article class="file-tile" data-file-index="${index}">
+									<div class="thumb">${thumb}</div>
+									<div class="file-meta">
+										<p class="file-name" title="${escapeHtml(file.name || 'Unknown')}">${escapeHtml(file.name || 'Unknown')}</p>
+										<p class="file-sub ${file.missing ? 'missing' : ''}">${file.missing ? 'Unavailable in index' : `${escapeHtml(formatBytes(file.size))} • ${escapeHtml(file.collection || '-')}`}</p>
+									</div>
+								</article>
+							`
+						}).join('')}
+					</div>
+				`
+			}
+
+			function openFilePreview(file, index = -1) {
+				if (!file) return
+				if (Number.isFinite(index) && index >= 0) {
+					state.previewIndex = index
+				} else {
+					const inferredIndex = Array.isArray(state.filteredFiles)
+						? state.filteredFiles.indexOf(file)
+						: -1
+					state.previewIndex = inferredIndex
+				}
+				const baseUrl = getFileUrl(file)
+				const imageUrl = buildTransformedImageUrl(file, 'viewer')
+				const isImage = isImageFile(file)
+				const isVideo = isVideoFile(file)
+				const openUrl = baseUrl || ''
+
+				if (!file.missing && openUrl) {
+					openFileNewTabEl.href = openUrl
+					openFileNewTabEl.classList.remove('disabled')
+					openFileNewTabEl.setAttribute('aria-disabled', 'false')
+				} else {
+					openFileNewTabEl.href = '#'
+					openFileNewTabEl.classList.add('disabled')
+					openFileNewTabEl.setAttribute('aria-disabled', 'true')
+				}
+
+				filePreviewTitleEl.textContent = file.name || 'File Preview'
+				if (file.missing) {
+					filePreviewStageEl.innerHTML = '<p class="empty">This file reference exists in the pool but the file cannot currently be resolved.</p>'
+				} else if (isImage && imageUrl) {
+					filePreviewStageEl.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(file.name || 'file')}" decoding="async" />`
+				} else if (isVideo && baseUrl) {
+					filePreviewStageEl.innerHTML = `<video controls preload="metadata" src="${escapeHtml(baseUrl)}"></video>`
+				} else if (baseUrl) {
+					filePreviewStageEl.innerHTML = `<p class="empty">Preview unavailable for this file type.<br /><a style="color:#9ed0ff" href="${escapeHtml(baseUrl)}" target="_blank" rel="noopener noreferrer">Open file</a></p>`
+				} else {
+					filePreviewStageEl.innerHTML = '<p class="empty">Preview unavailable.</p>'
+				}
+
+				filePreviewDetailsEl.innerHTML = `
+					<div class="file-detail-row"><strong>Name</strong><span>${escapeHtml(formatDetailValue(file.name, 'Unknown'))}</span></div>
+					<div class="file-detail-row"><strong>Type</strong><span>${escapeHtml(formatDetailValue(file.type || file.mime, 'unknown'))}</span></div>
+					<div class="file-detail-row"><strong>Size</strong><span>${escapeHtml(formatBytes(file.size))}</span></div>
+					<div class="file-detail-row"><strong>Collection</strong><span>${escapeHtml(formatDetailValue(file.collection, '-'))}</span></div>
+					<div class="file-detail-row"><strong>Author</strong><span>${escapeHtml(formatDetailValue(file.author, '-'))}</span></div>
+					<div class="file-detail-row"><strong>Modified</strong><span>${escapeHtml(formatDate(file.modified || file.created))}</span></div>
+					<div class="file-detail-row"><strong>UUID</strong><span>${escapeHtml(formatDetailValue(file.uuid, '-'))}</span></div>
+				`
+
+				filePreviewOverlayEl.classList.add('show')
+			}
+
+			function closeFilePreview() {
+				filePreviewOverlayEl.classList.remove('show')
+				state.previewIndex = -1
+			}
+
+			function navigateFilePreview(offset) {
+				if (!Array.isArray(state.filteredFiles) || state.filteredFiles.length === 0) return
+				const total = state.filteredFiles.length
+				const baseIndex = state.previewIndex >= 0 ? state.previewIndex : 0
+				const nextIndex = (baseIndex + offset + total) % total
+				openFilePreview(state.filteredFiles[nextIndex], nextIndex)
+			}
+
+			async function openExplorer(pool) {
+				state.openPool = pool
+				explorerTitleEl.textContent = pool.name || 'Pool'
+				crumbsEl.textContent = `Pools / ${pool.name || 'Unnamed'} / Files`
+				state.filter = 'all'
+
+				try {
+					const [rawPool, files] = await Promise.all([
+						fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}`),
+						fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}/files`),
+					])
+					const foundFiles = Array.isArray(files) ? files : []
+					const refs = Array.isArray(rawPool?.files) ? rawPool.files : []
+					const foundByUuid = new Set(foundFiles.map((file) => String(file?.uuid || '')))
+					const missingFiles = refs
+						.filter((uuid) => uuid && !foundByUuid.has(String(uuid)))
+						.map((uuid) => ({
+							uuid,
+							name: `Unavailable file (${String(uuid).slice(0, 8)}...)`,
+							type: 'missing',
+							size: 0,
+							collection: '-',
+							modified: null,
+							missing: true,
+						}))
+					state.files = [...foundFiles, ...missingFiles]
+				} catch {
+					const fallbackFiles = Array.isArray(pool.files) ? pool.files : []
+					const fallbackRefs = Array.isArray(pool.fileRefs) ? pool.fileRefs : []
+					const foundByUuid = new Set(fallbackFiles.map((file) => String(file?.uuid || '')))
+					const missingFiles = fallbackRefs
+						.filter((uuid) => uuid && !foundByUuid.has(String(uuid)))
+						.map((uuid) => ({
+							uuid,
+							name: `Unavailable file (${String(uuid).slice(0, 8)}...)`,
+							type: 'missing',
+							size: 0,
+							collection: '-',
+							modified: null,
+							missing: true,
+						}))
+					state.files = [...fallbackFiles, ...missingFiles]
+				}
+
+				document.querySelectorAll('.folder-item').forEach((item) => {
+					item.classList.toggle('active', item.getAttribute('data-filter') === 'all')
+				})
+
+				renderExplorerFiles()
+				overlayEl.classList.add('show')
+			}
+
+			document.getElementById('reload-button').addEventListener('click', loadPools)
+			document.getElementById('close-overlay').addEventListener('click', () => {
+				overlayEl.classList.remove('show')
+			})
+
+			overlayEl.addEventListener('click', (event) => {
+				if (event.target === overlayEl) overlayEl.classList.remove('show')
+			})
+
+			document.getElementById('close-file-preview').addEventListener('click', () => {
+				closeFilePreview()
+			})
+
+			fileDetailsToggleEl.addEventListener('click', () => {
+				const isCollapsed = filePreviewDetailsEl.classList.contains('collapsed')
+				setFileDetailsCollapsed(!isCollapsed)
+			})
+
+			filePreviewOverlayEl.addEventListener('click', (event) => {
+				if (event.target === filePreviewOverlayEl) closeFilePreview()
+			})
+
+			fileZoneEl.addEventListener('click', (event) => {
+				const tile = event.target.closest('.file-tile')
+				if (!tile) return
+				const index = Number(tile.getAttribute('data-file-index'))
+				if (!Number.isFinite(index)) return
+				const selected = Array.isArray(state.filteredFiles) ? state.filteredFiles[index] : null
+				openFilePreview(selected, index)
+			})
+
+			document.addEventListener('keydown', (event) => {
+				const target = event.target
+				const isTypingTarget =
+					target instanceof HTMLInputElement ||
+					target instanceof HTMLTextAreaElement ||
+					(target instanceof HTMLElement && target.isContentEditable)
+				if (isTypingTarget) return
+
+				if (event.key === 'Escape') {
+					if (filePreviewOverlayEl.classList.contains('show')) {
+						event.preventDefault()
+						closeFilePreview()
+						return
+					}
+					if (overlayEl.classList.contains('show')) {
+						event.preventDefault()
+						overlayEl.classList.remove('show')
+					}
+					return
+				}
+
+				if (!filePreviewOverlayEl.classList.contains('show')) return
+
+				if (event.key === 'ArrowRight') {
+					event.preventDefault()
+					navigateFilePreview(1)
+				}
+
+				if (event.key === 'ArrowLeft') {
+					event.preventDefault()
+					navigateFilePreview(-1)
+				}
+			})
+
+			document.getElementById('mode-grid').addEventListener('click', () => {
+				state.mode = 'grid'
+				document.getElementById('mode-grid').classList.add('active')
+				document.getElementById('mode-list').classList.remove('active')
+				renderExplorerFiles()
+			})
+
+			document.getElementById('mode-list').addEventListener('click', () => {
+				state.mode = 'list'
+				document.getElementById('mode-list').classList.add('active')
+				document.getElementById('mode-grid').classList.remove('active')
+				renderExplorerFiles()
+			})
+
+			sortByEl.addEventListener('change', () => {
+				state.sortBy = sortByEl.value
+				renderExplorerFiles()
+			})
+
+			sortDirEl.addEventListener('click', () => {
+				state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'
+				sortDirEl.textContent = state.sortDir === 'asc' ? '↑' : '↓'
+				sortDirEl.classList.toggle('sort-dir-active', state.sortDir === 'desc')
+				renderExplorerFiles()
+			})
+
+			document.querySelectorAll('.folder-item').forEach((item) => {
+				item.addEventListener('click', () => {
+					const filter = item.getAttribute('data-filter') || 'all'
+					state.filter = filter
+					document.querySelectorAll('.folder-item').forEach((entry) => {
+						entry.classList.toggle('active', entry === item)
+					})
+					renderExplorerFiles()
+				})
+			})
+
+			loadPools()
+		</script>
+	</body>
+</html>

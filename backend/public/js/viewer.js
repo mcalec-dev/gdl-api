@@ -174,6 +174,7 @@ function showViewer(index) {
       'pointer-events-none'
     )
   }
+  fileViewer.hidden = false
   fileViewer.style.display = 'flex'
   fileViewer.classList.remove('hidden')
   currentItemIndex = index
@@ -428,6 +429,8 @@ async function setupViewerEvents() {
 async function setupFileClickHandlers(fileListSelector = '#fileList') {
   const fileList = document.querySelector(fileListSelector)
   if (!fileList) return
+  if (fileList.dataset.viewerBound === 'true') return
+  fileList.dataset.viewerBound = 'true'
   fileList.addEventListener('click', (e) => {
     const media = e.target.closest('.file-item[data-file-type]')
     if (media && media.dataset.fileType) {

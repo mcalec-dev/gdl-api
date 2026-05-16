@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt')
 const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const sendResponse = require('../../../utils/resUtils')
+const { getRequestUserAgent } = require('../../../utils/requestUtils')
 router.post('/', async (req, res) => {
   const { username, email, password } = req.body
   if (!username || !password) {
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
           modified: now,
           expires: expiresAt,
           ip: String(req.ip),
-          useragent: String(req.useragent),
+          useragent: getRequestUserAgent(req),
         })
         await user.save()
         req.session.uuid = sessionUuid

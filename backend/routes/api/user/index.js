@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
+const sendResponse = require('../../../utils/resUtils')
 try {
   log.debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))
@@ -13,7 +14,7 @@ try {
 }
 router.get('/', async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
-  return res.json({
+  return sendResponse.json(res, 200, {
     user: req.user,
     urls: {
       announcements: baseURL + '/user/announcements',

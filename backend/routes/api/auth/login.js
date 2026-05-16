@@ -5,6 +5,7 @@ const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const { COOKIE_MAX_AGE } = require('../../../config')
 const sendResponse = require('../../../utils/resUtils')
+const { getRequestUserAgent } = require('../../../utils/requestUtils')
 router.post('/', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     log.debug('User already logged in:', req.user.username || '')
@@ -29,6 +30,10 @@ router.post('/', async (req, res) => {
     log.debug('User not found:', username, email)
     return sendResponse(res, 400, 'User not found')
   }
+  if (!user.password) {
+    log.debug('No password set for user:', username, email)
+    return sendResponse(res, 400, 'No password set for this account')
+  }
   const match = await bcrypt.compare(password, user.password)
   if (!match) {
     log.debug('Password mismatch:', username, email)
@@ -50,7 +55,7 @@ router.post('/', async (req, res) => {
           modified: now,
           expires: new Date(now.getTime() + COOKIE_MAX_AGE),
           ip: String(req.ip),
-          useragent: String(req.useragent),
+          useragent: getRequestUserAgent(req),
         })
         await user.save()
         req.session.uuid = uuid
@@ -60,7 +65,7 @@ router.post('/', async (req, res) => {
             return sendResponse(res, 500)
           }
           log.info('User logged in:', user.username)
-          return res.status(201).json({
+          return sendResponse.json(res, 201, {
             success: true,
             user,
           })

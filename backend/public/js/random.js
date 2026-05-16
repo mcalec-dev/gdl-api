@@ -297,6 +297,18 @@ function setupRandomMediaContextMenu() {
       },
     })
     menuItems.push({
+      label: 'Add to Pool',
+      icon: icons?.nav?.next || '',
+      handler: () => {
+        if (!currentMediaData.uuid) return
+        try {
+          utils.addToPool(currentMediaData.uuid)
+        } catch (error) {
+          utils.handleError(error)
+        }
+      },
+    })
+    menuItems.push({
       divider: true,
     })
     menuItems.push({
