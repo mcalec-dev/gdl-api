@@ -2,12 +2,8 @@
 
 - add file checkers (ex. duplicate files, no extensions, etc.)
 - integration with gallery-dl (via pwsh script or exe)
-- pagination for better optimization of large lists
 - add filters and pagination to `files` and `search` endpoints and frontend
 - add github actions (ci pipeline) for auditing dependencies, and linting
-- implement logging for the entire project (via debug with log files and live ones)
-- proper error handler middleware
-- validator for json api data
 - translations for the frontend (refer to discord bots)
 - `files.js` doesn't append the metadata even if it doesn't have an url param
 - proper MIME setter in `files.js` (for each file)
@@ -16,7 +12,6 @@
 - autocomplete for search frontend (like google)
 - implement google oauth with passport
 - configurable grid layout for frontend files
-- compiling tailwindcss within the dist dir
 - rollup with nexe
 - `AUTO_SCAN` even if its on, it should upsert directories when accessed too
 - npm package `emailvalid` for email validation in user registrations

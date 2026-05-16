@@ -1,0 +1,27 @@
+name: Run Check
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Dependencies
+        run: npm i
+      - name: Run Check
+        run: npm run check
+        continue-on-error: true

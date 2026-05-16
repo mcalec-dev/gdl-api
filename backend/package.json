@@ -20,8 +20,9 @@
     "format:fix": "prettier . --write --config .prettierrc",
     "tailwind:minify": "tailwindcss -c ./tailwind.config.js -o ./public/css/min/tailwind.min.css --minify",
     "minify": "node -e 'import(\"./minify.js\").processFiles()'",
-    "build": "npm run lint:fix && npm run format:fix && npm run tailwind:minify && npm run minify",
-    "typecheck": "tsc --noEmit"
+    "build": "npm run check && npm run tailwind:minify && npm run minify",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run format:check && npm run typecheck"
   },
   "engines": {
     "node": ">=22"
