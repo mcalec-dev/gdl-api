@@ -292,7 +292,7 @@ const schema = {
     parse: (v) => parseJsonArrayEnv(v, 'TROLLING_TERMS'),
     type: 'array',
   },
-  AUTO_SCAN: { env: 'AUTO_SCAN', parse: parseBooleanEnv, type: 'boolean' },
+  SCAN_ON_STARTUP: { env: 'SCAN_ON_STARTUP', parse: parseBooleanEnv, type: 'boolean' },
   UPSERT_ON_ACCESS: {
     env: 'UPSERT_ON_ACCESS',
     parse: (v) => v,

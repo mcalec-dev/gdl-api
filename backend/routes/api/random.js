@@ -9,7 +9,7 @@ router.get('/', requireRole('user'), async (req, res) => {
     const getRandomImage = await File.aggregate([{ $sample: { size: 1 } }])
     if (!getRandomImage || getRandomImage.length === 0) {
       log.debug('No random file found in database')
-      return sendResponse(res, 404)
+      return sendResponse(res, 404, 'No files found')
     }
     const randomImage = getRandomImage[0]
     return sendResponse.json(res, 200, {
@@ -27,7 +27,7 @@ router.get('/', requireRole('user'), async (req, res) => {
     })
   } catch (error) {
     log.error('Error in random route:', error)
-    return sendResponse(res, 500)
+    return sendResponse(res, 500, 'Internal server error')
   }
 })
 module.exports = router

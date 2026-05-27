@@ -37,7 +37,23 @@ function sendJson(res, status, payload) {
 function sendResponse(res, status, message = null) {
   if (!res || !status)
     throw new Error('Response and status are required to send a response')
+  if (message && typeof message !== 'string') {
+    throw new Error('Message must be a string if provided')
+  }
+  if (status >= 200 && status < 300 && message) {
+    log.warn(
+      `Status code ${status} typically does not include a message. Message will be sent but consider using sendJson for custom payloads.`
+    )
+  }
+  if (status >= 400 && !message) {
+    log.warn(
+      `Status code ${status} typically includes an error message. Consider providing a message for better client feedback.`
+    )
+  }
   assertValidStatus(status)
+  if (status === 204) {
+    return res.status(status).end()
+  }
   const finalMessage = resolveMessage(status, message)
   return res.status(status).json({
     message: finalMessage,
@@ -45,5 +61,4 @@ function sendResponse(res, status, message = null) {
   })
 }
 sendResponse.json = sendJson
-
 module.exports = sendResponse

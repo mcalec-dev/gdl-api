@@ -44,16 +44,11 @@ router.delete(['/:uuid', '/:uuid/'], requireRole('user'), async (req, res) => {
       log.debug('User not found for session deletion:', requestUser.uuid)
       return sendResponse(res, 404)
     }
-    log.debug(
-      'Deleted session',
-      uuid,
-      'for user:',
-      requestUser.username || 'user'
-    )
-    return sendResponse(res, 204, 'Session deleted successfully')
+    log.info('Deleted session', uuid, 'for user:', requestUser.username)
+    return sendResponse(res, 204)
   } catch (error) {
     log.error('Failed to delete session for user:', error)
-    return sendResponse(res, 500)
+    return sendResponse(res, 500, 'Failed to delete session')
   }
 })
 module.exports = router

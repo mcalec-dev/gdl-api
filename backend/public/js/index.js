@@ -98,7 +98,6 @@ export function formatDate(timestamp) {
       year: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
-      timeZone: 'America/New_York',
       hour12: true,
     }
   )

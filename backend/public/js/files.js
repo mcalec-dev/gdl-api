@@ -138,7 +138,7 @@ function renderSortToolbar() {
     'flex cursor-pointer items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
   const sortStateStyle = 'w-4 h-4 align-middle font-white'
   const actionButtonStyle =
-    'flex cursor-pointer items-center justify-center px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
+    'flex cursor-pointer items-center justify-center px-3 py-2 h-full bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
   const isRootDirectory =
     !currentDirectoryData || currentDirectoryData.path === ''
   const goBackButton = isRootDirectory
@@ -149,6 +149,8 @@ function renderSortToolbar() {
       <span class="${sortStateStyle}">${icons?.back || ''}</span>
     </button>
   `
+  const searchInputStyle =
+    'flex-shrink-0 px-3 py-2 min-w-[200px] bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 transition focus:outline-none focus:border-white/40'
   const sortToolbarHtml = `
     <div class="flex w-full items-center justify-between gap-3">
       <div class="flex min-w-0 flex-1 flex-wrap gap-3">
@@ -174,7 +176,8 @@ function renderSortToolbar() {
           <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.created)}</span>
         </button>
       </div>
-      <button id="refreshDirectory" class="${actionButtonStyle} flex-shrink-0 self-start" title="Refresh directory" aria-label="Refresh directory">
+      <input type="text" id="searchDirectory" class="${searchInputStyle}" placeholder="Search..." title="Search files in current directory" aria-label="Search directory">
+      <button id="refreshDirectory" class="${actionButtonStyle} flex-shrink-0" title="Refresh directory" aria-label="Refresh directory">
         <span class="${sortStateStyle}">${icons?.nav?.refresh || ''}</span>
       </button>
     </div>
@@ -555,6 +558,18 @@ function setupSortButtons() {
         null,
         true
       )
+    })
+  }
+  const searchInput = document.getElementById('searchDirectory')
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.toLowerCase()
+      const fileItems = document.querySelectorAll('.file-item')
+      fileItems.forEach((item) => {
+        const fileName = item.querySelector('.text-white')?.textContent || ''
+        const matches = query === '' || fileName.toLowerCase().includes(query)
+        item.style.display = matches ? '' : 'none'
+      })
     })
   }
 }

@@ -5,7 +5,7 @@ const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const { COOKIE_MAX_AGE } = require('../../../config')
 const sendResponse = require('../../../utils/resUtils')
-const { getRequestUserAgent } = require('../../../utils/requestUtils')
+const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
 router.post('/', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     log.debug('User already logged in:', req.user.username || '')
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
           created: now,
           modified: now,
           expires: new Date(now.getTime() + COOKIE_MAX_AGE),
-          ip: String(req.ip),
+          ip: String(getRequestIp(req)),
           useragent: getRequestUserAgent(req),
         })
         await user.save()

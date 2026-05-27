@@ -7,8 +7,9 @@ const {
   buildPaths,
   deriveCollectionAuthor,
 } = require('../pathUtils')
-const { BASE_DIR, BASE_PATH, AUTO_SCAN, UPSERT_ON_ACCESS } =
-  /** @type {any} */ (require('../../config'))
+const { BASE_DIR, BASE_PATH, UPSERT_ON_ACCESS } = /** @type {any} */ (
+  require('../../config')
+)
 const { getImageMeta } = require('../image/metadata.js')
 const Directory = require('../../models/Directory')
 const File = require('../../models/File')
@@ -307,12 +308,10 @@ async function maybeUpsertAccessed(realPath, isDirectory = false) {
   if (!UPSERT_ON_ACCESS) return
   if (UPSERT_ON_ACCESS === 'file' && isDirectory) return
   if (UPSERT_ON_ACCESS === 'dir' && !isDirectory) return
-  if (AUTO_SCAN === false) {
-    try {
-      await upsertAccessedItem(realPath)
-    } catch (err) {
-      log.error('Background upsertAccessedItem failed:', err)
-    }
+  try {
+    await upsertAccessedItem(realPath)
+  } catch (err) {
+    log.error('Background upsertAccessedItem failed:', err)
   }
 }
 module.exports = {

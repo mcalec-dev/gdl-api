@@ -6,7 +6,7 @@ const log = require('../../utils/logHandler')
 const sendResponse = require('../../utils/resUtils')
 const {
   BASE_DIR,
-  AUTO_SCAN,
+  SCAN_ON_STARTUP,
   DISALLOWED_FILES,
   PAGINATION_LIMIT,
   UPSERT_ON_ACCESS,
@@ -48,8 +48,8 @@ const {
 const { resizeImage } = require('../../utils/image/resize.js')
 const { convertImage } = require('../../utils/image/convert.js')
 const { applyMetadata } = require('../../utils/image/metadata.js')
-if (AUTO_SCAN === true) initializeDatabaseSync()
-else if (!AUTO_SCAN || AUTO_SCAN === false)
+if (SCAN_ON_STARTUP === true) initializeDatabaseSync()
+else if (!SCAN_ON_STARTUP || SCAN_ON_STARTUP === false)
   log.debug('Skipping full database sync')
 /**
  * Prefer extension MIME for transport, then fall back to magic-byte detection.

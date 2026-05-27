@@ -6,6 +6,9 @@ const sendResponse = require('../../../utils/resUtils')
 try {
   log.debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))
+  log.debug('Mounting tasks route')
+  router.use('/tasks', require('./tasks'))
+
 } catch (error) {
   log.error('Error initializing admin routes:', error)
 }
@@ -16,15 +19,15 @@ const uptimeStart = Date.now()
 const { countActiveSessions } = require('../../../utils/authUtils')
 router.get('/', requireRole('admin'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
-  if (!req.user || !req.user.roles.includes('admin')) {
-    log.debug('Unauthorized access attempt to admin dashboard')
-    return sendResponse(res, 401)
+  if (!req.user) {
+    log.warn('Unauthorized access attempt to admin dashboard')
+    return sendResponse(res, 401, 'Unauthorized')
   }
   try {
     const uptime = Math.floor(Date.now() - uptimeStart)
     const totalUsers = await User.countDocuments()
     const loggedInUsers = await countActiveSessions()
-    // Top tags
+    /** @type {string[]} */
     const topTags = []
     const fileStorage = await File.aggregate([
       { $group: { _id: null, total: { $sum: '$size' } } },
@@ -47,6 +50,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
       },
       urls: {
         announcements: baseURL + '/admin/announcements',
+        tasks: baseURL + '/admin/tasks',
       },
     })
   } catch (error) {

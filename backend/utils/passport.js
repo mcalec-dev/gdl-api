@@ -3,7 +3,7 @@ const passport = require('passport')
 const uuidv4 = require('uuid').v4
 const User = require('../models/User')
 const log = require('./logHandler')
-const { getRequestUserAgent } = require('./requestUtils')
+const { getRequestIp, getRequestUserAgent } = require('./requestUtils')
 const config = /** @type {any} */ (require('../config'))
 const HOST =
   typeof process.env.HOST === 'string' && process.env.HOST.trim()
@@ -26,7 +26,7 @@ function createSessionMetadata(req) {
     created: now,
     modified: now,
     expires: new Date(now.getTime() + SESSION_MAX_AGE),
-    ip: req?.ip ? String(req.ip) : '',
+    ip: req ? String(getRequestIp(req)) : '',
     useragent: req ? getRequestUserAgent(req) : '',
   }
 }

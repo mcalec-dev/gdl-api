@@ -2,7 +2,7 @@ const express = require('express')
 const session = require('express-session')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
-const { setReqVars } = require('./utils/requestUtils')
+const { getRequestIp, setReqVars } = require('./utils/requestUtils')
 const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
 const {
@@ -288,8 +288,11 @@ async function renderApp() {
 }
 async function initApp() {
   const store = await initSessionStore()
+  app.set('trust proxy', true)
   app.use(setReqVars)
   app.use(require('cors')())
+  app.use(BodyParser.urlencoded({ extended: true }))
+  app.use(BodyParser.json())
   app.use(
     // @ts-ignore - no type declarations
     rateLimit({
@@ -320,8 +323,6 @@ async function initApp() {
   app.use(require('express-useragent').express())
   // @ts-ignore - no type declarations
   app.use(require('express-robots-txt')({ UserAgent: '*', Disallow: '/' }))
-  app.use(BodyParser.urlencoded({ extended: true }))
-  app.use(BodyParser.json())
   app.use(
     session({
       secret: SESSION_SECRET,
@@ -410,7 +411,7 @@ async function initApp() {
         log.debug('Bot/crawler detected:', req.useragent?.source)
         return next()
       }
-      log.debug('Sending troll to:', req.ip, req.useragent?.source)
+      log.debug('Sending troll to:', getRequestIp(req), req.useragent?.source)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'rickroll.mp4')
       )
@@ -419,7 +420,7 @@ async function initApp() {
       uri.toLowerCase().includes(term.toLowerCase())
     )
     if (containsBlockedTerm) {
-      log.debug('Sending troll to:', req.ip, req.useragent)
+      log.debug('Sending troll to:', getRequestIp(req), req.useragent)
       return res.sendFile(
         path.join(__dirname, 'public', 'video', 'so-you-found-it.mp4')
       )
@@ -548,9 +549,9 @@ const banner = async () => {
           font: 'Standard',
           horizontalLayout: 'full',
           verticalLayout: 'default',
+          whitespaceBreak: true,
         })
-      ) +
-      '\n'
+      )
   )
   log.info(chalk.dim('━'.repeat(50)))
   log.info(chalk.gray('Status:'), chalk.green('Online'))

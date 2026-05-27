@@ -23,7 +23,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
       title,
       message,
       severity,
-      author: req.user.username,
+      author: req.user?.username,
       created: Date.now(),
       modified: Date.now(),
       uuid,
@@ -54,7 +54,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
         title: String(title),
         message: String(message),
         severity: String(severity),
-        author: req.user.username,
+        author: req.user?.username,
         modified: Date.now(),
       },
       { returnDocument: 'after' }
@@ -63,7 +63,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
       return sendResponse(res, 404, 'Announcement not found')
     }
     log.debug('Announcement updated:', updatedAnnouncement)
-    return sendResponse(res, 204, 'Announcement updated successfully')
+    return sendResponse(res, 204)
   } catch (error) {
     log.error('Error updating announcement:', error)
     return sendResponse(res, 500)
@@ -75,9 +75,9 @@ router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
     log.debug('Invalid UUID parameter:', uuid)
     return sendResponse(res, 400, 'Invalid UUID parameter')
   }
-  if (!req.user || !req.user.roles.includes('admin')) {
-    log.debug('Unauthorized access attempt')
-    return sendResponse(res, 401)
+  if (!req.user) {
+    log.warn('Unauthorized access attempt to delete announcement')
+    return sendResponse(res, 401, 'Unauthorized')
   }
   try {
     const deletedAnnouncement = await Announcement.findOneAndDelete({
@@ -85,13 +85,13 @@ router.delete(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
     })
     if (!deletedAnnouncement) {
       log.debug('Announcement not found for deletion:', uuid)
-      return sendResponse(res, 404)
+      return sendResponse(res, 404, 'Announcement not found')
     }
     log.debug('Announcement deleted:', deletedAnnouncement)
-    return sendResponse(res, 204, 'Announcement deleted successfully')
+    return sendResponse(res, 204)
   } catch (error) {
     log.error('Error deleting announcement:', error)
-    return sendResponse(res, 500)
+    return sendResponse(res, 500, 'Internal Server Error')
   }
 })
 module.exports = router

@@ -1,17 +1,15 @@
 const log = require('./logHandler')
-/** @param {import('express').Request} req @param {string} fallback */
-function getRequestIp(req, fallback = '') {
-  const forwardedFor = req?.headers?.['x-forwarded-for']
-  const firstForwarded =
-    typeof forwardedFor === 'string' ? forwardedFor.split(',')[0].trim() : ''
-  return (
-    req?.headers?.['cf-connecting-ip'] ||
-    firstForwarded ||
-    req?.connection?.remoteAddress ||
-    req?.socket?.remoteAddress ||
-    /** @type {any} */ (req?.connection)?.socket?.remoteAddress ||
-    fallback
-  )
+/** @param {string | undefined | null} ip */
+function normalizeIp(ip) {
+  if (typeof ip !== 'string') return ''
+  const trimmed = ip.trim()
+  if (!trimmed) return ''
+  return trimmed.replace(/^::ffff:/, '')
+}
+/** @param {import('express').Request} req */
+function getRequestIp(req) {
+  const ip = normalizeIp(typeof req?.ip === 'string' ? req.ip : '')
+  return ip
 }
 /**
  * @param {import('express').Request} req
@@ -29,7 +27,7 @@ function getRequestUserAgent(req) {
  * @param {import('express').Request} req
  */
 function requestLogger(req) {
-  const ip = getRequestIp(req, 'unknown')
+  const ip = getRequestIp(req)
   const url = req.url
   const useragent = getRequestUserAgent(req)
   log.info('Incoming request', { ip, url, useragent })
@@ -41,11 +39,13 @@ function requestLogger(req) {
  */
 function setReqVars(req, res, next) {
   const reqAny = /** @type {any} */ (req)
-  reqAny.ip = getRequestIp(req)
+  const ip = getRequestIp(req)
+  reqAny.ip = ip
   reqAny.useragent = getRequestUserAgent(req)
   next()
 }
 module.exports = {
+  getRequestIp,
   getRequestUserAgent,
   requestLogger,
   setReqVars,

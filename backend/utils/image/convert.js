@@ -1,22 +1,18 @@
 const sharp = require('sharp')
 const log = require('../logHandler')
-/** @typedef {{ width?: number, height?: number, scale?: number, kernel?: keyof import('sharp').KernelEnum, quality?: number }} ResizeInput */
+/** @typedef {{ q?: number, w?: number, h?: number, x?: number, k?: string }} ResizeInput */
 /** @param {string} imagePath @param {string} format @param {ResizeInput} [options={}] */
-async function convertImage(
-  imagePath,
-  format,
-  { quality, width, height, scale, kernel } = {}
-) {
+async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
   let transformer
   try {
     transformer = sharp(imagePath, {
       failOnError: false,
       limitInputPixels: true,
     })
-    if (scale || width || height) {
+    if (x || w || h) {
       /** @type {import('sharp').ResizeOptions} */
       let resizeOptions = {}
-      if (scale) {
+      if (x) {
         const metadata = await sharp(imagePath, {
           failOnError: false,
           limitInputPixels: false,
@@ -25,17 +21,18 @@ async function convertImage(
           log.warn('Could not read metadata for scaled conversion')
           return null
         }
-        width = Math.round(metadata.width * (scale / 100))
-        height = Math.round(metadata.height * (scale / 100))
+        w = Math.round(metadata.width * (x / 100))
+        h = Math.round(metadata.height * (x / 100))
         resizeOptions = {
-          width,
-          height,
-          kernel: kernel || (scale > 100 ? 'lanczos3' : 'mitchell'),
+          width: w,
+          height: h,
+          // if kernel is not provided, use mitchell for downscaling and lanczos3 for upscaling
+          kernel: k || (x < 100 ? 'mitchell' : 'lanczos3'),
         }
       } else {
-        if (width) resizeOptions.width = width
-        if (height) resizeOptions.height = height
-        if (kernel) resizeOptions.kernel = kernel
+        if (w) resizeOptions.width = w
+        if (h) resizeOptions.height = h
+        if (k) resizeOptions.kernel = k
       }
       transformer = transformer.resize(resizeOptions)
     }
@@ -43,33 +40,46 @@ async function convertImage(
       case 'jpeg':
       case 'jpg':
         transformer = transformer.jpeg({
-          quality: quality,
-          mozjpeg: true,
+          // integer 1-100 (default 80)
+          quality: q || 80,
+          // 4:4:4 when quality is greater than 90 (default 4:2:0)
+          chromaSubsampling: q <= 90 ? '4:4:4' : '4:2:0',
         })
         break
       case 'png':
         transformer = transformer.png({
-          compressionLevel: 9,
+          // integer 0-9 (default 6)
+          compressionLevel: 6,
+          // integer 1-100 (default 100)
+          quality: q || 100,
         })
         break
       case 'webp':
         transformer = transformer.webp({
-          quality: quality,
+          // integer 1-100 (default 80)
+          quality: q || 80,
+          // integer 0-6 (default 4)
+          effort: 4,
         })
         break
       case 'tiff':
         transformer = transformer.tiff({
-          quality: quality,
+          // integer 1-100 (default 80)
+          quality: q || 80,
         })
         break
       case 'avif':
         transformer = transformer.avif({
-          quality: quality,
+          // integer 1-100 (default 50)
+          quality: q || 50,
+          // integer 0-9 (default 4)
+          effort: 4,
         })
         break
       case 'gif':
         transformer = transformer.gif({
-          effort: 3,
+          // Level of CPU effort to reduce file size, between 1 (fastest) and 10 (slowest) (optional, default 7)
+          effort: 7,
         })
         break
       default:

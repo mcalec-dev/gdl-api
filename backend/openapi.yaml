@@ -144,6 +144,10 @@ paths:
                     type: object
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/login/:
     post:
       tags:
@@ -182,10 +186,22 @@ paths:
                     type: object
         '400':
           description: Missing credentials, user not found, or invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: User already logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/logout/:
     post:
       tags:
@@ -196,9 +212,17 @@ paths:
         '201':
           description: User successfully logged out
         '401':
-          description: User is not logged in
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/register/:
     post:
       tags:
@@ -230,10 +254,22 @@ paths:
           description: User successfully registered and logged in
         '400':
           description: Missing required fields or invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/provider/:
     get:
       tags:
@@ -278,8 +314,16 @@ paths:
           description: Redirect to provider authentication
         '400':
           description: Invalid provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Authentication error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/provider/callback/{provider}:
     get:
       tags:
@@ -322,8 +366,16 @@ paths:
           description: Redirect to provider authentication
         '400':
           description: Invalid provider or provider already linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /auth/provider/unlink/{provider}:
     get:
       tags:
@@ -343,8 +395,16 @@ paths:
           description: Provider unlinked successfully
         '400':
           description: Invalid provider or cannot unlink (no other auth method)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /files/:
     get:
       tags:
@@ -384,10 +444,22 @@ paths:
           description: List of files and directories
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /files/{collection}/:
     get:
       tags:
@@ -418,8 +490,16 @@ paths:
           description: List of files in collection
         '400':
           description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /files/{collection}/{author}/:
     get:
       tags:
@@ -444,6 +524,10 @@ paths:
           description: List of files from author directory
         '404':
           description: Path not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /download/:
     get:
       tags:
@@ -462,14 +546,34 @@ paths:
           description: File content as binary data
         '400':
           description: Missing or invalid uuid parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: File not found or not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Downloads
@@ -492,14 +596,34 @@ paths:
           description: File content as binary data
         '400':
           description: Missing or invalid uuid parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: File not found or not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /upload/:
     post:
@@ -542,12 +666,28 @@ paths:
                     format: date-time
         '400':
           description: No file provided or file too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: File upload failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /uuid/{uuid}/{type}:
     get:
       tags:
@@ -573,14 +713,34 @@ paths:
           description: File or directory information retrieved successfully
         '400':
           description: Invalid UUID or type parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: File or directory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /random:
     get:
       tags:
@@ -621,12 +781,28 @@ paths:
                     type: string
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: No file found in database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /random/:
     get:
       tags:
@@ -667,12 +843,28 @@ paths:
                     type: string
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: No file found in database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /pool:
     get:
       tags:
@@ -713,8 +905,16 @@ paths:
                       $ref: '#/components/schemas/Pool'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Pools
@@ -754,10 +954,22 @@ paths:
                 $ref: '#/components/schemas/Pool'
         '400':
           description: Invalid pool name or request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /pool/{uuid}:
     get:
       tags:
@@ -786,12 +998,28 @@ paths:
                 $ref: '#/components/schemas/Pool'
         '400':
           description: Invalid UUID parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pool not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
         - Pools
@@ -836,12 +1064,28 @@ paths:
                 $ref: '#/components/schemas/Pool'
         '400':
           description: Invalid UUID or request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pool not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - Pools
@@ -859,12 +1103,28 @@ paths:
           description: Pool deleted successfully
         '400':
           description: Invalid UUID parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pool not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /pool/{uuid}/files:
     get:
       tags:
@@ -889,12 +1149,28 @@ paths:
                   $ref: '#/components/schemas/File'
         '400':
           description: Invalid UUID parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pool not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Pools
@@ -936,12 +1212,28 @@ paths:
                     description: Total number of files in the pool after operation
         '400':
           description: Invalid UUID or empty files array
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Pool or files not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /search/:
     get:
       tags:
@@ -980,10 +1272,22 @@ paths:
                       type: object
         '400':
           description: Empty search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /stats/:
     get:
       tags:
@@ -1006,10 +1310,22 @@ paths:
                     description: Collection statistics including totals and file types
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /health/:
     get:
       tags:
@@ -1019,6 +1335,10 @@ paths:
       responses:
         '501':
           description: Not Implemented - This endpoint is planned for future implementation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /user/:
     get:
       tags:
@@ -1092,10 +1412,22 @@ paths:
                           type: string
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /user/session/:
     get:
       tags:
@@ -1123,8 +1455,16 @@ paths:
                       type: string
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /user/session/{uuid}:
     delete:
       tags:
@@ -1143,10 +1483,22 @@ paths:
           description: Session deleted successfully
         '400':
           description: Missing or invalid UUID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /user/announcements:
     get:
       tags:
@@ -1184,6 +1536,10 @@ paths:
                       type: string
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/:
     get:
       tags:
@@ -1222,8 +1578,16 @@ paths:
                         type: string
         '401':
           description: User not authenticated or not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/users:
     get:
       tags:
@@ -1233,6 +1597,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/user/{id}:
     get:
       tags:
@@ -1249,6 +1617,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
         - Admin
@@ -1264,6 +1636,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/user/{id}/action:
     post:
       tags:
@@ -1293,8 +1669,16 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/roles:
     get:
       tags:
@@ -1313,6 +1697,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/tags/{id}:
     post:
       tags:
@@ -1340,6 +1728,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - Admin
@@ -1353,6 +1745,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/dmca:
     get:
       tags:
@@ -1362,6 +1758,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Admin
@@ -1383,6 +1783,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/file/duplicates:
     get:
       tags:
@@ -1392,6 +1796,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/file/uri-check:
     get:
       tags:
@@ -1401,6 +1809,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/cache/purge:
     post:
       tags:
@@ -1445,6 +1857,10 @@ paths:
           description: Announcement created successfully
         '400':
           description: Title is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/announcements/{uuid}:
     put:
       tags:
@@ -1479,8 +1895,16 @@ paths:
           description: Announcement updated successfully
         '400':
           description: Invalid UUID or severity not provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Announcement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - Admin
@@ -1498,10 +1922,22 @@ paths:
           description: Announcement deleted successfully
         '400':
           description: Invalid UUID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authorized as admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Announcement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     User:
@@ -1640,11 +2076,21 @@ components:
           type: string
           format: date-time
           description: Timestamp when pool was last modified
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+    UnauthorizedResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Unauthorized access message
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
       name: connect.sid
       description: Session cookie for authenticated requests
-security:
-  - cookieAuth: []
