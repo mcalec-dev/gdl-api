@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'gdl-api',
-      script: './backend/server.js',
+      script: 'server.js',
       watch: false,
       ignore_watch: [
         "node_modules",

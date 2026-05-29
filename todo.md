@@ -10,9 +10,11 @@
 - configurable grid layout for frontend files
 - rollup with nexe
 - npm package `emailvalid` for email validation in user registrations
-- backend typescript rewrite
+- backend typescript rewrite (planned for v1.0.0)
 - finish adding the quality settings/params to the files endpoint with sharp (imageUtils & fileUtils)
 - instead of having a seperate `:uuid` endpoint, each db model should have a `:uuid` endpoint that returns the data correlated to its database entry. ex. `/files/:uuid`, `/directories/:uuid`, etc.
 - implement tasks/queues for long-running processes (ex. file scanning, session management, metadata processing, etc.)
 - implement checks for file integrity and duplicates (ex. using checksums or hashes) to prevent storing multiple copies of the same file and to ensure data integrity.
 - add last accessed/scanned timestamps to files and directories for better management and cleanup of old or unused files.
+- jwt tokens via `express-jwt`
+- move trolling middleware stuff to an optional addon (trolling middleware removed in v0.4.0)

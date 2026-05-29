@@ -1,0 +1,259 @@
+const path = require('path')
+const log = require('./logHandler')
+const sanitizeFilename = require('sanitize-filename')
+/** @param {string} str */
+const normalizeString = (str) => {
+  if (typeof str !== 'string') return ''
+  return str.trim().normalize('NFC')
+}
+/** @param {unknown} pathStr */
+const normalizePath = (pathStr) => {
+  if (typeof pathStr !== 'string') return ''
+  return pathStr.replace(/\\/g, '/').replace(/\/+/g, '/').trim()
+}
+/** @param {unknown} rawPath */
+const sanitizePathSegments = (rawPath) => {
+  if (!rawPath) return null
+  const pathParts = String(rawPath).split('/').filter(Boolean)
+  const sanitizedParts = pathParts
+    .map((part) => sanitizePathComponent(part))
+    .filter((part) => part !== null)
+  if (
+    sanitizedParts.length === 0 ||
+    sanitizedParts.length !== pathParts.length
+  ) {
+    return null
+  }
+  return sanitizedParts
+}
+/** @param {string} pathStr */
+const normalizeAndEncodePath = (pathStr) => {
+  if (typeof pathStr !== 'string') return ''
+  const normalized = normalizePath(pathStr)
+  log.debug('Normalized path:', normalized)
+  return normalized
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
+/** @param {string} childPath @param {string} parentPath */
+const isSubPath = (childPath, parentPath) => {
+  const normalizedChild = path.resolve(childPath).replace(/\\/g, '/')
+  const normalizedParent = path.resolve(parentPath).replace(/\\/g, '/')
+  const normalizedParentWithSlash = normalizedParent.endsWith('/')
+    ? normalizedParent
+    : normalizedParent + '/'
+  return (
+    normalizedChild.startsWith(normalizedParentWithSlash) ||
+    normalizedChild === normalizedParent
+  )
+}
+/** @param {unknown} userInput */
+const sanitizePathComponent = (userInput) => {
+  if (!userInput || typeof userInput !== 'string') {
+    return null
+  }
+  const sanitized = sanitizeFilename(userInput, {
+    replacement: '',
+  }).trim()
+  if (!sanitized || /^[.\s]*$/.test(sanitized)) {
+    log.debug(
+      'Rejected sanitized path component (empty or dots/spaces):',
+      userInput
+    )
+    return null
+  }
+  const dangerousPatterns = [
+    /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i,
+    /^\./,
+    /\s+$/,
+  ]
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(sanitized)) {
+      log.debug('Rejected path component due to dangerous pattern:', sanitized)
+      return null
+    }
+  }
+  return sanitized
+}
+/** @param {unknown} baseDir @param {...unknown} pathComponents */
+const safePath = (baseDir, ...pathComponents) => {
+  try {
+    if (!baseDir || typeof baseDir !== 'string') {
+      log.debug('Invalid baseDir provided to safePath')
+      return null
+    }
+    const flattenedComponents = pathComponents
+      .filter((component) => component != null && component !== '')
+      .flatMap((component) => {
+        const str = String(component)
+        return str.split('/').filter(Boolean)
+      })
+    const sanitizedComponents = flattenedComponents
+      .map((component) => sanitizePathComponent(component))
+      .filter((component) => component !== null)
+    if (sanitizedComponents.length === 0) {
+      return path.resolve(baseDir)
+    }
+    const constructedPath = path.join(baseDir, ...sanitizedComponents)
+    const resolvedPath = path.resolve(constructedPath)
+    const resolvedBase = path.resolve(baseDir)
+    if (!isSubPath(resolvedPath, resolvedBase)) {
+      log.debug(
+        'Path traversal attempt detected:',
+        constructedPath,
+        '->',
+        resolvedPath
+      )
+      return null
+    }
+    return resolvedPath
+  } catch (error) {
+    log.error('Error in safePath construction:', error)
+    return null
+  }
+}
+/** @param {string} targetPath @param {string} baseDir */
+const isPathSafe = (targetPath, baseDir) => {
+  try {
+    if (
+      !targetPath ||
+      !baseDir ||
+      typeof targetPath !== 'string' ||
+      typeof baseDir !== 'string'
+    ) {
+      return false
+    }
+    const resolvedTarget = path.resolve(targetPath)
+    const resolvedBase = path.resolve(baseDir)
+    return isSubPath(resolvedTarget, resolvedBase)
+  } catch (error) {
+    log.error('Error in isPathSafe:', error)
+    return false
+  }
+}
+/** @param {Record<string, unknown> | null | undefined} params */
+const validateRequestParams = (params) => {
+  if (!params || typeof params !== 'object') {
+    return {
+      collection: null,
+      author: null,
+      additionalPath: null,
+      isValid: false,
+    }
+  }
+  const collection = sanitizePathComponent(params.collection)
+  const author = sanitizePathComponent(params.author)
+  let splat = null
+  if (params.splat) {
+    const sanitizedParts = sanitizePathSegments(params.splat)
+    if (sanitizedParts) {
+      splat = sanitizedParts.join(',').replace(/,/g, '/')
+    }
+  }
+  return {
+    collection,
+    author,
+    splat,
+    isValid: collection !== null,
+  }
+}
+/** @param {string} baseApiPath @param {unknown} relativePath */
+const safeApiPath = (baseApiPath, relativePath) => {
+  if (!relativePath) return baseApiPath
+  const normalized = normalizePath(relativePath)
+  const encoded = normalized
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+  const path = `${baseApiPath}/${encoded}`.replace(/\/+/g, '/')
+  return path.endsWith('/') ? path : path + '/'
+}
+/** @param {string} filename @param {string[]} [allowedExtensions=[]] */
+const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
+  if (!filename || typeof filename !== 'string') return false
+  if (!Array.isArray(allowedExtensions) || allowedExtensions.length === 0)
+    return true
+  const ext = path.extname(filename).toLowerCase()
+  return allowedExtensions.some((allowedExt) => {
+    const normalizedAllowed = allowedExt.startsWith('.')
+      ? allowedExt.toLowerCase()
+      : `.${allowedExt.toLowerCase()}`
+    return ext === normalizedAllowed
+  })
+}
+/** @param {string} p */
+const normalizeLocalPath = (p) => {
+  return normalizePath(p)
+}
+/** @param {string} localBase @param {string} relativePath @param {string} [baseApiPath=''] */
+const buildPaths = (localBase, relativePath, baseApiPath = '') => {
+  try {
+    if (!localBase || typeof localBase !== 'string') {
+      log.debug('Invalid localBase provided to buildPaths')
+      return null
+    }
+    const rel = relativePath ? normalizePath(relativePath) : ''
+    if (rel && !sanitizePathSegments(rel)) {
+      log.debug('Invalid path segments in buildPaths:', rel)
+      return null
+    }
+    const local = normalizeLocalPath(path.join(localBase, rel))
+    let remote = safeApiPath(`${baseApiPath || ''}/api/files`, rel)
+    if (remote) {
+      remote = remote.replace(/([^:])\/\//g, '$1/')
+      if (/\.[a-zA-Z0-9]+\/$/.test(remote)) {
+        remote = remote.replace(/(\.[a-zA-Z0-9]+)\/$/, '$1')
+      }
+    }
+    return {
+      local: local,
+      relative: rel,
+      remote: remote,
+    }
+  } catch (error) {
+    log.error('Error in buildPaths:', error)
+    return null
+  }
+}
+/** @param {string} relativePath */
+const deriveCollectionAuthor = (relativePath) => {
+  try {
+    if (!relativePath || typeof relativePath !== 'string') {
+      return {
+        collection: null,
+        author: null,
+      }
+    }
+    const normalized = normalizePath(relativePath)
+    const parts = normalized.split('/').filter(Boolean)
+    const collection = parts.length > 0 ? sanitizePathComponent(parts[0]) : null
+    const author = parts.length > 1 ? sanitizePathComponent(parts[1]) : null
+    return {
+      collection,
+      author,
+    }
+  } catch (error) {
+    log.error('Error in deriveCollectionAuthor:', error)
+    return {
+      collection: null,
+      author: null,
+    }
+  }
+}
+module.exports = {
+  normalizeString,
+  normalizePath,
+  normalizeAndEncodePath,
+  isSubPath,
+  sanitizePathComponent,
+  safePath,
+  isPathSafe,
+  validateRequestParams,
+  safeApiPath,
+  hasAllowedFileExtension,
+  normalizeLocalPath,
+  buildPaths,
+  deriveCollectionAuthor,
+}
