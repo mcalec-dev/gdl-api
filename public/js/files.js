@@ -1,37 +1,40 @@
-'use strict'
-import * as utils from '../min/index.min.js'
-import {
-  MIN_IMAGE_SCALE,
-  PAGINATION,
-  IMAGE_KERNEL,
-} from '../min/settings.min.js'
-import { initViewer, setupFileClickHandlers } from '../min/viewer.min.js'
+import * as utils from './index.min.js'
+import { initViewer, setupFileClickHandlers } from './viewer.min.js'
 import {
   setupFileItemContextMenu,
   setContextIcons,
   setContextBasePaths,
-} from '../min/contextmenu.min.js'
-function setCookie(name, value, days = 365) {
-  const expires = new Date()
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`
-}
-function getCookie(name) {
-  const nameEQ = name + '='
-  const ca = document.cookie.split(';')
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i]
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
-  }
-  return null
-}
+} from './contextmenu.min.js'
+import {
+  MIN_IMAGE_SCALE,
+  PAGINATION,
+  IMAGE_KERNEL,
+  TRANSCODE_VIDEO_ENABLED,
+  TRANSCODE_VIDEO_CODEC,
+  TRANSCODE_AUDIO_ENABLED,
+  TRANSCODE_AUDIO_CODEC,
+} from './settings.min.js'
+
 let frontendBasePath = document.location.origin + '/files'
 let apiBasePath = document.location.origin + '/api/files'
-let icons
-async function loadIcons() {
+let currentDirectoryData = null
+let currentFetchController = null
+let currentSort = 'name'
+let currentSortDir = 'none'
+let isInitialized = false
+let SORT_STATES = {
+  name: 'none',
+  modified: 'none',
+  type: 'none',
+  size: 'none',
+  created: 'none',
+}
+
+const fileList = document.getElementById('file-list')
+
+const icons = async () => {
   const icon = await utils.getIcons()
-  icons = {
+  return {
     directory: icon.folder,
     image: icon.file.image,
     video: icon.file.video,
@@ -55,14 +58,37 @@ async function loadIcons() {
     },
   }
 }
-function constructApiPath(path) {
-  const cleanPath = path.replace(/^\/|\/$/g, '').replace(/^files\/?/, '')
-  return cleanPath ? `${apiBasePath}/${cleanPath}` : apiBasePath
+
+function setCookie(name, value, days = 365) {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`
 }
-const fileList = document.getElementById('file-list')
+
+function getCookie(name) {
+  const nameEQ = name + '='
+  const ca = document.cookie.split(';')
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
+function constructApiPath(path, params = {}) {
+  const base = `${document.location.origin}/api/files`
+  const pathSegment = path ? `/${path.replace(/^\/+/, '')}` : ''
+  return (
+    utils.constructURL(`${base}${pathSegment}`, params) ||
+    `${base}${pathSegment}`
+  )
+}
+
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+
 function getFileType(mime) {
   if (!mime || mime === 'n/a' || typeof mime !== 'string') return 'other'
   switch (true) {
@@ -82,18 +108,7 @@ function getFileType(mime) {
       return 'other'
   }
 }
-let currentDirectoryData = null
-let currentSort = 'name'
-let currentSortDir = 'none'
-let currentFetchController = null
-let isInitialized = false
-let SORT_STATES = {
-  name: 'none',
-  modified: 'none',
-  type: 'none',
-  size: 'none',
-  created: 'none',
-}
+
 function saveSortState() {
   const sortState = JSON.stringify({
     sort: currentSort,
@@ -102,6 +117,7 @@ function saveSortState() {
   })
   setCookie('fileSortState', sortState)
 }
+
 function loadSortState() {
   const saved = getCookie('fileSortState')
   if (saved) {
@@ -121,6 +137,7 @@ function loadSortState() {
     }
   }
 }
+
 function getSortIcon(state) {
   switch (state) {
     case 'asc':
@@ -131,6 +148,7 @@ function getSortIcon(state) {
       return icons?.sort?.default || ''
   }
 }
+
 function renderSortToolbar() {
   const sortToolbar = document.getElementById('sort-toolbar')
   sortToolbar.classList.remove('invisible')
@@ -184,6 +202,7 @@ function renderSortToolbar() {
   `
   sortToolbar.innerHTML = sortToolbarHtml
 }
+
 function sortContents(contents, sortBy, direction) {
   if (direction === 'none') {
     return [...contents].sort((a, b) => {
@@ -229,6 +248,7 @@ function sortContents(contents, sortBy, direction) {
     return direction === 'asc' ? comparison : -comparison
   })
 }
+
 async function loadDirectory(path = '', callback, forceRefresh = false) {
   try {
     if (currentFetchController) {
@@ -237,14 +257,6 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
     currentFetchController = new AbortController()
     const { signal } = currentFetchController
     path = path ? decodeURIComponent(path) : ''
-    if (path) {
-      const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
-      path = path
-        .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
-        .replace(/\/+/g, '/')
-        .replace(/^\/|\/$/g, '')
-        .replace(/^files\/?/, '')
-    }
     fileList.innerHTML = ''
     const loadingIndicator = document.createElement('div')
     loadingIndicator.className =
@@ -257,14 +269,25 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       url.searchParams.set('limit', PAGINATION.limit)
       queryString = url.search
     }
-    const apiPath = constructApiPath(path) + queryString
+    const apiBase = `${document.location.origin}/api/files`
+    const pathSegment = path ? `/${path.replace(/^\/+/, '')}` : ''
+    const mergedUrl = new URL(`${apiBase}${pathSegment}`)
+    if (queryString) {
+      new URLSearchParams(queryString).forEach((value, key) => {
+        mergedUrl.searchParams.set(key, value)
+      })
+    }
+    if (forceRefresh) {
+      mergedUrl.searchParams.set('_t', String(Date.now()))
+    }
+    const apiUrl = mergedUrl.toString()
     let needsFetch =
       !currentDirectoryData ||
       currentDirectoryData.path !== path ||
       forceRefresh
     if (needsFetch) {
       try {
-        const response = await fetch(apiPath, { signal })
+        const response = await fetch(apiUrl, { signal })
         if (!response.ok) {
           fileList.innerHTML = `
             <div class="error">
@@ -323,6 +346,7 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
     }
   }
 }
+
 window.addEventListener('popstate', (event) => {
   const state = event.state || {}
   if (state.sortBy) {
@@ -340,6 +364,7 @@ window.addEventListener('popstate', (event) => {
           .replace(/^\/|\/$/g, '')
   loadDirectory(currentPath, null, true)
 })
+
 function setupLazyLoading() {
   if (window.lazyLoadObserver) {
     window.lazyLoadObserver.disconnect()
@@ -467,6 +492,7 @@ function setupLazyLoading() {
     window.lazyLoadObserver.observe(element)
   })
 }
+
 function handleDirectoryClick(event) {
   const target = event.target.closest('.file-item.directory')
   if (!target) return
@@ -573,6 +599,7 @@ function setupSortButtons() {
     })
   }
 }
+
 async function renderDirectory(contents, path) {
   const hasFiles = contents.some((item) => item.type === 'file')
   const hasDirectories = contents.some((item) => item.type === 'directory')
@@ -605,7 +632,7 @@ async function renderDirectory(contents, path) {
   renderSortToolbar()
   const goBack = document.getElementById('goBack')
   if (goBack) {
-    goBack.addEventListener('click', () => {
+    goBack.addEventListener('click', async () => {
       const parentPath = currentDirectoryData.path
         .split('/')
         .slice(0, -1)
@@ -622,6 +649,27 @@ async function renderDirectory(contents, path) {
         `${frontendBasePath}/${parentPath}${params}`
       )
       loadDirectory(parentPath, null, true)
+    })
+    window.addEventListener('keydown', async (e) => {
+      if (e.key === 'Backspace') {
+        e.preventDefault()
+        const parentPath = currentDirectoryData.path
+          .split('/')
+          .slice(0, -1)
+          .join('/')
+        const url = new URL(window.location.href)
+        url.searchParams.set('page', '1')
+        if (PAGINATION.enabled && PAGINATION.limit) {
+          url.searchParams.set('limit', PAGINATION.limit)
+        }
+        const params = url.search
+        window.history.pushState(
+          {},
+          '',
+          `${frontendBasePath}/${parentPath}${params}`
+        )
+        loadDirectory(parentPath, null, true)
+      }
     })
   }
   await setupFileClickHandlers('#file-list')
@@ -649,17 +697,19 @@ async function renderDirectory(contents, path) {
       item.type === 'file' &&
       (itemType === 'image' || itemType === 'video' || itemType === 'audio')
     ) {
-      const encodedPath = itemPath
-        .split('/')
-        .map((part) => encodeURIComponent(part))
-        .join('/')
-      previewUrl = item.url || `${apiBasePath}/${encodedPath}`
-      if (itemType === 'image') {
-        previewUrl = utils.upscaleImage(
-          previewUrl,
-          MIN_IMAGE_SCALE,
-          IMAGE_KERNEL
-        )
+      previewUrl = item.url
+        ? item.url
+        : itemPath
+          ? `${apiBasePath}/${itemPath
+              .split('/')
+              .map((p) => encodeURIComponent(p))
+              .join('/')}`
+          : null
+      if (itemType === 'image' && previewUrl) {
+        const imageParams = {}
+        if (MIN_IMAGE_SCALE != null) imageParams.scale = MIN_IMAGE_SCALE
+        if (IMAGE_KERNEL != null) imageParams.kernel = IMAGE_KERNEL
+        previewUrl = utils.constructURL(previewUrl, imageParams) ?? previewUrl
       }
     }
     let cursorClass = ''
@@ -673,7 +723,7 @@ async function renderDirectory(contents, path) {
         html += `
         <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
-          <div class="flex-1 min-w- overflow-hidden">
+          <div class="flex-1 min-w-0 overflow-hidden">
             <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span>
@@ -795,6 +845,7 @@ async function renderDirectory(contents, path) {
   setupLazyLoading()
   renderPaginationUI(contents)
 }
+
 function renderPaginationUI(contents) {
   try {
     const controls =
@@ -811,7 +862,7 @@ function renderPaginationUI(contents) {
     controls.hidden = false
     const page = Math.max(
       1,
-      parseInt(url.searchParams.get('page') || 'Page 0', 10) || 1
+      parseInt(url.searchParams.get('page') || '1', 10) || 1
     )
     const disablePrev = page <= 1
     const disableNext = Array.isArray(contents) ? contents.length < limit : true
@@ -897,6 +948,7 @@ function renderPaginationUI(contents) {
     console.error('Failed to render pagination UI:', err)
   }
 }
+
 function getSortFromQuery() {
   const params = new URLSearchParams(window.location.search)
   let found = false
@@ -923,11 +975,11 @@ function getSortFromQuery() {
     saveSortState()
   }
 }
+
 async function init() {
   if (isInitialized) return
   isInitialized = true
   try {
-    await loadIcons()
     setContextIcons(icons)
     setContextBasePaths(frontendBasePath, apiBasePath)
     await initViewer({ fileListSelector: '#file-list' })
@@ -968,4 +1020,5 @@ async function init() {
   }
   await loadDirectory(initialPath)
 }
+
 document.addEventListener('DOMContentLoaded', init)

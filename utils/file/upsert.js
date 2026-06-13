@@ -3,7 +3,7 @@ const fs = require('fs').promises
 const uuid = require('uuid')
 const log = require('../logHandler')
 const {
-  normalizeLocalPath,
+  normalizePath,
   buildPaths,
   deriveCollectionAuthor,
 } = require('../pathUtils')
@@ -54,7 +54,7 @@ async function upsertDirectoryEntry(dirObj) {
   if (
     dirObj.paths.relative === '' ||
     dirObj.paths.relative === '/' ||
-    dirObj.paths.local === normalizeLocalPath(BASE_DIR)
+    dirObj.paths.local === normalizePath(BASE_DIR)
   ) {
     log.info('Excluded root directory from upsert')
     return { result: null, isNew: false }
@@ -222,7 +222,7 @@ async function upsertAccessedItem(realPath) {
       .replace(/\\/g, '/')
     const paths = buildPaths(BASE_DIR, relative, BASE_PATH)
     const remote = paths?.remote
-    const local = paths?.local || normalizeLocalPath(realPath)
+    const local = paths?.local || normalizePath(realPath)
     let result = null
     if (stats.isDirectory()) {
       try {
@@ -334,7 +334,9 @@ async function deleteEntry(realPath, isDirectory) {
   } catch {}
   try {
     if (isDirectory === true) {
-      const result = await Directory.findOneAndDelete({ 'paths.local': realPath })
+      const result = await Directory.findOneAndDelete({
+        'paths.local': realPath,
+      })
       if (result) log.debug('Deleted stale directory entry from DB:', realPath)
     }
     if (isDirectory === false) {
@@ -346,7 +348,8 @@ async function deleteEntry(realPath, isDirectory) {
         Directory.findOneAndDelete({ 'paths.local': realPath }),
       ])
       if (fileResult) log.debug('Deleted stale file entry from DB:', realPath)
-      if (dirResult) log.debug('Deleted stale directory entry from DB:', realPath)
+      if (dirResult)
+        log.debug('Deleted stale directory entry from DB:', realPath)
     }
   } catch (error) {
     log.error('Error deleting DB entry:', error)

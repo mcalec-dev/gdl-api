@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "gdl-api express server",
   "author": "McAlec",
   "keywords": [
@@ -21,7 +21,9 @@
     "tailwind:minify": "tailwindcss -c ./tailwind.config.js -o ./public/css/min/tailwind.min.css --minify",
     "minify": "node -e 'import(\"./minify.js\").processFiles()'",
     "build": "npm run tailwind:minify && npm run minify",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run typecheck:api && npm run typecheck:public",
+    "typecheck:api": "tsc -p ./tsconfig.json --noEmit",
+    "typecheck:public": "tsc -p ./public/tsconfig.json --noEmit",
     "check": "npm run lint && npm run format:check && npm run typecheck",
     "licenses": "license-report --only=prod > public/json/licenses.json"
   },
@@ -29,6 +31,7 @@
     "node": ">=24"
   },
   "dependencies": {
+    "@types/filename-reserved-regex": "^3.0.0",
     "bcrypt": "^6",
     "bytes": "^3",
     "chalk": "^4",
@@ -48,9 +51,10 @@
     "express-session": "^1",
     "express-useragent": "^2",
     "fast-glob": "^3",
+    "ffmpeg-static": "^5",
     "figlet": "^1",
     "file-type": "^22",
-    "fs-extra": "^11",
+    "filename-reserved-regex": "^4",
     "helmet": "^8",
     "isbot": "^5",
     "js-yaml": "^4",
@@ -61,13 +65,14 @@
     "morgan-body": "^2",
     "ms": "^2",
     "multer": "^2",
+    "normalize-path": "^3",
     "normalize-url": "^9",
     "passport": "^0.7.0",
     "passport-discord-auth": "^1",
     "passport-github2": "^0.1.12",
     "passport-local": "^1",
     "redis": "^5",
-    "sanitize-filename": "^1",
+    "resolve-path": "^1",
     "serve-favicon": "^2",
     "sharp": "^0.34.5",
     "slash": "^5",
@@ -92,10 +97,13 @@
     "@types/js-yaml": "^4.0.9",
     "@types/lusca": "^1.7.5",
     "@types/mime-types": "^3.0.1",
+    "@types/ms": "^2.1.0",
     "@types/node": "^25.9.1",
+    "@types/normalize-path": "^3.0.2",
     "@types/passport": "^1.0.17",
     "@types/passport-github2": "^1.2.9",
     "@types/passport-local": "^1.0.38",
+    "@types/resolve-path": "^1.4.3",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^11.0.0",
     "@types/validator": "^13.15.10",
@@ -110,7 +118,6 @@
   },
   "allowScripts": {
     "bcrypt@6.0.0": true,
-    "sharp@0.34.5": true,
-    "@parcel/watcher@2.5.6": true
+    "sharp@0.34.5": true
   }
 }

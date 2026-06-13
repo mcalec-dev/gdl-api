@@ -18,3 +18,5 @@
 - add last accessed/scanned timestamps to files and directories for better management and cleanup of old or unused files.
 - jwt tokens via `express-jwt`
 - move trolling middleware stuff to an optional addon (trolling middleware removed in v0.4.0)
+- packages to utilize for, `sanitize-url` `slugify`
+- reduce log spam for database upserts to `Updated n file entries` `Excluded n entries` `Created n file entries` for info logs

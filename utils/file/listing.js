@@ -5,7 +5,7 @@ const {
   normalizeString,
   safeApiPath,
   safePath,
-  isSubPath,
+  isPathSafe,
   buildPaths,
   deriveCollectionAuthor,
 } = require('../pathUtils')
@@ -173,7 +173,7 @@ async function formatListingEntry(
       return null
     }
     const entryPath = safePath(baseDir, entry.name)
-    if (!entryPath || !isSubPath(entryPath, normalizedDir)) return null
+    if (!entryPath || !isPathSafe(entryPath, normalizedDir)) return null
     let stats
     try {
       stats = await fs.stat(entryPath)

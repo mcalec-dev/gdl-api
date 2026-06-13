@@ -1,22 +1,52 @@
-'use strict'
-import * as utils from '../min/index.min.js'
-import { IMAGE_SCALE, IMAGE_KERNEL } from '../min/settings.min.js'
+import * as utils from './index.min.js'
+import { initViewer } from './viewer.min.js'
 import {
   setupContextMenu,
   createContextMenu,
   setContextIcons,
-} from '../min/contextmenu.min.js'
-import { initViewer } from '../min/viewer.min.js'
+} from './contextmenu.min.js'
+import {
+  IMAGE_SCALE,
+  IMAGE_KERNEL,
+  TRANSCODE_VIDEO_ENABLED,
+  TRANSCODE_VIDEO_CODEC,
+  TRANSCODE_AUDIO_ENABLED,
+  TRANSCODE_AUDIO_CODEC,
+} from './settings.min.js'
+
 const API_URL = '/api/random'
+const HISTORY_KEY = 'randomMediaHistory'
+const HISTORY_LIMIT = 10
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
 const imageInfo = document.getElementById('item-info')
-const HISTORY_KEY = 'randomMediaHistory'
-const HISTORY_LIMIT = 10
+const icons = async () => {
+  const icon = await utils.getIcons()
+  return {
+    back: icon?.arrow.left,
+    shuffle: icon?.arrow.shuffle,
+    forward: icon?.arrow.right,
+    image: icon?.file.image,
+    video: icon?.file.video,
+    audio: icon?.file.audio,
+    text: icon?.file.text,
+    other: icon?.file.default,
+    nav: {
+      exit: icon?.nav.exit,
+      next: icon?.nav.next,
+      prev: icon?.nav.prev,
+      link: icon?.nav.link,
+      copy: icon?.nav.copy,
+      download: icon?.nav.download,
+    },
+  }
+}
+
 let history = []
 let historyIndex = 0
 let currentMediaData = null
 let viewerApi = null
+
 function showMedia(data) {
   if (!data || !data.url) {
     console.error('Invalid media data:', data)
@@ -40,8 +70,11 @@ function showMedia(data) {
   loading.hidden = false
   loading.classList.remove('error')
   mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
-  const mediaUrl =
-    utils.upscaleImage(data.url, IMAGE_SCALE, IMAGE_KERNEL) || data.url
+  let mediaUrl =
+    utils.constructURL(data.url, {
+      scale: IMAGE_SCALE,
+      kernel: IMAGE_KERNEL,
+    }) || data.url
   const isVideo = data.file.toLowerCase().match(/\.(mp4|webm|mov)$/)
   const mediaElement = isVideo
     ? document.createElement('video')
@@ -79,6 +112,7 @@ function showMedia(data) {
         .match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
       if (viewerApi && (isVideo || isImage)) {
         const type = isVideo ? 'video' : 'image'
+        const previewSrc = mediaUrl
         const item = {
           name: data.file.split('/').pop(),
           path: data.file,
@@ -87,7 +121,7 @@ function showMedia(data) {
           size: data.size || 0,
           modified: data.modified || null,
           encodedPath: encodeURIComponent(data.file).replace(/%2F/g, '/'),
-          previewSrc: data.url,
+          previewSrc,
         }
         viewerApi.setItemList([item])
         viewerApi.showViewer(0)
@@ -102,6 +136,7 @@ function showMedia(data) {
   }
   mediaContainer.appendChild(mediaElement)
 }
+
 async function loadRandomMedia() {
   try {
     mediaContainer.classList.remove('has-image')
@@ -133,12 +168,14 @@ async function loadRandomMedia() {
     handleMediaError(error)
   }
 }
+
 function handleMediaError(error) {
   loading.textContent = error.message
   loading.classList.add('error')
   imageInfo.hidden = true
   mediaContainer.classList.remove('has-image')
 }
+
 function showPreviousMedia() {
   if (history.length === 0 || historyIndex <= 0) {
     let lastValidIndex = history.length - 1
@@ -185,6 +222,7 @@ function showPreviousMedia() {
     }
   }
 }
+
 function showNextMedia() {
   if (historyIndex < history.length - 1) {
     let nextIndex = historyIndex + 1
@@ -212,28 +250,7 @@ function showNextMedia() {
     mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
   }
 }
-let icons
-async function loadIcons() {
-  const icon = await utils.getIcons()
-  icons = {
-    back: icon.arrow.left,
-    shuffle: icon.arrow.shuffle,
-    forward: icon.arrow.right,
-    image: icon.file.image,
-    video: icon.file.video,
-    audio: icon.file.audio,
-    text: icon.file.text,
-    other: icon.file.default,
-    nav: {
-      exit: icon.nav.exit,
-      next: icon.nav.next,
-      prev: icon.nav.prev,
-      link: icon.nav.link,
-      copy: icon.nav.copy,
-      download: icon.nav.download,
-    },
-  }
-}
+
 function setupRandomMediaContextMenu() {
   setupContextMenu('#media-container', () => {
     if (!currentMediaData) return { items: [] }
@@ -362,6 +379,7 @@ function setupRandomMediaContextMenu() {
     }
   })
 }
+
 document.addEventListener('DOMContentLoaded', async () => {
   const loadImageBtn = document.getElementById('loadImageBtn')
   const backImageBtn = document.getElementById('backImageBtn')
@@ -386,7 +404,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
   try {
-    await loadIcons()
     setContextIcons(icons)
     backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
     loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`

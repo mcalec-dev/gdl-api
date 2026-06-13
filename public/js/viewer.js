@@ -1,48 +1,32 @@
-'use strict'
-import * as utils from '../min/index.min.js'
+import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
+import * as utils from './index.min.js'
 import {
   IMAGE_SCALE,
   MAX_IMAGE_SCALE,
   IMAGE_KERNEL,
-} from '../min/settings.min.js'
-import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
-/** @type {number} Current index in the item list being viewed */
+  TRANSCODE_VIDEO_ENABLED,
+  TRANSCODE_VIDEO_CODEC,
+  TRANSCODE_AUDIO_ENABLED,
+  TRANSCODE_AUDIO_CODEC,
+} from './settings.min.js'
+
 let currentItemIndex = 0
-/** @type {Array<Object>} List of media items available for viewing */
 let currentItemList = []
-
-/** @type {Map<Element, AbortController>} Map of elements to their corresponding abort controllers for load cancellation */
 let itemLoadControllers = new Map()
-/** @type {Object} Set of loaded icon SVG strings for viewer UI */
-let icons
-
-/** @type {boolean} Tracks whether the viewer modal is currently open */
 let isViewerOpen = false
-/**
- * Loads viewer-specific icons from the utility icons collection.
- * Sets the icons object with exit, navigation, and action icons.
- * @async
- * @returns {Promise<void>}
- */
-async function loadViewerIcons() {
+
+const icons = async () => {
   const icon = await utils.getIcons()
-  icons = {
-    exit: icon.nav.exit,
-    next: icon.nav.next,
-    prev: icon.nav.prev,
-    link: icon.nav.link,
-    copy: icon.nav.copy,
-    download: icon.nav.download,
+  return {
+    exit: icon?.nav.exit,
+    next: icon?.nav.next,
+    prev: icon?.nav.prev,
+    link: icon?.nav.link,
+    copy: icon?.nav.copy,
+    download: icon?.nav.download,
   }
 }
-/**
- * Constructs the full media URL for a given item.
- * Handles both absolute HTTP URLs and relative API paths.
- * @param {Object} item - The media item object
- * @param {string} item.previewSrc - Optional preview source URL
- * @param {string} item.encodedPath - Encoded file path for fallback URL construction
- * @returns {string} The full media URL
- */
+
 function getMediaUrl(item) {
   if (item.previewSrc) {
     return item.previewSrc.startsWith('http')
@@ -51,28 +35,19 @@ function getMediaUrl(item) {
   }
   return `${document.location.origin}/api/files/${item.encodedPath}`
 }
-/**
- * Preloads media content to improve perceived loading performance.
- * Skips preloading for video files.
- * @param {Object} item - The media item to preload
- * @param {string} item.type - Media type (image, video, audio, text)
- * @returns {void}
- */
+
 function preloadMedia(item) {
   if (!item || item.type === 'video') return
   const preloadImg = document.createElement('img')
   preloadImg.src =
     item.type === 'image'
-      ? utils.upscaleImage(getMediaUrl(item), IMAGE_SCALE, IMAGE_KERNEL)
+      ? utils.constructURL(getMediaUrl(item), {
+          scale: IMAGE_SCALE,
+          kernel: IMAGE_KERNEL,
+        })
       : getMediaUrl(item)
 }
-/**
- * Displays a media item in the viewer modal at the specified index.
- * Handles all media types (image, video, audio, text) and manages UI state.
- * Preloads adjacent items for smooth navigation.
- * @param {number} index - The index of the item to display from currentItemList
- * @returns {void}
- */
+
 function showViewer(index) {
   if (!isViewerOpen) {
     scroll.lock()
@@ -107,7 +82,22 @@ function showViewer(index) {
   viewerEmbed.style.display = 'none'
   viewerVideo.pause()
   viewerAudio.pause()
-  const url = getMediaUrl(item)
+  const baseUrl = getMediaUrl(item)
+  let url = baseUrl
+  if (item.type === 'video' && TRANSCODE_VIDEO_ENABLED) {
+    const videoCodec = TRANSCODE_VIDEO_CODEC || ''
+    const audioPart = TRANSCODE_AUDIO_ENABLED ? TRANSCODE_AUDIO_CODEC : ''
+    const convertParam = audioPart
+      ? `${videoCodec},${audioPart}`
+      : `${videoCodec}`
+    url = utils.constructURL(url, {
+      convert: convertParam,
+    })
+  } else if (item.type === 'audio' && TRANSCODE_AUDIO_ENABLED) {
+    url = utils.constructURL(url, {
+      convert: TRANSCODE_AUDIO_CODEC,
+    })
+  }
   if (item.type === 'audio') {
     viewerAudio.src = url
     viewerAudio.style.display = 'block'
@@ -116,7 +106,11 @@ function showViewer(index) {
     viewerAudio.style.maxWidth = '600px'
   }
   if (item.type === 'image') {
-    viewerImage.src = utils.upscaleImage(url, IMAGE_SCALE, IMAGE_KERNEL) || url
+    viewerImage.src =
+      utils.constructURL(baseUrl, {
+        scale: IMAGE_SCALE,
+        kernel: IMAGE_KERNEL,
+      }) || baseUrl
     viewerImage.style.display = 'block'
     viewerImage.style.cursor = 'zoom-in'
     viewerImage.style.maxHeight = '85vh'
@@ -185,13 +179,7 @@ function showViewer(index) {
     preloadMedia(currentItemList[index + 1])
   }
 }
-/**
- * Initializes event listeners for the viewer modal.
- * Sets up handlers for navigation, closing, media actions, keyboard controls, and image zoom.
- * Returns control functions if markup is present; returns stub handlers otherwise.
- * @async
- * @returns {Promise<Object>} Event handler object with closeViewer, next, prev, and isZoomed methods
- */
+
 async function setupViewerEvents() {
   const fileViewer = document.getElementById('file-viewer')
   const closeButton = document.getElementById('close-popup')
@@ -338,11 +326,10 @@ async function setupViewerEvents() {
     if (isZoomed) {
       const item = currentItemList[currentItemIndex]
       viewerImage.src =
-        utils.upscaleImage(
-          await getMediaUrl(item),
-          IMAGE_SCALE,
-          IMAGE_KERNEL
-        ) || getMediaUrl(item)
+        utils.constructURL(await getMediaUrl(item), {
+          scale: IMAGE_SCALE,
+          kernel: IMAGE_KERNEL,
+        }) || getMediaUrl(item)
       viewerImage.classList.remove('zoomed')
       viewerImage.style.transform = 'none'
       viewerImage.style.cursor = 'zoom-in'
@@ -356,11 +343,10 @@ async function setupViewerEvents() {
     } else {
       const item = currentItemList[currentItemIndex]
       const zoomedSrc =
-        utils.upscaleImage(
-          await getMediaUrl(item),
-          MAX_IMAGE_SCALE,
-          IMAGE_KERNEL
-        ) || getMediaUrl(item)
+        utils.constructURL(await getMediaUrl(item), {
+          scale: MAX_IMAGE_SCALE,
+          kernel: IMAGE_KERNEL,
+        }) || getMediaUrl(item)
       viewerImage.onload = function () {
         viewerImage.style.maxHeight = '95vh'
         viewerImage.style.maxWidth = '95vw'
@@ -419,13 +405,7 @@ async function setupViewerEvents() {
     isZoomed: () => isZoomed,
   }
 }
-/**
- * Attaches click handlers to file list items to open them in the viewer.
- * Builds the current item list from all file items matching the selector.
- * @async
- * @param {string} [fileListSelector='#fileList'] - CSS selector for the file list container
- * @returns {Promise<void>}
- */
+
 async function setupFileClickHandlers(fileListSelector = '#fileList') {
   const fileList = document.querySelector(fileListSelector)
   if (!fileList) return
@@ -484,27 +464,8 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
     }
   })
 }
-/**
- * Initializes the viewer module and returns the public API.
- * Loads icons, sets up event handlers, and attaches file click handlers.
- * @async
- * @param {Object} [options={}] - Initialization options
- * @param {string} [options.fileListSelector] - CSS selector for the file list container
- * @returns {Promise<Object>} Public API object with viewer control methods
- * @returns {Function} returns.showViewer - Display media at specified index
- * @returns {Function} returns.closeViewer - Close the viewer modal
- * @returns {Function} returns.next - Navigate to next item in list
- * @returns {Function} returns.prev - Navigate to previous item in list
- * @returns {Function} returns.isZoomed - Check if image zoom is active
- * @returns {Function} returns.setItemList - Set the media items list
- * @returns {Function} returns.getCurrentItemList - Get current media items list
- * @returns {Function} returns.getCurrentItemIndex - Get index of currently viewed item
- * @returns {Function} returns.preloadMedia - Preload media content for smooth viewing
- * @returns {Function} returns.getMediaUrl - Get full URL for a media item
- * @returns {Function} returns.loadViewerIcons - Reload viewer UI icons
- */
+
 async function initViewer({ fileListSelector } = {}) {
-  await loadViewerIcons()
   const events = await setupViewerEvents()
   await setupFileClickHandlers(fileListSelector)
   return {
@@ -519,14 +480,9 @@ async function initViewer({ fileListSelector } = {}) {
     getCurrentItemIndex,
     preloadMedia,
     getMediaUrl,
-    loadViewerIcons,
   }
 }
-/**
- * Cancels all pending media load operations.
- * Aborts fetch requests and clears load controller tracking.
- * @returns {void}
- */
+
 function cancelImageLoads() {
   itemLoadControllers.forEach((controller, element) => {
     controller.abort()
@@ -538,36 +494,19 @@ function cancelImageLoads() {
   })
   itemLoadControllers.clear()
 }
-/**
- * Sets the current item list for the viewer.
- * @param {Array<Object>} itemList - Array of media item objects
- * @param {string} itemList[].name - File name
- * @param {string} itemList[].path - File path
- * @param {string} itemList[].type - Media type (image, video, audio, text)
- * @param {string} [itemList[].uuid] - Unique identifier for download
- * @param {number} [itemList[].size] - File size in bytes
- * @param {string} [itemList[].modified] - Last modified timestamp
- * @param {string} itemList[].encodedPath - URL-encoded file path
- * @param {string} [itemList[].previewSrc] - Preview source URL
- * @returns {void}
- */
+
 function setItemList(itemList) {
   currentItemList = itemList
 }
-/**
- * Gets the current item list.
- * @returns {Array<Object>} The current list of media items
- */
+
 function getCurrentItemList() {
   return currentItemList
 }
-/**
- * Gets the current item index being viewed.
- * @returns {number} The index of the currently viewed item
- */
+
 function getCurrentItemIndex() {
   return currentItemIndex
 }
+
 export {
   showViewer,
   setupViewerEvents,
@@ -578,6 +517,5 @@ export {
   getCurrentItemIndex,
   preloadMedia,
   getMediaUrl,
-  loadViewerIcons,
   initViewer,
 }

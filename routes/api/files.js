@@ -10,6 +10,8 @@ const {
   DISALLOWED_FILES,
   PAGINATION_LIMIT,
   UPSERT_ON_ACCESS,
+  TRANSCODE_VIDEO,
+  TRANSCODE_AUDIO,
 } = /** @type {any} */ (require('../../config'))
 const {
   isExcluded,
@@ -30,6 +32,12 @@ const {
 } = require('../../utils/file/typeGuards.js')
 const { isSidecarFile } = require('../../utils/file/sidecar.js')
 const { getFileMime } = require('../../utils/file/mimeAndHash.js')
+const {
+  getTranscodeOptions,
+  convertVideo,
+  convertAudio,
+  getMimeType: getConvertMimeType,
+} = require('../../utils/video/convert.js')
 const mimeTypes = require('mime-types')
 const {
   maybeUpsertAccessed,
@@ -44,11 +52,7 @@ const {
   initializeDatabaseSync,
   createDbEntriesForContents,
 } = require('../../utils/file/sync.js')
-const {
-  safePath,
-  validateRequestParams,
-  isSubPath,
-} = require('../../utils/pathUtils')
+const { safePath, validateRequestParams } = require('../../utils/pathUtils')
 const { resizeImage } = require('../../utils/image/resize.js')
 const { convertImage } = require('../../utils/image/convert.js')
 const { applyMetadata } = require('../../utils/image/metadata.js')
@@ -56,8 +60,8 @@ if (SCAN_ON_STARTUP === true) initializeDatabaseSync()
 else if (!SCAN_ON_STARTUP || SCAN_ON_STARTUP === false)
   log.debug('Skipping full database sync')
 /**
- * Prefer extension MIME for transport, then fall back to magic-byte detection.
  * @param {string} realPath
+ * @returns {Promise<string>}
  */
 async function resolveMediaMimeType(realPath) {
   const extMime = mimeTypes.lookup(realPath)
@@ -69,6 +73,66 @@ async function resolveMediaMimeType(realPath) {
     return detected
   }
   return 'application/octet-stream'
+}
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {string} filePath
+ * @param {import('../../utils/video/convert').TranscodeOptions} options
+ */
+function streamTranscodedMedia(req, res, filePath, options) {
+  const mimeType = getConvertMimeType(options.container) || 'application/octet-stream'
+  const filename = `${path.basename(filePath, path.extname(filePath))}.${options.container}`
+  res.set({
+    'Content-Type': mimeType,
+    'Content-Disposition': `inline; filename="${filename}"`,
+    'Cache-Control': 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+  })
+  const transcode =
+    options.mode === 'audio'
+      ? convertAudio(filePath, options.audioCodec, options.container)
+      : convertVideo(
+          filePath,
+          options.videoCodec,
+          options.mode === 'video' ? 'copy' : options.audioCodec,
+          options.container
+        )
+  const ffmpegProcess = transcode.process
+  const stream = transcode.stream
+  let aborted = false
+  const cleanup = () => {
+    if (aborted) return
+    aborted = true
+    if (ffmpegProcess && !ffmpegProcess.killed) {
+      log.debug('Client disconnected, killing FFmpeg process')
+      ffmpegProcess.kill('SIGKILL')
+    }
+  }
+  const removeListeners = () => {
+    res.off('close', cleanup)
+    req.off('close', cleanup)
+    stream.off('error', onError)
+    stream.off('end', removeListeners)
+    stream.off('close', removeListeners)
+    ffmpegProcess.off('exit', removeListeners)
+  }
+  /** @param {Error} error */
+  const onError = (error) => {
+    log.error('Error during transcoding:', error)
+    if (!res.headersSent) {
+      sendResponse(res, 500, 'Transcoding error')
+    } else {
+      res.destroy()
+    }
+  }
+  res.on('close', cleanup)
+  req.on('close', cleanup)
+  stream.on('error', onError)
+  stream.on('end', removeListeners)
+  stream.on('close', removeListeners)
+  ffmpegProcess.on('exit', removeListeners)
+  stream.pipe(res)
 }
 /**
  * @param {unknown} cacheQuery
@@ -224,7 +288,7 @@ router.get(
       return sendResponse(res, 400, 'Invalid path parameters')
     }
     const { collection, author, splat } = validatedParams
-    const normalizedDir = path.resolve(BASE_DIR)
+    const resolvedBaseDir = path.resolve(BASE_DIR)
     const pathComponents = [collection, author, splat]
       .filter(Boolean)
       .map((component) => {
@@ -235,7 +299,7 @@ router.get(
           return component
         }
       })
-    let realPath = safePath(normalizedDir, ...pathComponents)
+    let realPath = safePath(resolvedBaseDir, ...pathComponents)
     if (!realPath) {
       log.debug(
         'Path construction resulted in unsafe path for components:',
@@ -243,14 +307,8 @@ router.get(
       )
       return sendResponse(res, 400, 'Invalid path parameters')
     }
-    if (!isSubPath(realPath, normalizedDir)) {
-      log.error(
-        `Path safety check failed: ${realPath} not within ${normalizedDir}`
-      )
-      return sendResponse(res, 400, 'Invalid path parameters')
-    }
     const relativePath = path
-      .relative(normalizedDir, realPath)
+      .relative(resolvedBaseDir, realPath)
       .replace(/\\/g, '/')
     const isDirectSidecarRequest = isSidecarFile(realPath)
     if (isDirectSidecarRequest) {
@@ -326,7 +384,7 @@ router.get(
         .filter((entry) => entry.isFile())
         .map((entry) => {
           const entryRelPath = path
-            .relative(normalizedDir, path.join(realPath, entry.name))
+            .relative(resolvedBaseDir, path.join(realPath, entry.name))
             .replace(/\\/g, '/')
           return entryRelPath
         })
@@ -341,7 +399,7 @@ router.get(
           formatListingEntry(
             entry,
             realPath,
-            normalizedDir,
+            resolvedBaseDir,
             req,
             true,
             metadataMap
@@ -424,9 +482,11 @@ router.get(
               ? parseFloat(qualityParam)
               : qualityParam
             : undefined
-          const kernel = isValidKernel(/** @type {string} */ (req.query.kernel))
-            ? req.query.kernel
-            : undefined
+          const kernelParam = req.query.kernel
+          const kernel =
+            typeof kernelParam === 'string' && isValidKernel(kernelParam)
+              ? kernelParam
+              : undefined
           const scaleParam =
             typeof req.query.scale === 'number' ||
             typeof req.query.scale === 'string'
@@ -452,6 +512,7 @@ router.get(
             await maybeUpsertAccessed(realPath, false)
             return res.sendFile(realPath)
           }
+          /** @type {import('../../utils/image/resize').ResizeInput} */
           let resizeOptions = {}
           if (!kernel && req.query.kernel) {
             log.debug('Invalid kernel parameter provided:', req.query.kernel)
@@ -463,20 +524,23 @@ router.get(
           }
           if (shouldConvertToGif) {
             log.debug('Converting image to gif')
-            /** @type {import('sharp').Sharp} */
             const convertedTransformer = await convertImage(realPath, 'gif', {
               q: quality,
               x: scale,
               k: kernel,
             })
-            convertedTransformer.on('error', (error) => {
-              log.error('Error during image conversion:', error)
-              return sendResponse(res, 500, 'Failed to convert image to gif')
-            })
             if (!convertedTransformer) {
               log.debug('Failure converting image to gif')
               return sendResponse(res, 500, 'Failed to convert image to gif')
             }
+            convertedTransformer.on('error', (error) => {
+              log.error('Error during image conversion:', error)
+              if (!res.headersSent) {
+                sendResponse(res, 500, 'Failed to convert image to gif')
+              } else {
+                res.destroy()
+              }
+            })
             const filename =
               path.basename(realPath, path.extname(realPath)) + '.gif'
             res.set({
@@ -490,7 +554,9 @@ router.get(
             return
           }
           if (scale) resizeOptions.scale = scale
-          if (kernel) resizeOptions.kernel = kernel
+          if (kernel)
+            resizeOptions.kernel =
+              /** @type {keyof import('sharp').KernelEnum} */ (kernel)
           if (quality) resizeOptions.quality = quality
           if (!isNaN(scale) && scale > 0 && scale !== 100) {
             log.debug('Resizing image with scale:', scale)
@@ -541,6 +607,34 @@ router.get(
         }
       }
       if (isVideoFile(realPath) || isAudioFile(realPath)) {
+        const convertParam =
+          typeof req.query.convert === 'string' ? req.query.convert : undefined
+        const transcodeOptions = getTranscodeOptions(
+          convertParam,
+          isVideoFile(realPath),
+          isAudioFile(realPath)
+        )
+        if (convertParam && !transcodeOptions) {
+          return sendResponse(res, 400, 'Invalid convert parameter')
+        }
+        if (transcodeOptions) {
+          if (
+            (transcodeOptions.mode === 'video' ||
+              transcodeOptions.mode === 'video_audio') &&
+            !TRANSCODE_VIDEO
+          ) {
+            return sendResponse(res, 501, 'Video transcoding is disabled')
+          }
+          if (
+            (transcodeOptions.mode === 'audio' ||
+              transcodeOptions.mode === 'video_audio') &&
+            !TRANSCODE_AUDIO
+          ) {
+            return sendResponse(res, 501, 'Audio transcoding is disabled')
+          }
+          await maybeUpsertAccessed(realPath, false)
+          return streamTranscodedMedia(req, res, realPath, transcodeOptions)
+        }
         if (!req.headers.range) {
           log.debug(
             'Request does not have any range headers - sending file instead'

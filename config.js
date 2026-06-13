@@ -347,6 +347,26 @@ const schema = {
     },
     type: ['string', 'number'],
   },
+  TRANSCODE_VIDEO: {
+    env: 'TRANSCODE_VIDEO',
+    parse: parseBooleanEnv,
+    type: 'boolean',
+  },
+  TRANSCODE_AUDIO: {
+    env: 'TRANSCODE_AUDIO',
+    parse: parseBooleanEnv,
+    type: 'boolean',
+  },
+  USE_SYSTEM_FFMPEG: {
+    env: 'USE_SYSTEM_FFMPEG',
+    parse: parseBooleanEnv,
+    type: 'boolean',
+  },
+  FFMPEG_PATH: {
+    env: 'FFMPEG_PATH',
+    parse: (v) => v,
+    type: 'string',
+  },
   DISCORD_CLIENT_ID: {
     env: 'DISCORD_CLIENT_ID',
     parse: parseOptionalTrimmedString,

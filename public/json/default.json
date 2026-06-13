@@ -1,7 +1,7 @@
 {
   "theme": {
     "bg": "auto",
-    "color": "bg" 
+    "color": "bg"
   },
   "oneko": false,
   "serverSort": true,
@@ -17,5 +17,15 @@
   },
   "containerWidth": 65,
   "imageKernel": "lanczos3",
-  "bytesBits": false
+  "bytesBits": false,
+  "transcode": {
+    "video": {
+      "enabled": true,
+      "codec": "h264"
+    },
+    "audio": {
+      "enabled": true,
+      "codec": "aac"
+    }
+  }
 }

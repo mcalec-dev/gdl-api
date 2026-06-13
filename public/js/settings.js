@@ -15,6 +15,14 @@ const containerWidthInput = document.getElementById('container-width-input')
 const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
 const resetSettingsButton = document.getElementById('reset-settings-button')
 const imageKernelSelect = document.getElementById('image-kernel-select')
+const transcodeVideoToggle = document.getElementById('transcode-video-toggle')
+const transcodeVideoCodecSelect = document.getElementById(
+  'transcode-video-codec-select'
+)
+const transcodeAudioToggle = document.getElementById('transcode-audio-toggle')
+const transcodeAudioCodecSelect = document.getElementById(
+  'transcode-audio-codec-select'
+)
 const FALLBACK_DEFAULTS = {
   theme: {
     bg: 'auto',
@@ -35,6 +43,16 @@ const FALLBACK_DEFAULTS = {
   containerWidth: 65,
   imageKernel: 'lanczos3',
   bytesBits: false,
+  transcode: {
+    video: {
+      enabled: true,
+      codec: 'h264',
+    },
+    audio: {
+      enabled: true,
+      codec: 'aac',
+    },
+  },
 }
 let defaults = { ...FALLBACK_DEFAULTS }
 async function loadDefaultSettings() {
@@ -92,6 +110,10 @@ function loadSettings() {
     containerWidth: defaults.containerWidth,
     bytesBits: defaults.bytesBits,
     imageKernel: defaults.imageKernel,
+    transcode: {
+      video: { ...defaults.transcode.video },
+      audio: { ...defaults.transcode.audio },
+    },
   }
   const saved = getCookie('settings')
   if (!saved) return baseSettings
@@ -120,6 +142,28 @@ function loadSettings() {
         typeof parsed.imageKernel === 'string'
           ? parsed.imageKernel
           : defaults.imageKernel,
+      transcode: {
+        video: {
+          enabled:
+            typeof parsed.transcode?.video?.enabled === 'boolean'
+              ? parsed.transcode.video.enabled
+              : defaults.transcode.video.enabled,
+          codec:
+            typeof parsed.transcode?.video?.codec === 'string'
+              ? parsed.transcode.video.codec
+              : defaults.transcode.video.codec,
+        },
+        audio: {
+          enabled:
+            typeof parsed.transcode?.audio?.enabled === 'boolean'
+              ? parsed.transcode.audio.enabled
+              : defaults.transcode.audio.enabled,
+          codec:
+            typeof parsed.transcode?.audio?.codec === 'string'
+              ? parsed.transcode.audio.codec
+              : defaults.transcode.audio.codec,
+        },
+      },
     }
   } catch (e) {
     console.error('Failed to parse settings:', e)
@@ -167,6 +211,10 @@ export let PAGINATION = {
 export let CONTAINER_WIDTH = settings.containerWidth
 export let BYTES_BITS = settings.bytesBits
 export let IMAGE_KERNEL = settings.imageKernel
+export let TRANSCODE_VIDEO_CODEC = settings.transcode.video.codec
+export let TRANSCODE_VIDEO_ENABLED = settings.transcode.video.enabled
+export let TRANSCODE_AUDIO_CODEC = settings.transcode.audio.codec
+export let TRANSCODE_AUDIO_ENABLED = settings.transcode.audio.enabled
 function setExportVals(min, def, max) {
   MIN_IMAGE_SCALE = min
   IMAGE_SCALE = def
@@ -198,6 +246,95 @@ function resetAllSettings() {
   })
   saveSettings(settings)
   window.location.reload()
+}
+async function isCodecSupported(codec, type) {
+  if (!navigator.mediaCapabilities) {
+    return true
+  }
+  try {
+    let config
+    if (type === 'audio') {
+      const audioCodecMap = {
+        aac: 'audio/mp4;codecs="mp4a.40.2"',
+        mp3: 'audio/mpeg',
+        opus: 'audio/ogg;codecs="opus"',
+        flac: 'audio/flac',
+      }
+      const mimeType = audioCodecMap[codec]
+      if (!mimeType) return false
+      config = { type: 'record', audio: { contentType: mimeType } }
+    } else {
+      const videoCodecMap = {
+        h264: 'video/mp4;codecs="avc1.42E01E"',
+        h265: 'video/mp4;codecs="hev1.1.6.L93.B0"',
+        vp9: 'video/webm;codecs="vp9"',
+        vp8: 'video/webm;codecs="vp8"',
+        av1: 'video/mp4;codecs="av01.0.05M.08"',
+        mov: 'video/quicktime',
+        mkv: 'video/x-matroska',
+        webm: 'video/webm',
+      }
+      const mimeType = videoCodecMap[codec]
+      if (!mimeType) return false
+      config = {
+        type: 'record',
+        video: {
+          contentType: mimeType,
+          width: 1280,
+          height: 720,
+          bitrate: 2500000,
+          framerate: 24,
+        },
+      }
+    }
+    const result = await navigator.mediaCapabilities.encodingInfo(config)
+    return result.supported
+  } catch (e) {
+    console.debug(`Could not check codec support for ${codec}:`, e)
+    return true
+  }
+}
+async function populateSupportedCodecs() {
+  const videoCodecs = ['h264', 'h265', 'vp9', 'vp8', 'av1']
+  const videoContainers = ['mov', 'mkv', 'webm']
+  const audioCodecs = ['aac', 'mp3', 'opus', 'flac']
+  if (transcodeVideoCodecSelect) {
+    const supportedVideoCodecs = []
+    for (const codec of videoCodecs) {
+      const supported = await isCodecSupported(codec, 'video')
+      if (supported) {
+        supportedVideoCodecs.push(codec)
+      }
+    }
+    supportedVideoCodecs.push(...videoContainers)
+    transcodeVideoCodecSelect.innerHTML = ''
+    supportedVideoCodecs.forEach((codec) => {
+      const option = document.createElement('option')
+      option.value = codec
+      option.textContent = codec
+      transcodeVideoCodecSelect.appendChild(option)
+    })
+    transcodeVideoCodecSelect.value =
+      settings.transcode.video.codec || supportedVideoCodecs[0] || 'h264'
+  }
+  if (transcodeAudioCodecSelect) {
+    const supportedAudioCodecs = []
+    for (const codec of audioCodecs) {
+      const supported = await isCodecSupported(codec, 'audio')
+      if (supported) {
+        supportedAudioCodecs.push(codec)
+      }
+    }
+    transcodeAudioCodecSelect.innerHTML = ''
+    supportedAudioCodecs.forEach((codec) => {
+      const option = document.createElement('option')
+      option.value = codec
+      option.textContent = codec
+      transcodeAudioCodecSelect.appendChild(option)
+    })
+    transcodeAudioCodecSelect.value =
+      settings.transcode.audio.codec || supportedAudioCodecs[0] || 'aac'
+  }
 }
 async function updateSettings() {
   onekoToggle.addEventListener('change', async (e) => {
@@ -353,6 +490,37 @@ async function updateSettings() {
       if (confirm('Reset all settings to defaults?')) {
         resetAllSettings()
       }
+    })
+  }
+  await populateSupportedCodecs()
+  if (transcodeVideoToggle) {
+    transcodeVideoToggle.checked = settings.transcode.video.enabled
+    transcodeVideoToggle.addEventListener('change', (e) => {
+      settings.transcode.video.enabled = e.target.checked
+      TRANSCODE_VIDEO_ENABLED = settings.transcode.video.enabled
+      saveSettings(settings)
+    })
+  }
+  if (transcodeVideoCodecSelect) {
+    transcodeVideoCodecSelect.addEventListener('change', (e) => {
+      settings.transcode.video.codec = e.target.value
+      TRANSCODE_VIDEO_CODEC = settings.transcode.video.codec
+      saveSettings(settings)
+    })
+  }
+  if (transcodeAudioToggle) {
+    transcodeAudioToggle.checked = settings.transcode.audio.enabled
+    transcodeAudioToggle.addEventListener('change', (e) => {
+      settings.transcode.audio.enabled = e.target.checked
+      TRANSCODE_AUDIO_ENABLED = settings.transcode.audio.enabled
+      saveSettings(settings)
+    })
+  }
+  if (transcodeAudioCodecSelect) {
+    transcodeAudioCodecSelect.addEventListener('change', (e) => {
+      settings.transcode.audio.codec = e.target.value
+      TRANSCODE_AUDIO_CODEC = settings.transcode.audio.codec
+      saveSettings(settings)
     })
   }
 }

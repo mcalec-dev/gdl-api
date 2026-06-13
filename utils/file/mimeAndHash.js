@@ -2,14 +2,23 @@ const path = require('path')
 const fs = require('fs').promises
 const crypto = require('crypto')
 const log = require('../logHandler')
+const mimeTypes = require('mime-types')
 const { HASH_ALGORITHM } = /** @type {any} */ (require('../../config'))
 /** @type {((buffer: Uint8Array) => Promise<{mime: string, ext: string} | undefined>) | null} */
 let fileTypeFromBufferResolver = null
-
 /** @param {string | null | undefined} type */
 function normalizeMimeType(type) {
   if (!type) return null
   return type.replace('application/mp4', 'video/mp4')
+}
+/**
+ * @param {string} name
+ * @returns {string | null}
+ */
+function getMimeType(name) {
+  if (!name) return null
+  const mime = mimeTypes.lookup(name.toLowerCase())
+  return normalizeMimeType(typeof mime === 'string' ? mime : null)
 }
 /** @param {string} file */
 async function getFileMime(file) {
@@ -81,6 +90,7 @@ async function calculateFileHash(filePath) {
 }
 module.exports = {
   normalizeMimeType,
+  getMimeType,
   getFileMime,
   calculateFileHash,
 }

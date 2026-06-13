@@ -5,8 +5,11 @@ const Announcement = require('../../../models/Announcement')
 const sendResponse = require('../../../utils/resUtils')
 router.get('/', requireRole('admin'), async (req, res) => {
   try {
-    const announcements = await Announcement.find().sort({ created: -1 }).lean()
-    return sendResponse.status(200).json(res)
+    const announcements = await Announcement.find()
+      .sort({ created: -1 })
+      .select('-_id')
+      .lean()
+    return sendResponse(res, 200).json({ announcements })
   } catch (error) {
     log.error('Error fetching announcements:', error)
     return sendResponse(res, 500)
@@ -23,7 +26,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
       title,
       message,
       severity,
-      author: req.user?.username,
+      author: String((/** @type {any} */ req.user)?.username),
       created: Date.now(),
       modified: Date.now(),
       uuid,
@@ -54,7 +57,7 @@ router.put(['/:uuid', '/:uuid/'], requireRole('admin'), async (req, res) => {
         title: String(title),
         message: String(message),
         severity: String(severity),
-        author: req.user?.username,
+        author: String((/** @type {any} */ req.user)?.username),
         modified: Date.now(),
       },
       { returnDocument: 'after' }

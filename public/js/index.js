@@ -1,93 +1,11 @@
-'use strict'
-import prettyBytes from 'https://cdn.jsdelivr.net/npm/pretty-bytes/+esm'
-import prettyMs from 'https://cdn.jsdelivr.net/npm/pretty-ms/+esm'
-import { BYTES_BITS } from '../min/settings.min.js'
+import * as helpers from './helpers/format.min.js'
+
+export const formatSize = () => helpers.formatSize()
+export const formatMilliseconds = () => helpers.formatMs()
+
 /**
- * Formats bytes into a human-readable file size string
- * Respects the BYTES_BITS setting to show sizes in bits or bytes
- * @param {number} bytes - The number of bytes to format
- * @param {Object} [options] - Formatting options
- * @param {number} [options.minDecimalPlaces=0] - Minimum decimal places to show
- * @param {number} [options.maxDecimalPlaces=2] - Maximum decimal places to show
- * @returns {string|null} Formatted size string or null if invalid input
- */
-export function formatSize(
-  bytes,
-  { minDecimalPlaces = 0, maxDecimalPlaces = 2 } = {}
-) {
-  if (!bytes) return null
-  if (typeof bytes !== 'number' || isNaN(bytes) || bytes < 0) {
-    return null
-  }
-  try {
-    if (BYTES_BITS) {
-      return prettyBytes(bytes, {
-        signed: false,
-        bits: false,
-        binary: false,
-        locale: true,
-        minimumFractionDigits: minDecimalPlaces,
-        maximumFractionDigits: maxDecimalPlaces,
-        space: true,
-        nonBreakingSpace: true,
-        //fixedWidth: undefined,
-      })
-    }
-    if (!BYTES_BITS) {
-      return prettyBytes(bytes, {
-        signed: false,
-        bits: false,
-        binary: true,
-        locale: true,
-        minimumFractionDigits: minDecimalPlaces,
-        maximumFractionDigits: maxDecimalPlaces,
-        space: true,
-        nonBreakingSpace: true,
-        //fixedWidth: undefined,
-      })
-    }
-  } catch (error) {
-    handleError(error)
-    return null
-  }
-}
-/**
- * Formats milliseconds into a human-readable time duration string
- * @param {number} ms - The number of milliseconds to format
- * @returns {string|null} Formatted duration string or null if invalid input
- */
-export function formatMilliseconds(ms) {
-  if (!ms) return null
-  if (typeof ms !== 'number' || isNaN(ms) || ms < 0) {
-    return null
-  }
-  try {
-    /*return prettyMs(ms, {
-      secondsDecimalDigits: 0,
-      millisecondsDecimalDigits: 0,
-      keepDecimalsOnWholeSeconds: false,
-      compact: false, // add settings option for this
-      //unitCount: Infinity, // add settings option for this
-      verbose: false, // add settings option for this too
-      separateMilliseconds: false,
-      formatSubMilliseconds: false,
-      colonNotation: false,
-      hideYears: false,
-      hideYearAndDays: false,
-      hideSeconds: true, // add settings option for this
-      subSecondsAsDecimals: false, // add settings option for this
-    })*/
-    return prettyMs(ms)
-  } catch (error) {
-    handleError(error)
-    return null
-  }
-}
-/**
- * Formats a timestamp into a localized date and time string
- * Uses America/New_York timezone
- * @param {string|number|Date} timestamp - The timestamp to format
- * @returns {string} Formatted date string in 'long' format with time
+ * @param {string|number|Date} timestamp
+ * @returns {string}
  */
 export function formatDate(timestamp) {
   return new Date(timestamp).toLocaleString(
@@ -102,6 +20,7 @@ export function formatDate(timestamp) {
     }
   )
 }
+
 /**
  * Fetches the API name from the server
  * Makes a request to /api to retrieve server information
@@ -126,6 +45,7 @@ export async function getName() {
   }
   return name
 }
+
 /**
  * Parses emoji shortcodes in text and replaces them with icon SVGs
  * Looks for patterns like :emoji_name: and replaces with corresponding icons
@@ -139,10 +59,10 @@ export async function parseEmojis(text) {
     return icons[key] || match
   })
 }
+
 /**
- * Fetches the icons JSON file from the server (fallback)
  * @async
- * @returns {Promise<Object>} Icon object containing SVG icon definitions
+ * @returns {Promise<Object>}
  */
 export async function getIcons() {
   return await fetch('/icons.json')
@@ -152,44 +72,69 @@ export async function getIcons() {
       return {}
     })
 }
-/**
- * Handles and logs errors to the console
- * Logs both error message and stack trace
- * @param {Error} error - The error object to handle
- */
+
+/** @param {string|Error} error */
 export function handleError(error) {
   console.log('An error occurred:', error)
   return console.error(error)
 }
+
 /**
- * Displays a status message in the UI
- * @param {string} mesg
+ * @param {string} message
  * @param {boolean} isError
  */
-export function statusMessage(mesg, isError = false) {
+export function statusMessage(message, isError = false) {
   const statusMessageElement = document.getElementById('statusMessage')
   if (statusMessageElement) {
-    statusMessageElement.textContent = mesg
+    statusMessageElement.textContent = message
     statusMessageElement.style.display = 'block'
     statusMessageElement.style.color = isError ? 'red' : 'black'
   }
 }
-export function upscaleImage(url, scale = '100', kernel = 'lanczos3') {
-  if (!url || !scale) return null
+
+/**
+ * @param {string|URL} url
+ * @param {Record<string, any>|Array<{key: string, value: any}>|undefined} params
+ * @returns {string|null}
+ */
+export function constructURL(url, params = {}) {
+  if (!url) return null
   try {
-    const urlObj = new URL(url)
-    urlObj.searchParams.set('scale', scale)
-    if (kernel) urlObj.searchParams.set('kernel', kernel)
-    return urlObj.toString()
+    const baseUrl = new URL(url)
+    if (!params || Object.keys(params).length === 0) {
+      return baseUrl.toString()
+    }
+    Object.entries(params).forEach(([key, value]) => {
+      if (key == null || key === '') return
+      let finalValue
+      if (Array.isArray(value)) {
+        finalValue = value
+          .filter((item) => item != null)
+          .map((item) => String(item).trim())
+          .filter((item) => item !== '')
+          .join(',')
+      } else {
+        finalValue = value ?? ''
+      }
+      baseUrl.searchParams.set(key, finalValue)
+    })
+    return baseUrl.toString()
   } catch (error) {
     handleError(error)
     return null
   }
 }
+
+/**
+ * @param {string} uuid
+ * @param {string|undefined} type
+ * @returns {Object|null}
+ */
 export function getByUUID(uuid, type = 'file') {
   if (!uuid || !type) return null
-  const typeEnum = ['file', 'directory']
-  if (!typeEnum.includes(type)) {
+  /** @enum {string} */
+  const types = ['file', 'directory']
+  if (!types.includes(type)) {
     handleError('Invalid type parameter: ' + type)
     return null
   }
@@ -206,38 +151,36 @@ export function getByUUID(uuid, type = 'file') {
       return null
     })
 }
+
+/**
+ * @param {string} url
+ * @returns {Promise<boolean|null>}
+ */
 export async function copyImage(url) {
   if (!url) {
     handleError('No URL provided for copying image')
-    return
+    return null
+  }
+  if (!navigator.clipboard?.write) {
+    handleError('Clipboard API not supported in this browser')
+    return null
   }
   try {
     const res = await fetch(url)
     if (!res.ok) {
-      throw new Error('Failed to fetch image: ' + res.statusText)
+      handleError('Failed to fetch image: ' + res.statusText)
+      return null
     }
     const blob = await res.blob()
     const type = blob.type
-    if (!navigator.clipboard) {
-      throw new Error('Clipboard API not supported in this browser')
-    }
-    if (navigator.clipboard.write) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ [type]: blob })])
-        return
-      } catch (err) {
-        console.warn('Clipboard write failed, trying alternative methods:', err)
-      }
-    }
-    if (navigator.clipboard.writeBlob) {
-      await navigator.clipboard.writeBlob(blob)
-      return
-    }
-    throw new Error('No compatible clipboard method available')
+    await navigator.clipboard.write([new ClipboardItem({ [type]: blob })])
+    return true
   } catch (error) {
-    handleError(`Failed to copy image: ${error.message}`)
+    handleError(error)
+    return null
   }
 }
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -250,15 +193,15 @@ function normalizeIdentifier(value) {
   }
   return normalized
 }
+
 /**
- * Adds a file UUID to an existing pool.
- * @param {string} poolUuid
- * @param {string} fileUuid
+ * @param {string} pUUID
+ * @param {string} fUUID
  * @returns {Promise<Object>}
  */
-export async function addToPool(poolUuid, fileUuid) {
-  const normalizedPoolUuid = normalizeIdentifier(poolUuid)
-  const normalizedFileUuid = normalizeIdentifier(fileUuid)
+export async function addToPool(pUUID, fUUID) {
+  const normalizedPoolUuid = normalizeIdentifier(pUUID)
+  const normalizedFileUuid = normalizeIdentifier(fUUID)
   if (!normalizedPoolUuid || !normalizedFileUuid) {
     throw new Error('Pool UUID and file UUID are required to add to pool')
   }
@@ -279,6 +222,7 @@ export async function addToPool(poolUuid, fileUuid) {
   }
   return payload || { message: 'Added to pool' }
 }
+
 /**
  * Fetches pools for pool selection UI.
  * @returns {Promise<Array<{ uuid: string, name: string }>>}
@@ -298,8 +242,8 @@ export async function fetchPools() {
       : []
   return results.filter((pool) => pool && pool.uuid && pool.name)
 }
+
 /**
- * Creates a pool and assigns the given file UUID to it.
  * @param {string} poolName
  * @param {string} fileUuid
  * @returns {Promise<Object>}
@@ -327,6 +271,7 @@ export async function createPoolAndAdd(poolName, fileUuid) {
   }
   return payload || { message: 'Pool created' }
 }
+
 /**
  * Opens a modal that lets the user add a file to an existing pool or create a new one.
  * @param {string} fileUuid
@@ -471,12 +416,14 @@ export async function openAddToPoolModal(fileUuid) {
     handleError(error)
   }
 }
+
 export function escapeHtml(text) {
   if (typeof text !== 'string') return ''
   const div = document.createElement('div')
   div.textContent = text
   return div.innerHTML
 }
+
 export default {
   formatSize,
   formatMilliseconds,
@@ -486,7 +433,7 @@ export default {
   getIcons,
   handleError,
   statusMessage,
-  upscaleImage,
+  constructURL,
   getByUUID,
   copyImage,
   addToPool,

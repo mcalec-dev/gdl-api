@@ -88,6 +88,40 @@
       </span>
       <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="bytes-bits-toggle" />
     </div>
+    <div id="transcode-video-container" class="gap-2 flex-col flex items-center justify-center">
+      <div>
+        <span class="text-white">
+          Transcode Video:
+        </span>
+        <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="transcode-video-toggle" />
+      </div>
+      <span class="text-white/80 text-sm mb-1">codec</span>
+      <select id="transcode-video-codec-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
+        <option value="h264">h264</option>
+        <option value="h265">h265</option>
+        <option value="vp9">vp9</option>
+        <option value="vp8">vp8</option>
+        <option value="av1">av1</option>
+        <option value="mov">mov</option>
+        <option value="mkv">mkv</option>
+        <option value="webm">webm</option>
+      </select>
+    </div>
+    <div id="transcode-audio-container" class="gap-2 flex-col flex items-center justify-center">
+      <div>
+        <span class="text-white">
+          Transcode Audio:
+        </span>
+        <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="transcode-audio-toggle" />
+      </div>
+      <span class="text-white/80 text-sm mb-1">codec</span>
+      <select id="transcode-audio-codec-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
+        <option value="aac">aac</option>
+        <option value="mp3">mp3</option>
+        <option value="opus">opus</option>
+        <option value="flac">flac</option>
+      </select>
+    </div>
     <div id="reset-settings-container" class="gap-2 mt-2 flex-col flex items-center justify-center">
       <button id="reset-settings-button" class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold px-4 py-2 rounded select-none pointer-events-auto">
         Reset Settings

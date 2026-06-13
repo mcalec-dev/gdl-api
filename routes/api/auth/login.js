@@ -8,7 +8,10 @@ const sendResponse = require('../../../utils/resUtils')
 const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
 router.post('/', async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
-    log.debug('User already logged in:', req.user.username || '')
+    log.debug(
+      'User already logged in:',
+      /** @type {any} */ (req.user)?.username
+    )
     return sendResponse.error(res, 403, 'Already logged in')
   }
   const { username, email, password } = req.body

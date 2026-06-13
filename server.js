@@ -2,7 +2,7 @@ const express = require('express')
 const session = require('express-session')
 const { isbot } = require('isbot')
 const { processFiles } = require('./minify')
-const { getRequestIp, setReqVars } = require('./utils/requestUtils')
+const { setReqVars } = require('./utils/requestUtils')
 const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
 const {
@@ -128,6 +128,33 @@ async function webVars() {
   }
 }
 async function renderApp() {
+  const pages = [
+    'home',
+    'random',
+    'stats',
+    'search',
+    'files',
+    'login',
+    'register',
+    'dashboard',
+    'admin',
+  ]
+  for (const page of pages) {
+    if (!page) continue
+    app.get(`${BASE_PATH}/${page}/`, async (req, res) => {
+      try {
+        var vars = await webVars()
+        await res.render(page, {
+          ...vars,
+          title: page.charAt(0).toUpperCase() + page.slice(1),
+          currentPage: page,
+        })
+      } catch (error) {
+        log.error(`Error rendering ${page} page:`, error)
+        sendResponse.error(res, 500, 'Error rendering page!')
+      }
+    })
+  }
   app.get(`${BASE_PATH}/`, async (req, res) => {
     try {
       var vars = await webVars()
@@ -138,59 +165,7 @@ async function renderApp() {
       })
     } catch (error) {
       log.error('Error rendering home page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/random/`, async (req, res) => {
-    try {
-      const vars = await webVars()
-      await res.render('random', {
-        ...vars,
-        title: 'Random',
-        currentPage: 'random',
-      })
-    } catch (error) {
-      log.error('Error rendering random page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/stats/`, async (req, res) => {
-    try {
-      const vars = await webVars()
-      await res.render('stats', {
-        ...vars,
-        title: 'Stats',
-        currentPage: 'stats',
-      })
-    } catch (error) {
-      log.error('Error rendering stats page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/search/`, async (req, res) => {
-    try {
-      const vars = await webVars()
-      await res.render('search', {
-        ...vars,
-        title: 'Search',
-        currentPage: 'search',
-      })
-    } catch (error) {
-      log.error('Error rendering search page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/files/`, async (req, res) => {
-    try {
-      const vars = await webVars()
-      await res.render('files', {
-        ...vars,
-        title: 'Files',
-        currentPage: 'files',
-      })
-    } catch (error) {
-      log.error('Error rendering files page:', error)
-      res.status(500).send('Error rendering page!')
+      sendResponse.error(res, 500, 'Error rendering page!')
     }
   })
   app.get(`${BASE_PATH}/files/*subdir`, async (req, res) => {
@@ -203,72 +178,7 @@ async function renderApp() {
       })
     } catch (error) {
       log.error('Error rendering files page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/login/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      await res.render('login', {
-        ...vars,
-        title: 'Login',
-        currentPage: 'login',
-      })
-    } catch (error) {
-      log.error('Error rendering login page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/register/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      await res.render('register', {
-        ...vars,
-        title: 'Register',
-        currentPage: 'register',
-      })
-    } catch (error) {
-      log.error('Error rendering register page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/download/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      await res.render('download', {
-        ...vars,
-        title: 'Download',
-        currentPage: 'download',
-      })
-    } catch (error) {
-      log.error('Error rendering download page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/dashboard/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      await res.render('dashboard', {
-        ...vars,
-        title: 'Dashboard',
-        currentPage: 'dashboard',
-      })
-    } catch (error) {
-      log.error('Error rendering dashboard page:', error)
-      res.status(500).send('Error rendering page!')
-    }
-  })
-  app.get(`${BASE_PATH}/admin/`, async (req, res) => {
-    try {
-      var vars = await webVars()
-      await res.render('admin', {
-        ...vars,
-        title: 'Admin',
-        currentPage: 'admin',
-      })
-    } catch (error) {
-      log.error('Error rendering admin page:', error)
-      res.status(500).send('Error rendering page!')
+      sendResponse.error(res, 500, 'Error rendering page!')
     }
   })
   app.get(`${BASE_PATH}/404/`, async (req, res) => {
@@ -281,7 +191,7 @@ async function renderApp() {
       })
     } catch (error) {
       log.error('Error rendering 404 page:', error)
-      res.status(500).send('Error rendering page!')
+      sendResponse.error(res, 500, 'Error rendering page!')
     }
   })
 }
@@ -325,6 +235,7 @@ async function initApp() {
       resave: false,
       saveUninitialized: false,
       rolling: true,
+      /** @type any */
       store: await initSessionStore(),
       cookie: {
         secure: NODE_ENV === 'production',
@@ -394,7 +305,7 @@ async function initApp() {
     require('serve-favicon')(path.join(__dirname, 'public', 'favicon.ico'))
   )
   app.use((req, res, next) => {
-    if (isbot(req.useragent?.source ?? '')) {
+    if (req.useragent?.isBot || isbot(req.useragent?.source || '')) {
       log.debug('Bot/crawler detected:', req.useragent?.source)
       if (res.headersSent) {
         return next()
@@ -435,7 +346,7 @@ async function initRoutes() {
       })
     } catch (error) {
       log.error('Error rendering 404 page:', error)
-      res.status(500).send('Error rendering page!')
+      sendResponse.error(res, 500, 'Error rendering page!')
     }
   })
   app.use(

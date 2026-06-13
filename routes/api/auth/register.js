@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
           modified: now,
           expires: expiresAt,
           ip: String(getRequestIp(req)),
-          useragent: getRequestUserAgent(req),
+          useragent: String(getRequestUserAgent(req)),
         })
         await user.save()
         req.session.uuid = sessionUuid

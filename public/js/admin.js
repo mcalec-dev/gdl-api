@@ -4,11 +4,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const loading = document.getElementById('loading')
   const announcementForm = document.getElementById('announcement-form')
   const announcementList = document.getElementById('announcement-list')
+  async function parseApiResponse(res) {
+    if (!res.ok) {
+      let message = res.statusText
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const body = await res.json().catch(() => null)
+        message = body?.message || body || message
+      } else {
+        const text = await res.text().catch(() => '')
+        message = text || message
+      }
+      throw new Error(message)
+    }
+    if (res.status === 204) {
+      return null
+    }
+    return res.json().catch(() => null)
+  }
   async function loadAnnouncements() {
     fetch('/api/admin/announcements')
-      .then((res) => res.json())
-      .then((announcements) => {
-        if (!Array.isArray(announcements) || announcements.length === 0) {
+      .then(parseApiResponse)
+      .then((data) => {
+        const announcements = Array.isArray(data?.announcements)
+          ? data.announcements
+          : []
+        if (announcements.length === 0) {
           announcementList.innerHTML = ''
           return
         }
@@ -82,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       body: JSON.stringify({ title, message, severity }),
     })
-      .then((res) => res.json())
+      .then(parseApiResponse)
       .then(async () => {
         loadAnnouncements()
         await announcementForm.reset()
@@ -141,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       body: JSON.stringify({ title, message, severity }),
     })
-      .then((res) => res.json())
+      .then(parseApiResponse)
       .then(async () => {
         loadAnnouncements()
         await window.fetchAnnouncements()
@@ -181,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch(`/api/admin/announcements/${id}`, {
       method: 'DELETE',
     })
-      .then((res) => res.json())
+      .then(parseApiResponse)
       .then(async () => {
         loadAnnouncements()
         await window.fetchAnnouncements()
