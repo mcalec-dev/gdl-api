@@ -71,10 +71,10 @@
     "passport-discord-auth": "^1",
     "passport-github2": "^0.1.12",
     "passport-local": "^1",
-    "redis": "^5",
+    "redis": "^6",
     "resolve-path": "^1",
     "serve-favicon": "^2",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.0",
     "slash": "^5",
     "swagger-parser": "^10",
     "swagger-ui-express": "^5",
@@ -99,14 +99,13 @@
     "@types/lusca": "^1.7.5",
     "@types/mime-types": "^3.0.1",
     "@types/ms": "^2.1.0",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26",
     "@types/normalize-path": "^3.0.2",
     "@types/passport": "^1.0.17",
     "@types/passport-github2": "^1.2.9",
     "@types/passport-local": "^1.0.38",
     "@types/resolve-path": "^1.4.3",
     "@types/swagger-ui-express": "^4.1.8",
-    "@types/uuid": "^11.0.0",
     "@types/validator": "^13.15.10",
     "eslint": "^9.39.4",
     "eslint-plugin-jsonc": "^3.1.2",
@@ -118,7 +117,8 @@
     "typescript": "^6"
   },
   "allowScripts": {
-    "bcrypt@6.0.0": true,
-    "sharp@0.34.5": true
+    "bcrypt": true,
+    "ffmpeg-static": true,
+    "sharp": true
   }
 }
