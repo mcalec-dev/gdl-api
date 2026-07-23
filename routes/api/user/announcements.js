@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
     return sendResponse(res, 200).json(announcements)
   } catch (error) {
     log.error('Error fetching announcements:', error)
-    return sendResponse(res, 500)
+    return sendResponse(res, 500, 'Error fetching announcements')
   }
 })
 module.exports = router

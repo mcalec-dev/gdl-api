@@ -32,30 +32,36 @@ let SORT_STATES = {
 
 const fileList = document.getElementById('file-list')
 
-const icons = async () => {
-  const icon = await utils.getIcons()
-  return {
-    directory: icon.folder,
-    image: icon.file.image,
-    video: icon.file.video,
-    audio: icon.file.audio,
-    text: icon.file.text,
-    other: icon.file.default,
-    back: icon.nav.back,
-    sort: {
-      asc: icon.arrow.asc,
-      desc: icon.arrow.desc,
-      default: icon.arrow.default,
-    },
-    nav: {
-      exit: icon.nav.exit,
-      next: icon.nav.next,
-      prev: icon.nav.prev,
-      link: icon.nav.link,
-      copy: icon.nav.copy,
-      download: icon.nav.download,
-      refresh: icon.arrow.refresh,
-    },
+let icons = {}
+async function loadIcons() {
+  try {
+    const icon = await utils.getIcons()
+    icons = {
+      directory: icon?.folder || '',
+      image: icon?.file?.image || '',
+      video: icon?.file?.video || '',
+      audio: icon?.file?.audio || '',
+      text: icon?.file?.text || '',
+      other: icon?.file?.default || '',
+      back: icon?.nav?.back || '',
+      sort: {
+        asc: icon?.arrow?.asc || '',
+        desc: icon?.arrow?.desc || '',
+        default: icon?.arrow?.default || '',
+      },
+      nav: {
+        exit: icon?.nav?.exit || '',
+        next: icon?.nav?.next || '',
+        prev: icon?.nav?.prev || '',
+        link: icon?.nav?.link || '',
+        copy: icon?.nav?.copy || '',
+        download: icon?.nav?.download || '',
+        refresh: icon?.arrow?.refresh || '',
+      },
+    }
+  } catch (error) {
+    console.error('Error loading icons:', error)
+    icons = {}
   }
 }
 
@@ -545,9 +551,7 @@ function setupSortButtons() {
       if (SORT_STATES[sortBy] !== 'none') {
         url.searchParams.set(sortBy, SORT_STATES[sortBy])
       }
-      let pathname = url.pathname
-      if (!pathname.endsWith('/')) pathname += '/'
-      window.history.replaceState({}, '', pathname + url.search)
+      window.history.replaceState({}, '', url.pathname + url.search)
       const useServerSort = getCookie('server-sort') !== 'false'
       if (useServerSort) {
         if (
@@ -967,9 +971,7 @@ function getSortFromQuery() {
     if (currentSortDir !== 'none') {
       const url = new URL(window.location.href)
       url.searchParams.set(currentSort, currentSortDir)
-      let pathname = url.pathname
-      if (!pathname.endsWith('/')) pathname += '/'
-      window.history.replaceState({}, '', pathname + url.search)
+      window.history.replaceState({}, '', url.pathname + url.search)
     }
   } else {
     saveSortState()
@@ -980,6 +982,7 @@ async function init() {
   if (isInitialized) return
   isInitialized = true
   try {
+    await loadIcons()
     setContextIcons(icons)
     setContextBasePaths(frontendBasePath, apiBasePath)
     await initViewer({ fileListSelector: '#file-list' })
@@ -989,8 +992,8 @@ async function init() {
     console.warn('Files page initialization failed:', error)
     try {
       utils.handleError(error)
-    } catch (e) {
-      console.warn('Error handler failed:', e)
+    } catch (error) {
+      console.warn('Error handler failed:', error)
     }
     return
   }

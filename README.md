@@ -1,7 +1,8 @@
 # gdl-api
 
 > [!WARNING]
-> Don't use any <=0.3.x api versions as they are no longer supported/maintained. Please use >=0.4.x versions.
+> Any version below `v0.3.0` is no longer maintained. Please use any version above `v0.4.0`.
+> Docker Compose support is in the testing phase. Report any bugs to the issue tracker.
 
 an express api made for gallery-dl downloads.
 
@@ -12,16 +13,15 @@ install [MongoDB](https://www.mongodb.com/try/download/community) for database s
 your local directory structure should look like this:
 
 ```text
-base-dir/ # defined with `BASE_DIR`
+root/              # defined with `BASE_DIR`
 └─ collection/
   └─ author/
-    ├─ subdir/ # support for subdirectories (`MAX_DEPTH`)
-    ├─ files.png
-    ├─ files.png.json # sidecar json (`SIDECAR_FILE` and `SIDECAR_FILE_EXTENSION`)
-    ├─ files.mp4
-    └─ ...etc
+    ├─ subdir/         # support for subdirectories (`MAX_DEPTH`)
+    ├─ image.png       # supports resizing and other image processing (`MAX_BUFFER_SIZE` `MAX_SCALE` `MAX_PIXELS`)
+    ├─ image.png.json  # sidecar json (`SIDECAR_FILE` `SIDECAR_FILE_EXTENSION`)
+    ├─ video.mp4       # transcoding suppport via ffmpeg (`TRANSCODE_VIDEO` `TRANSCODE_AUDIO`)
+    ├─ audio.wav
+    └─ ...
 ```
 
-example dotenv file is in `.env.example`
-
-McAlec Development © 2025
+an example dotenv file is in `.env.example`

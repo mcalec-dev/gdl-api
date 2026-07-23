@@ -69,13 +69,15 @@ async function initDB() {
   await initSessionStore()
   const sessionStoreKind = getSessionStoreKind()
   const cookieMaxAgeMs = COOKIE_MAX_AGE
+  let mongodb = null
   try {
-    const connection = await require('mongoose').connect(MONGODB_URL)
-    log.info('MongoDB connected')
+    mongodb = await require('mongoose').connect(MONGODB_URL)
+    if (mongodb != null) log.info('MongoDB connected')
+    if (mongodb === null) throw new Error('MongoDB connection failed')
     const gridfsUtils = require('./utils/gridfsUtils')
     gridfsUtils.initGridFS()
     if (sessionStoreKind === 'mongo') {
-      const db = connection.connection.db
+      const db = mongodb.connection.db
       if (!db) throw new Error('Database connection unavailable')
       const sessions = db.collection('sessions')
       try {
@@ -114,7 +116,7 @@ async function initDB() {
       `User sessions cleaned up (${userResult.modifiedCount} users updated)`
     )
   } catch (error) {
-    log.error('Database initialization failed:', error)
+    throw error
   }
 }
 async function webVars() {

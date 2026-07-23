@@ -1368,6 +1368,81 @@ paths:
                         type: string
                       dashboard:
                         type: string
+  /user/color/:
+    get:
+      tags:
+        - User
+      summary: Get user color preference
+      description: Retrieve the color preference for the authenticated user
+      responses:
+        '200':
+          description: User color preference
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  color:
+                    type: string
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - User
+      summary: Set user color preference
+      description: Update the color preference for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                color:
+                  type: string
+                  description: The new color preference (e.g., hex code)
+              required:
+                - color
+      responses:
+        '200':
+          description: User color preference updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  color:
+                    type: string
+        '400':
+          description: Invalid color value provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /user/dashboard/:
     get:
       tags:

@@ -9,6 +9,8 @@ try {
   router.use('/dashboard', require('./dashboard'))
   log.debug('Mounting session route')
   router.use('/session', require('./session'))
+  log.debug('Mounting color route')
+  router.use('/color', require('./color'))
 } catch (error) {
   log.error('Error initializing user routes:', error)
 }
@@ -19,6 +21,7 @@ router.get('/', async (req, res) => {
     urls: {
       announcements: baseURL + '/user/announcements',
       dashboard: baseURL + '/user/dashboard',
+      color: baseURL + '/user/color',
     },
   })
 })

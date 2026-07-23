@@ -20,3 +20,4 @@
 - move trolling middleware stuff to an optional addon (trolling middleware removed in v0.4.0)
 - packages to utilize for, `sanitize-url` `slugify`
 - reduce log spam for database upserts to `Updated n file entries` `Excluded n entries` `Created n file entries` for info logs
+- use `create-torrent` and `parse-torrent` for creating file/folder .torrent files would. ex. file `/files/<path to file>/torrent` or `/files/<path to folder>/torrent` will generate and download a torrent file for use.

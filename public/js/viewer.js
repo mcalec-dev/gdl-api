@@ -15,23 +15,34 @@ let currentItemList = []
 let itemLoadControllers = new Map()
 let isViewerOpen = false
 
-const icons = async () => {
-  const icon = await utils.getIcons()
-  return {
-    exit: icon?.nav.exit,
-    next: icon?.nav.next,
-    prev: icon?.nav.prev,
-    link: icon?.nav.link,
-    copy: icon?.nav.copy,
-    download: icon?.nav.download,
+let icons = {}
+async function loadIcons() {
+  try {
+    const icon = await utils.getIcons()
+    icons = {
+      exit: icon?.nav?.exit || '',
+      next: icon?.nav?.next || '',
+      prev: icon?.nav?.prev || '',
+      link: icon?.nav?.link || '',
+      copy: icon?.nav?.copy || '',
+      download: icon?.nav?.download || '',
+    }
+  } catch (error) {
+    console.error('Error loading icons:', error)
+    icons = {}
   }
 }
 
 function getMediaUrl(item) {
   if (item.previewSrc) {
-    return item.previewSrc.startsWith('http')
-      ? item.previewSrc
-      : `${document.location.origin}${item.previewSrc.startsWith('/') ? '' : '/'}${item.previewSrc}`
+    try {
+      return new URL(item.previewSrc, document.location.origin).toString()
+    } catch (err) {
+      if (item.previewSrc.startsWith('http')) {
+        return item.previewSrc
+      }
+      return `${document.location.origin}${item.previewSrc.startsWith('/') ? '' : '/'}${item.previewSrc}`
+    }
   }
   return `${document.location.origin}/api/files/${item.encodedPath}`
 }
@@ -465,24 +476,6 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
   })
 }
 
-async function initViewer({ fileListSelector } = {}) {
-  const events = await setupViewerEvents()
-  await setupFileClickHandlers(fileListSelector)
-  return {
-    showViewer,
-    closeViewer: events?.closeViewer,
-    next: events?.next,
-    prev: events?.prev,
-    isZoomed: events?.isZoomed,
-    setupFileClickHandlers,
-    setItemList,
-    getCurrentItemList,
-    getCurrentItemIndex,
-    preloadMedia,
-    getMediaUrl,
-  }
-}
-
 function cancelImageLoads() {
   itemLoadControllers.forEach((controller, element) => {
     controller.abort()
@@ -505,6 +498,25 @@ function getCurrentItemList() {
 
 function getCurrentItemIndex() {
   return currentItemIndex
+}
+
+async function initViewer({ fileListSelector } = {}) {
+  await loadIcons()
+  const events = await setupViewerEvents()
+  await setupFileClickHandlers(fileListSelector)
+  return {
+    showViewer,
+    closeViewer: events?.closeViewer,
+    next: events?.next,
+    prev: events?.prev,
+    isZoomed: events?.isZoomed,
+    setupFileClickHandlers,
+    setItemList,
+    getCurrentItemList,
+    getCurrentItemIndex,
+    preloadMedia,
+    getMediaUrl,
+  }
 }
 
 export {

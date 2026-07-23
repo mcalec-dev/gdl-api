@@ -13,6 +13,11 @@ module.exports = mongoose.model(
         enum: ['active', 'inactive', 'banned'],
         default: 'active',
       },
+      color: {
+        hue: { type: Number, required: false, index: true },
+        lightness: { type: Number, required: false, default: 75 },
+        enabled: { type: Boolean, required: false, default: true },
+      },
       sessions: [
         {
           uuid: { type: String, required: true, index: true, unique: true },

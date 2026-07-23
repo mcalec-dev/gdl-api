@@ -20,25 +20,31 @@ const HISTORY_LIMIT = 10
 const mediaContainer = document.getElementById('media-container')
 const loading = document.getElementById('loading')
 const imageInfo = document.getElementById('item-info')
-const icons = async () => {
-  const icon = await utils.getIcons()
-  return {
-    back: icon?.arrow.left,
-    shuffle: icon?.arrow.shuffle,
-    forward: icon?.arrow.right,
-    image: icon?.file.image,
-    video: icon?.file.video,
-    audio: icon?.file.audio,
-    text: icon?.file.text,
-    other: icon?.file.default,
-    nav: {
-      exit: icon?.nav.exit,
-      next: icon?.nav.next,
-      prev: icon?.nav.prev,
-      link: icon?.nav.link,
-      copy: icon?.nav.copy,
-      download: icon?.nav.download,
-    },
+let icons = {}
+async function loadIcons() {
+  try {
+    const icon = await utils.getIcons()
+    icons = {
+      back: icon?.arrow?.left || '',
+      shuffle: icon?.arrow?.shuffle || '',
+      forward: icon?.arrow?.right || '',
+      image: icon?.file?.image || '',
+      video: icon?.file?.video || '',
+      audio: icon?.file?.audio || '',
+      text: icon?.file?.text || '',
+      other: icon?.file?.default || '',
+      nav: {
+        exit: icon?.nav?.exit || '',
+        next: icon?.nav?.next || '',
+        prev: icon?.nav?.prev || '',
+        link: icon?.nav?.link || '',
+        copy: icon?.nav?.copy || '',
+        download: icon?.nav?.download || '',
+      },
+    }
+  } catch (error) {
+    console.error('Error loading icons:', error)
+    icons = {}
   }
 }
 
@@ -404,6 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   backImageBtn.addEventListener('click', showPreviousMedia)
   forwardImageBtn.addEventListener('click', showNextMedia)
   try {
+    await loadIcons()
     setContextIcons(icons)
     backImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.back}</span>`
     loadImageBtn.innerHTML = `<span class="w-5 h-5 m-0 items-center">${icons.shuffle}</span>`

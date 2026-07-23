@@ -18,9 +18,6 @@ router.get('/', requireRole('user'), async (req, res) => {
       return sendResponse(res, 404)
     }
     return sendResponse(res, 200).json({
-      message: userEntry.username
-        ? `Welcome ${userEntry.username}!`
-        : 'Welcome to dashboard!',
       username: userEntry.username,
       email: userEntry.email,
       roles: userEntry.roles,
@@ -28,6 +25,7 @@ router.get('/', requireRole('user'), async (req, res) => {
       created: userEntry.created,
       oauth: userEntry.oauth,
       sessions: userEntry.sessions,
+      color: userEntry.color,
     })
   } catch (error) {
     log.error('Failed to send dashboard for user:', error)

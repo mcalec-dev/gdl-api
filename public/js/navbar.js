@@ -1,6 +1,7 @@
 'use strict'
 import * as utils from '/js/min/index.min.js'
-document.addEventListener('DOMContentLoaded', async () => {
+
+async function init() {
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
   let name
@@ -70,4 +71,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     })
   }
-})
+}
+
+document.addEventListener('DOMContentLoaded', init)

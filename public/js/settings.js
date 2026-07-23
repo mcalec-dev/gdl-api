@@ -262,7 +262,15 @@ async function isCodecSupported(codec, type) {
       }
       const mimeType = audioCodecMap[codec]
       if (!mimeType) return false
-      config = { type: 'record', audio: { contentType: mimeType } }
+      config = {
+        type: 'file',
+        audio: {
+          contentType: mimeType,
+          channels: 2,
+          bitrate: 128000,
+          samplerate: 44100,
+        },
+      }
     } else {
       const videoCodecMap = {
         h264: 'video/mp4;codecs="avc1.42E01E"',
@@ -277,7 +285,7 @@ async function isCodecSupported(codec, type) {
       const mimeType = videoCodecMap[codec]
       if (!mimeType) return false
       config = {
-        type: 'record',
+        type: 'file',
         video: {
           contentType: mimeType,
           width: 1280,
@@ -288,9 +296,9 @@ async function isCodecSupported(codec, type) {
       }
     }
     const result = await navigator.mediaCapabilities.encodingInfo(config)
-    return result.supported
-  } catch (e) {
-    console.debug(`Could not check codec support for ${codec}:`, e)
+    return result && result.supported
+  } catch (error) {
+    console.debug(`Could not check codec support for ${codec}:`, error)
     return true
   }
 }

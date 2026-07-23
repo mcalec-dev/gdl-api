@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         data.oauth && data.oauth.discord && data.oauth.discord.id
       content.innerHTML = `
         <div class="flex flex-col items-center gap-2 text-clip">
-          <div class="text-lg font-semibold">${data.message}</div>
+          <div class="text-[hsl(${data.color.hue},100%,${data.color.lightness}%)] text-lg font-semibold">${'Welcome' + (data.username ? ` ${data.username}!` : ' to dashboard!')}</div>
           <div class="text-gray-300 text-sm">Username: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.username}</code></div>
           <div class="text-gray-300 text-sm">Email: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${data.email}</code></div>
           <div class="text-gray-300 text-sm">Roles: <code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded">${data.roles.join(', ')}</code></div>

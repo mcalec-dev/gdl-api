@@ -1,6 +1,7 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', async () => {
+
+async function init() {
   const registerForm = document.getElementById('registerForm')
   const errorDiv = document.getElementById('error')
   const loadingDiv = document.getElementById('loading')
@@ -66,4 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   registerForm.addEventListener('submit', async (e) => {
     await handleRegister(e)
   })
-})
+}
+
+document.addEventListener('DOMContentLoaded', init)

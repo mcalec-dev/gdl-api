@@ -1,6 +1,7 @@
 'use strict'
 import * as utils from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', async () => {
+
+async function init() {
   const loginForm = document.getElementById('loginForm')
   const errorDiv = document.getElementById('error')
   const loadingDiv = document.getElementById('loading')
@@ -58,4 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   loginForm.addEventListener('submit', async (e) => {
     await handleLogin(e)
   })
-})
+}
+
+document.addEventListener('DOMContentLoaded', init)

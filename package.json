@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "gdl-api express server",
   "author": "McAlec",
   "keywords": [
@@ -31,7 +31,7 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@types/filename-reserved-regex": "^3.0.0",
+    "@intrnl/xxhash64": "^0.1.2",
     "bcrypt": "^6",
     "bytes": "^3",
     "chalk": "^4",
@@ -94,6 +94,7 @@
     "@types/cors": "^2.8.19",
     "@types/express-session": "^1.18.2",
     "@types/figlet": "^1.7.0",
+    "@types/filename-reserved-regex": "^3.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/lusca": "^1.7.5",
     "@types/mime-types": "^3.0.1",
