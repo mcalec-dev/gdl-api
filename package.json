@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "gdl-api express server",
   "author": "McAlec",
   "keywords": [
@@ -19,7 +19,7 @@
     "format:check": "prettier . --check --config .prettierrc",
     "format:fix": "prettier . --write --config .prettierrc",
     "tailwind:minify": "tailwindcss -c ./tailwind.config.js -o ./public/css/min/tailwind.min.css --minify",
-    "minify": "node -e 'import(\"./utils/minify.js\").processFiles()'",
+    "minify": "node ./utils/minify.js",
     "build": "npm run tailwind:minify && npm run minify",
     "typecheck": "npm run typecheck:api && npm run typecheck:public",
     "typecheck:api": "tsc -p ./tsconfig.json --noEmit",
