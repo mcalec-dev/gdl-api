@@ -3,7 +3,7 @@ const path = require('path')
 const { minify } = require('terser')
 const CleanCSS = require('clean-css')
 const glob = require('fast-glob')
-const log = require('./utils/logHandler')
+const log = require('./logHandler')
 const publicDir = path.join(__dirname, 'public')
 /** @param {string} filePath */
 const minifyJS = async (filePath) => {

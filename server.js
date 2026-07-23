@@ -1,7 +1,7 @@
 const express = require('express')
 const session = require('express-session')
 const { isbot } = require('isbot')
-const { processFiles } = require('./minify')
+const { processFiles } = require('./utils/minify')
 const { setReqVars } = require('./utils/requestUtils')
 const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
