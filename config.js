@@ -282,11 +282,6 @@ const schema = {
     parse: (v) => parseIntegerEnv(v, 'RATE_LIMIT_MAX'),
     type: 'number',
   },
-  SCAN_ON_STARTUP: {
-    env: 'SCAN_ON_STARTUP',
-    parse: parseBooleanEnv,
-    type: 'boolean',
-  },
   UPSERT_ON_ACCESS: {
     env: 'UPSERT_ON_ACCESS',
     parse: (v) => v,

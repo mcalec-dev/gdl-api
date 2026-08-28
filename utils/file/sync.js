@@ -26,6 +26,8 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
     const dirStats = { created: 0, updated: 0 }
+    const fileStats = { created: 0, updated: 0 }
+    const skipStats = { excluded: 0, disallowed: 0 }
     for (const entry of entries) {
       const entryPath = path.join(dirPath, entry.name)
       const entryRelativePath = relativePath
@@ -40,7 +42,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
           (DISALLOWED_FILES.includes(entry.name) ||
             isDisallowedExtension(entry.name)))
       ) {
-        log.debug(`Skipping excluded item: ${entryRelativePath}`)
+        skipStats.excluded++
         continue
       }
       let mtime = new Date()
@@ -75,12 +77,14 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         )
         dirStats.created += nestedStats.created
         dirStats.updated += nestedStats.updated
+        fileStats.created += nestedStats.files.created
+        fileStats.updated += nestedStats.files.updated
+        skipStats.excluded += nestedStats.skipped.excluded
+        skipStats.disallowed += nestedStats.skipped.disallowed
       }
       if (entry.isFile()) {
         if (!hasAllowedExtension(entryPath)) {
-          log.debug(
-            `Skipping file with disallowed extension: ${entryRelativePath}`
-          )
+          skipStats.disallowed++
           continue
         }
         let metadata = /** @type {any} */ ({})
@@ -101,23 +105,28 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         const { collection, author } = deriveCollectionAuthor(entryRelativePath)
         const mime = await getFileMime(entryPath)
         const sidecar = await readSidecarFile(entryPath)
-        await upsertFileEntry({
-          name: entry.name,
-          paths,
-          author,
-          collection,
-          size: getStoredSize(stats, false),
-          type: 'file',
-          created: ctime,
-          modified: mtime,
-          mime,
-          meta: metadata,
-          hash,
-          sidecar,
-        })
+        const upsertResult = await upsertFileEntry(
+          {
+            name: entry.name,
+            paths,
+            author,
+            collection,
+            size: getStoredSize(stats, false),
+            type: 'file',
+            created: ctime,
+            modified: mtime,
+            mime,
+            meta: metadata,
+            hash,
+            sidecar,
+          },
+          true
+        )
+        if (upsertResult?.isNew) fileStats.created++
+        else if (upsertResult) fileStats.updated++
       }
     }
-    return dirStats
+    return { ...dirStats, files: fileStats, skipped: skipStats }
   } catch (error) {
     log.error(`Error scanning directory ${dirPath}:`, error)
     throw error
@@ -125,14 +134,19 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
 }
 async function syncAllFilesToDatabase() {
   try {
-    log.debug('Starting comprehensive database sync...')
+    log.debug('Syncing database...')
     const stats = await fs.stat(BASE_DIR)
     if (!stats.isDirectory()) {
       throw new Error(`${BASE_DIR} is not a directory`)
     }
     const dirStats = await scanAndSyncDirectory(BASE_DIR, '')
-    log.debug(
-      `Database sync completed: Created ${dirStats.created} directories, Updated ${dirStats.updated} directories`
+    log.info(`Created ${dirStats.files.created} file entries`)
+    log.info(`Updated ${dirStats.files.updated} file entries`)
+    log.info(`Created ${dirStats.created} directory entries`)
+    log.info(`Updated ${dirStats.updated} directory entries`)
+    log.info(`Skipped ${dirStats.skipped.excluded} excluded items`)
+    log.info(
+      `Skipped ${dirStats.skipped.disallowed} files with disallowed extensions`
     )
     return {
       success: true,

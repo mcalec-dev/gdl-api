@@ -1,23 +1,16 @@
 # todo
 
 - integration with gallery-dl (via pwsh script or exe)
-- `files.js` doesn't append the metadata even if it doesn't have an url param
-- proper MIME setter in `files.js` (for each file)
-- npm packages to utilize; moment, pm2, async, sitemap, glob, rollup
+- finish mime handling in `files.js` for every transformed and streamed response, using detected MIME values instead of extension-only fallbacks
+- npm packages to evaluate and integrate where useful; `moment`, `pm2`, `async`, `sitemap`, `rollup`, `sanitize-url`, `slugify`
 - app using native frameworks
-- autocomplete for search frontend (like google)
-- implement google oauth with passport
+- search autocomplete for frontend
+- implement google oauth
 - configurable grid layout for frontend files
 - rollup with nexe
 - npm package `emailvalid` for email validation in user registrations
 - backend typescript rewrite (planned for v1.0.0)
-- finish adding the quality settings/params to the files endpoint with sharp (imageUtils & fileUtils)
-- instead of having a seperate `:uuid` endpoint, each db model should have a `:uuid` endpoint that returns the data correlated to its database entry. ex. `/files/:uuid`, `/directories/:uuid`, etc.
-- implement tasks/queues for long-running processes (ex. file scanning, session management, metadata processing, etc.)
-- implement checks for file integrity and duplicates (ex. using checksums or hashes) to prevent storing multiple copies of the same file and to ensure data integrity.
-- add last accessed/scanned timestamps to files and directories for better management and cleanup of old or unused files.
-- jwt tokens via `express-jwt`
-- move trolling middleware stuff to an optional addon (trolling middleware removed in v0.4.0)
-- packages to utilize for, `sanitize-url` `slugify`
-- reduce log spam for database upserts to `Updated n file entries` `Excluded n entries` `Created n file entries` for info logs
-- use `create-torrent` and `parse-torrent` for creating file/folder .torrent files would. ex. file `/files/<path to file>/torrent` or `/files/<path to folder>/torrent` will generate and download a torrent file for use.
+- replace the separate `:uuid` endpoint with model specific uuid endpoints that return the related database entry ex. `/files/:uuid` or `/directories/:uuid`
+- add persistent "Last Accessed" and "Last Scanned" timestamps to file and directory models, update them from access and scan workflows, and use them for cleanup/management
+- token management via `express-jwt`
+- use `create-torrent` and `parse-torrent` to generate `.torrent` files for `/files/<path-to-file>/torrent` and `/files/<path-to-folder>/torrent`

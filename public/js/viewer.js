@@ -1,5 +1,32 @@
-import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
+// @ts-ignore
 import * as utils from './index.min.js'
+
+let scroll = {
+  lock: () => {},
+  unlock: () => {},
+}
+let _scrollLoaded = false
+
+async function loadScrollModule() {
+  if (_scrollLoaded) return
+  _scrollLoaded = true
+
+  try {
+    const module =
+      // @ts-ignore
+      await import('https://utils.mcalec.dev/scroll.js/scroll.min.js')
+    scroll = module?.default ?? module
+  } catch (error) {
+    console.warn(
+      'Unable to load scroll module; proceeding without scroll locking.',
+      error
+    )
+  }
+}
+
+function ensureScrollModule() {
+  void loadScrollModule()
+}
 import {
   IMAGE_SCALE,
   MAX_IMAGE_SCALE,
@@ -61,6 +88,7 @@ function preloadMedia(item) {
 
 function showViewer(index) {
   if (!isViewerOpen) {
+    ensureScrollModule()
     scroll.lock()
     isViewerOpen = true
   }
@@ -243,6 +271,7 @@ async function setupViewerEvents() {
       utils.handleError(error)
     } finally {
       if (isViewerOpen) {
+        ensureScrollModule()
         scroll.unlock()
         isViewerOpen = false
       }
@@ -395,6 +424,7 @@ async function setupViewerEvents() {
   })
   window.addEventListener('beforeunload', () => {
     if (isViewerOpen) {
+      ensureScrollModule()
       scroll.unlock()
       isViewerOpen = false
     }
@@ -405,6 +435,7 @@ async function setupViewerEvents() {
       fileViewer.style.display === 'flex' &&
       isViewerOpen
     ) {
+      ensureScrollModule()
       scroll.unlock()
       isViewerOpen = false
     }

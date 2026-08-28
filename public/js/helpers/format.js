@@ -1,21 +1,26 @@
+// @ts-ignore
 import { BYTES_BITS } from '../settings.min.js'
+// @ts-ignore
 import prettyBytes from 'https://cdn.jsdelivr.net/npm/pretty-bytes/+esm'
+// @ts-ignore
 import prettyMs from 'https://cdn.jsdelivr.net/npm/pretty-ms/+esm'
+// @ts-ignore
+import * as utils from '../index.min.js'
 
 /**
  * @param {number} bytes
  * @param {Object} [options]
  * @param {number} [options.minDecimalPlaces=0]
  * @param {number} [options.maxDecimalPlaces=2]
- * @returns {string|null}
+ * @returns {string|undefined}
  */
 export function formatSize(
   bytes,
   { minDecimalPlaces = 0, maxDecimalPlaces = 2 } = {}
 ) {
-  if (!bytes) return null
+  if (!bytes) return undefined
   if (typeof bytes !== 'number' || isNaN(bytes) || bytes < 0) {
-    return null
+    return undefined
   }
   try {
     if (BYTES_BITS) {
@@ -45,19 +50,19 @@ export function formatSize(
       })
     }
   } catch (error) {
-    handleError(error)
-    return null
+    utils.handleError(error)
+    return undefined
   }
 }
 
 /**
  * @param {number} ms
- * @returns {string|null}
+ * @returns {string|undefined}
  */
 export function formatMs(ms) {
-  if (!ms) return null
+  if (!ms) return undefined
   if (typeof ms !== 'number' || isNaN(ms) || ms < 0) {
-    return null
+    return undefined
   }
   try {
     /*return prettyMs(ms, {
@@ -77,8 +82,8 @@ export function formatMs(ms) {
     })*/
     return prettyMs(ms)
   } catch (error) {
-    handleError(error)
-    return null
+    utils.handleError(error)
+    return undefined
   }
 }
 

@@ -1,7 +1,24 @@
 const File = require('../../models/File')
+
 /**
+ * @typedef {{ local: string, relative: string, remote: string }} FilePaths
  * @typedef {{ uuid?: unknown }} FileInputObject
+ * @typedef {{ uuid?: unknown }} FileUuidDocument
+ * @typedef {{
+ *   name: string,
+ *   paths?: FilePaths | null,
+ *   size: number,
+ *   type: string,
+ *   collection: string,
+ *   author: string,
+ *   mime: string,
+ *   created: Date,
+ *   modified: Date,
+ *   hash: string,
+ *   uuid: string
+ * }} FileResult
  */
+
 /**
  * @param {unknown} value
  * @returns {string | null}
@@ -14,6 +31,7 @@ function normalizeUuidValue(value) {
   }
   return normalized
 }
+
 /**
  * @param {unknown} tags
  * @returns {string[]}
@@ -25,6 +43,7 @@ function normalizeTags(tags) {
     .filter((tag) => tag.length > 0)
   return [...new Set(normalized)]
 }
+
 /**
  * @param {unknown} value
  * @returns {value is string}
@@ -32,6 +51,7 @@ function normalizeTags(tags) {
 function isValidUuidParam(value) {
   return Boolean(normalizeUuidValue(value))
 }
+
 /**
  * @param {unknown} value
  * @returns {value is unknown[]}
@@ -39,6 +59,7 @@ function isValidUuidParam(value) {
 function isNonEmptyArray(value) {
   return Array.isArray(value) && value.length > 0
 }
+
 /**
  * @param {unknown} filesInput
  * @returns {string[]}
@@ -63,6 +84,7 @@ function normalizeFileUuidsInput(filesInput) {
   }
   return [...uuidCandidates]
 }
+
 /**
  * @param {unknown} limitQuery
  * @param {unknown} pageQuery
@@ -80,6 +102,7 @@ function parsePagination(limitQuery, pageQuery, paginationLimit) {
   const skip = (page - 1) * limit
   return { limit, page, skip }
 }
+
 /**
  * @param {unknown} filesInput
  * @returns {Promise<string[]>}
@@ -93,16 +116,17 @@ async function resolveFileUuidsFromInput(filesInput) {
     ...new Set(
       filesByUuid
         .map((doc) => {
-          const value = /** @type {{ uuid?: unknown }} */ (doc).uuid
+          const value = /** @type {FileUuidDocument} */ (doc).uuid
           return normalizeUuidValue(value) || ''
         })
         .filter(Boolean)
     ),
   ]
 }
+
 /**
  * @param {unknown[] | undefined | null} fileUuids
- * @returns {Promise<any[]>}
+ * @returns {Promise<FileResult[]>}
  */
 async function findFilesByUuids(fileUuids) {
   if (!Array.isArray(fileUuids) || fileUuids.length === 0) return []
@@ -131,6 +155,7 @@ async function findFilesByUuids(fileUuids) {
     .sort({ modified: -1 })
     .lean()
 }
+
 module.exports = {
   normalizeTags,
   isValidUuidParam,

@@ -59,12 +59,12 @@
         </span>
       </div>
       <div class="flex flex-row w-full items-center justify-center gap-2">
-        <a href="/api/auth/provider/login/discord" class="flex w-fit items-center justify-center gap-2 rounded bg-[#5662f6] px-3 py-2 font-medium text-white">
-          <img src="/svg/discord.svg" alt="Discord" class="invert h-5 w-5" />
+        <a href="<%= basePath || '' %>/api/auth/provider/login/discord" class="flex w-fit items-center justify-center gap-2 rounded bg-[#5662f6] px-3 py-2 font-medium text-white">
+          <img src="<%= basePath || '' %>/svg/discord.svg" alt="Discord" class="invert h-5 w-5" />
           Register with Discord
         </a>
-        <a href="/api/auth/provider/login/github" class="flex w-fit items-center justify-center gap-2 rounded bg-[#212830] px-3 py-2 font-medium text-white">
-          <img src="/svg/github.svg" alt="GitHub" class="h-5 w-5" />
+        <a href="<%= basePath || '' %>/api/auth/provider/login/github" class="flex w-fit items-center justify-center gap-2 rounded bg-[#212830] px-3 py-2 font-medium text-white">
+          <img src="<%= basePath || '' %>/svg/github.svg" alt="GitHub" class="h-5 w-5" />
           Register with GitHub
         </a>
       </div>
@@ -72,13 +72,13 @@
         <p class="text-white">
           Already have an account?
           <br />
-          <a href="/login/" class="text-blue-500">
+          <a href="<%= basePath || '' %>/login/" class="text-blue-500">
             Login here
           </a>
         </p>
       </div>
     </div>
-    <script type="module" src="/js/min/register.min.js"></script>
+    <script type="module" src="<%= basePath || '' %>/js/min/register.min.js"></script>
     <%- include('partials/bg') %>
   </body>
 </html>

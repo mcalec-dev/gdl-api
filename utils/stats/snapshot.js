@@ -5,7 +5,9 @@ const { hasAllowedExtension } = require('../file/typeGuards.js')
 const config = /** @type {any} */ (require('../../config.js'))
 const log = require('../logHandler.js')
 const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
+
 /** @typedef {{ count: number, size: number }} FileTypeEntry */
+
 /**
  * @typedef {{
  *   files: number,
@@ -16,6 +18,7 @@ const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
  *   smallestFileSize: number | null,
  * }} AggregationStats
  */
+
 /**
  * @typedef {{
  *   files: number,
@@ -26,6 +29,7 @@ const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
  *   smallestFileSize: number | null,
  * }} CollectionDetail
  */
+
 /**
  * @typedef {{
  *   total: number,
@@ -39,6 +43,7 @@ const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
  *   details: Record<string, CollectionDetail>,
  * }} CollectionsSnapshot
  */
+
 /**
  * @typedef {{
  *   version: string | undefined,
@@ -48,12 +53,14 @@ const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
  *   node: string,
  * }} ApiStatsSnapshot
  */
+
 /**
  * @typedef {{
  *   api: ApiStatsSnapshot,
  *   collections: CollectionsSnapshot,
  * }} StatsSnapshot
  */
+
 /** @returns {AggregationStats} */
 function createEmptyStats() {
   return {
@@ -65,6 +72,7 @@ function createEmptyStats() {
     smallestFileSize: null,
   }
 }
+
 /** @param {AggregationStats} stats @param {Date | null | undefined} candidate */
 function setMostRecent(stats, candidate) {
   if (!candidate) return
@@ -72,6 +80,7 @@ function setMostRecent(stats, candidate) {
     stats.lastModified = candidate
   }
 }
+
 /** @param {AggregationStats} stats @param {string} ext @param {number} size */
 function addFileType(stats, ext, size) {
   if (!stats.fileTypes[ext]) {
@@ -80,6 +89,7 @@ function addFileType(stats, ext, size) {
   stats.fileTypes[ext].count += 1
   stats.fileTypes[ext].size += size
 }
+
 /** @param {AggregationStats} target @param {AggregationStats} source */
 function mergeStats(target, source) {
   target.files += source.files
@@ -103,6 +113,7 @@ function mergeStats(target, source) {
     target.fileTypes[ext].size += data.size
   }
 }
+
 /** @param {AggregationStats} stats @param {import('fs').Stats} fileStats @param {string} ext */
 function addFileStats(stats, fileStats, ext) {
   const fileSize = fileStats.size
@@ -117,6 +128,7 @@ function addFileStats(stats, fileStats, ext) {
   }
   addFileType(stats, ext, fileSize)
 }
+
 /** @param {string} dirPath @param {AggregationStats} [stats] */
 async function aggregateStats(dirPath, stats) {
   if (!stats) {
@@ -147,6 +159,7 @@ async function aggregateStats(dirPath, stats) {
   }
   return stats
 }
+
 /** @param {{ [key: string]: FileTypeEntry }} fileTypes */
 function sortFileTypes(fileTypes) {
   return Object.fromEntries(
@@ -160,6 +173,7 @@ function sortFileTypes(fileTypes) {
       ])
   )
 }
+
 /** @returns {Promise<ApiStatsSnapshot>} */
 async function getApiStats() {
   await Promise.resolve()
@@ -246,6 +260,7 @@ async function generateStatsSnapshot() {
   }
   return stats
 }
+
 module.exports = {
   generateStatsSnapshot,
 }

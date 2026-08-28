@@ -1,4 +1,36 @@
-import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
+let scroll = {
+  lock: () => {},
+  unlock: () => {},
+}
+let _scrollLoaded = false
+
+async function loadScrollModule() {
+  if (_scrollLoaded) return
+  _scrollLoaded = true
+
+  try {
+    const module =
+      // @ts-ignore
+      await import('https://utils.mcalec.dev/scroll.js/scroll.min.js')
+    scroll = module?.default ?? module
+  } catch (error) {
+    console.warn(
+      'Unable to load scroll module; proceeding without scroll locking.',
+      error
+    )
+  }
+}
+
+function ensureScrollModule() {
+  void loadScrollModule()
+}
+
+/**
+ * @param {string} id
+ * @param {string} title
+ * @param {string} content
+ * @returns {void}
+ */
 export function createModal(id, title, content) {
   if (document.getElementById(id)) {
     console.warn(`Modal with ID "${id}" already exists. Skipping creation.`)
@@ -16,19 +48,29 @@ export function createModal(id, title, content) {
   `
   document.body.appendChild(modal)
 }
+
+/**
+ * @param {string} id
+ */
 export function closeModal(id) {
   const modal = document.getElementById(id)
   if (modal) {
     modal.style.display = 'none'
+    ensureScrollModule()
     scroll.unlock()
   } else {
     console.error(`Modal with ID "${id}" not found.`)
   }
 }
+
+/**
+ * @param {string} id
+ */
 export function openModal(id) {
   const modal = document.getElementById(id)
   if (modal) {
     modal.style.display = 'block'
+    ensureScrollModule()
     scroll.lock()
   } else {
     console.error(`Modal with ID "${id}" not found.`)

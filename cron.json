@@ -1,0 +1,40 @@
+{
+	"enabled": true,
+	"tasks": [
+		{
+			"name": "sync",
+			"enabled": true,
+			"startup": true,
+			"interval": "0 0 * * *",
+			"manual": true
+		},
+		{
+			"name": "session-cleanup",
+			"enabled": true,
+			"startup": true,
+			"interval": "0 4 * * *",
+			"manual": true
+		},
+		{
+			"name": "stats",
+			"enabled": true,
+			"startup": true,
+			"interval": "0 * * * *",
+			"manual": true
+		},
+		{
+			"name": "cleanup",
+			"enabled": true,
+			"startup": true,
+			"interval": "0 3 * * *",
+			"manual": true
+		},
+		{
+			"name": "check-files",
+			"enabled": true,
+			"startup": false,
+			"interval": "0 * * * *",
+			"manual": true
+		}
+	]
+}

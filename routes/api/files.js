@@ -6,7 +6,6 @@ const log = require('../../utils/logHandler')
 const sendResponse = require('../../utils/resUtils')
 const {
   BASE_DIR,
-  SCAN_ON_STARTUP,
   DISALLOWED_FILES,
   PAGINATION_LIMIT,
   UPSERT_ON_ACCESS,
@@ -48,17 +47,13 @@ const {
   getCachedPaginationResult,
   setCachedPaginationResult,
 } = require('../../utils/file/paginationCache.js')
-const {
-  initializeDatabaseSync,
-  createDbEntriesForContents,
-} = require('../../utils/file/sync.js')
+const { createDbEntriesForContents } = require('../../utils/file/sync.js')
+const { checkFileRecord } = require('../../utils/file/check.js')
 const { safePath, validateRequestParams } = require('../../utils/pathUtils')
 const { resizeImage } = require('../../utils/image/resize.js')
 const { convertImage } = require('../../utils/image/convert.js')
 const { applyMetadata } = require('../../utils/image/metadata.js')
-if (SCAN_ON_STARTUP === true) initializeDatabaseSync()
-else if (!SCAN_ON_STARTUP || SCAN_ON_STARTUP === false)
-  log.debug('Skipping full database sync')
+
 /**
  * @param {string} realPath
  * @returns {Promise<string>}
@@ -74,6 +69,7 @@ async function resolveMediaMimeType(realPath) {
   }
   return 'application/octet-stream'
 }
+
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -134,6 +130,7 @@ function streamTranscodedMedia(req, res, filePath, options) {
   ffmpegProcess.on('exit', removeListeners)
   stream.pipe(res)
 }
+
 /**
  * @param {unknown} cacheQuery
  */
@@ -153,6 +150,7 @@ function parseCacheQuery(cacheQuery) {
   }
   return { isValid: false, useCache: true }
 }
+
 router.get('/', requireRole('user'), async (req, res) => {
   if (!req.user) {
     return sendResponse(res, 401)
@@ -270,6 +268,7 @@ router.get('/', requireRole('user'), async (req, res) => {
     return sendResponse(res, 500)
   }
 })
+
 router.get(
   [
     '/:collection',
@@ -441,6 +440,11 @@ router.get(
       }
       return sendResponse(res, 200).json(paginated)
     } else {
+      try {
+        await checkFileRecord(realPath)
+      } catch (error) {
+        log.error('Error checking file record:', error)
+      }
       if (
         !isDirectSidecarRequest &&
         (!hasAllowedExtension(realPath) ||
@@ -708,4 +712,5 @@ router.get(
     }
   }
 )
+
 module.exports = router

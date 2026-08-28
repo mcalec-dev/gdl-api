@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: gdl-api
   description: gdl-api express server
-  version: 'v0.4'
+  version: '0.5.0'
 servers:
   - url: https://gdl.mcalec.dev/api
     description: production server
@@ -74,6 +74,8 @@ paths:
                       auth:
                         type: string
                       user:
+                        type: string
+                      download:
                         type: string
                       files:
                         type: string
@@ -171,17 +173,8 @@ paths:
               required:
                 - password
       responses:
-        '201':
+        '204':
           description: User successfully logged in
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  user:
-                    type: object
         '400':
           description: Missing credentials, user not found, or invalid password
           content:
@@ -207,7 +200,7 @@ paths:
       summary: User logout
       description: Log out the authenticated user and destroy their session
       responses:
-        '201':
+        '204':
           description: User successfully logged out
         '401':
           description: User not authenticated
@@ -649,25 +642,18 @@ paths:
               required:
                 - file
       responses:
-        '201':
+        '200':
           description: File uploaded successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
+                  message:
+                    type: string
                   fileId:
                     type: string
                     description: The GridFS file ID
-                  filename:
-                    type: string
-                  size:
-                    type: number
-                  uploadDate:
-                    type: string
-                    format: date-time
         '400':
           description: No file provided or file too large
           content:
@@ -710,7 +696,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [file, directory]
+            enum: [file, directory, uuid, hash, all]
           description: The type of the entry to retrieve (file or directory)
       responses:
         '200':
@@ -896,7 +882,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  count:
+                  total:
                     type: integer
                     description: Total number of pools
                   page:
@@ -1207,13 +1193,65 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
+                $ref: '#/components/schemas/PoolFileUpdate'
+        '400':
+          description: Invalid UUID or empty files array
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Pool or files not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Pools
+      summary: Remove files from a pool
+      description: Remove one or more files from an existing pool by their UUIDs
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+          description: Pool UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  items:
                     type: string
-                  count:
-                    type: integer
-                    description: Total number of files in the pool after operation
+                  description: Array of file UUIDs to remove
+              required:
+                - files
+      responses:
+        '200':
+          description: Files removed from pool successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolFileUpdate'
         '400':
           description: Invalid UUID or empty files array
           content:
@@ -1256,8 +1294,8 @@ paths:
           required: false
           schema:
             type: string
-            enum: [file, directory]
-          description: Filter by type (file or directory)
+            enum: [file, directory, uuid, hash, all]
+          description: Filter by file, directory, UUID, hash, or all result types
       responses:
         '200':
           description: Search results with relevancy ranking
@@ -1366,7 +1404,11 @@ paths:
                     properties:
                       announcements:
                         type: string
+                      tasks:
+                        type: string
                       dashboard:
+                        type: string
+                      color:
                         type: string
   /user/color/:
     get:
@@ -1396,11 +1438,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-    post:
+    put:
       tags:
         - User
-      summary: Set user color preference
-      description: Update the color preference for the authenticated user
+      summary: Update user color settings
+      description: Update the lightness and enabled state of the authenticated user's color
       requestBody:
         required: true
         content:
@@ -1408,11 +1450,14 @@ paths:
             schema:
               type: object
               properties:
-                color:
-                  type: string
-                  description: The new color preference (e.g., hex code)
-              required:
-                - color
+                lightness:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  description: Optional color lightness percentage
+                enabled:
+                  type: boolean
+                  description: Optional color-enabled state
       responses:
         '200':
           description: User color preference updated successfully
@@ -1421,8 +1466,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
                   color:
                     type: string
         '400':
@@ -1433,6 +1476,40 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /user/color/reset:
+    post:
+      tags:
+        - User
+      summary: Reset user color settings
+      description: Reset the authenticated user's color settings to the default
+      responses:
+        '200':
+          description: User color settings reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  color:
+                    type: string
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -1457,8 +1534,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
                   username:
                     type: string
                   email:
@@ -1472,11 +1547,10 @@ paths:
                   created:
                     type: string
                     format: date-time
-                  modified:
-                    type: string
-                    format: date-time
                   oauth:
                     type: object
+                  color:
+                    type: string
                   sessions:
                     type: array
                     items:
@@ -1678,6 +1752,112 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/tasks:
+    get:
+      tags:
+        - Admin
+      summary: List administrative tasks
+      description: Retrieve administrative tasks
+      responses:
+        '200':
+          description: List of administrative tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+        '401':
+          description: User not authorized as admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to fetch tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Admin
+      summary: Create an administrative task
+      description: Create an administrative task
+      responses:
+        '204':
+          description: Task created successfully
+        '401':
+          description: User not authorized as admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to create task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/tasks/{id}:
+    get:
+      tags:
+        - Admin
+      summary: Get an administrative task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Administrative task
+          content:
+            application/json:
+              schema: {}
+        '401':
+          description: User not authorized as admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to fetch task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Admin
+      summary: Update an administrative task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Task updated successfully
+        '401':
+          description: User not authorized as admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to update task
           content:
             application/json:
               schema:
@@ -2157,6 +2337,18 @@ components:
           type: string
           format: date-time
           description: Timestamp when pool was last modified
+    PoolFileUpdate:
+      type: object
+      properties:
+        _id:
+          type: string
+        uuid:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+          description: Updated file UUIDs in the pool
     ErrorResponse:
       type: object
       properties:

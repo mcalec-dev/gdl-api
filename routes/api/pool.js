@@ -14,11 +14,12 @@ const {
   resolveFileUuidsFromInput,
   findFilesByUuids,
 } = require('../../utils/pool/helpers')
-/** @param {Record<string, any> | null | undefined} pool */
+
+/**
+ * @param {Record<string, any>} pool
+ * @returns {Record<string, any>}
+ */
 function serializePool(pool) {
-  if (!pool || typeof pool !== 'object') {
-    return pool
-  }
   if (!('_id' in pool)) {
     return pool
   }
@@ -55,7 +56,7 @@ router.get('/', requireRole('user'), async (req, res) => {
       total: count,
       page,
       limit,
-      pools: pools.map(serializePool),
+      results: pools.map(serializePool),
     })
   } catch (error) {
     log.error('Error retrieving pools:', error)
@@ -93,6 +94,9 @@ router.post('/', requireRole('user'), async (req, res) => {
         returnDocument: 'after',
       }
     ).lean()
+    if (!createdPool) {
+      return sendResponse.error(res, 500, 'Pool could not be created')
+    }
     log.debug('Pool created:', createdPool.uuid)
     return sendResponse(res, 201).json(serializePool(createdPool))
   } catch (error) {
@@ -132,7 +136,11 @@ router.put(['/:uuid', '/:uuid/'], requireRole('user'), async (req, res) => {
   }
   if (name !== undefined) {
     if (typeof name !== 'string' || !name.trim()) {
-      return sendResponse.error(res, 400, 'Pool name must be a non-empty string')
+      return sendResponse.error(
+        res,
+        400,
+        'Pool name must be a non-empty string'
+      )
     }
     updateDoc.name = name.trim()
   }
@@ -199,10 +207,14 @@ router.get(
         return sendResponse.error(res, 404, 'Pool not found')
       }
       if (!Array.isArray(pool.files) || pool.files.length === 0) {
-        return sendResponse.error(res, 404, 'No files found for the specified pool')
+        return sendResponse.error(
+          res,
+          404,
+          'No files found for the specified pool'
+        )
       }
       const files = await findFilesByUuids(pool.files)
-      return sendResponse.error(res, 200).json(files)
+      return sendResponse(res, 200).json(files)
     } catch (error) {
       log.error('Error retrieving files for pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
@@ -292,7 +304,7 @@ router.delete(
       if (!updatedPool) {
         return sendResponse.error(res, 404, 'Pool not found')
       }
-      return sendResponse.error(res, 200).json(serializePool(updatedPool))
+      return sendResponse(res, 200).json(serializePool(updatedPool))
     } catch (error) {
       log.error('Error removing files from pool:', error)
       return sendResponse.error(res, 500, 'Error removing files from pool')

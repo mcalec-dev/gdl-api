@@ -129,7 +129,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         .addEventListener('click', async () => {
           if (githubLinked) {
             await fetch(
-              document.location.origin + '/api/auth/provider/unlink/github',
+              document.location.origin +
+                (window.BASE_PATH || '') +
+                '/api/auth/provider/unlink/github',
               {
                 method: 'GET',
                 credentials: 'include',
@@ -137,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             )
             window.location.reload()
           } else {
-            window.location.href = '/api/auth/provider/link/github'
+              window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/github`
           }
         })
       document
@@ -145,7 +147,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         .addEventListener('click', async () => {
           if (discordLinked) {
             await fetch(
-              document.location.origin + '/api/auth/provider/unlink/discord',
+              document.location.origin +
+                (window.BASE_PATH || '') +
+                '/api/auth/provider/unlink/discord',
               {
                 method: 'GET',
                 credentials: 'include',
@@ -153,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             )
             window.location.reload()
           } else {
-            window.location.href = '/api/auth/provider/link/discord'
+              window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/discord`
           }
         })
       const logoutBtn = document.getElementById('logout')
@@ -168,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             utils.handleError(error)
             console.error('Failed to log out:', error)
           }
-          window.location.href = '/'
+          window.location.href = `${window.BASE_PATH || ''}/`
         })
       }
     })
@@ -184,7 +188,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     try {
       const res = await fetch(
-        document.location.origin + `/api/user/session/${uuid}`,
+        document.location.origin +
+          (window.BASE_PATH || '') +
+          `/api/user/session/${uuid}`,
         {
           method: 'DELETE',
           credentials: 'include',

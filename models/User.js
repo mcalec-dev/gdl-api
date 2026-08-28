@@ -44,6 +44,6 @@ module.exports = mongoose.model(
       },
       uuid: { type: String, required: true, index: true, unique: true },
     },
-    { _id: false, suppressReservedKeysWarning: true, versionKey: false }
+    { suppressReservedKeysWarning: true, versionKey: false }
   )
 )

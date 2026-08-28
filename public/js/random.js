@@ -309,7 +309,7 @@ function setupRandomMediaContextMenu() {
         if (!currentMediaData.uuid) return
         try {
           const a = document.createElement('a')
-          a.href = `/api/download/?uuid=${currentMediaData.uuid}`
+          a.href = `${window.BASE_PATH || ''}/api/download/?uuid=${currentMediaData.uuid}`
           a.download = ''
           document.body.appendChild(a)
           a.click()

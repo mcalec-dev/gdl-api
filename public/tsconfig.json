@@ -4,9 +4,12 @@
     "strict": true,
     "target": "ESNext",
     "module": "ESNext",
+    "allowJs": true,
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": []
+    "types": [],
+    "noEmit": true,
+    "checkJs": true,
   },
   "include": ["**/*.js"],
   "exclude": ["node_modules/**/*", "min/**/*"]

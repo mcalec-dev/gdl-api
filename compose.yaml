@@ -1,0 +1,87 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3030}:3030"
+    environment:
+      NODE_ENV: production
+      PORT: 3030
+      NAME: ${NAME:-gdl-api}
+      HOST: ${HOST:-localhost:3030}
+      BIND: 0.0.0.0
+      BASE_PATH: ${BASE_PATH:-}
+      BASE_DIR: /data
+      DISALLOWED_DIRS: ${DISALLOWED_DIRS:-["config/","functions/","logs/","node_modules"]}
+      DISALLOWED_FILES: ${DISALLOWED_FILES:-[".env",".DS_STORE","Thumbs.db","desktop.ini"]}
+      DISALLOWED_EXTENSIONS: ${DISALLOWED_EXTENSIONS:-["part","tmp","temp","log"]}
+      MONGODB_URL: mongodb://mongodb:27017/gdl
+      REDIS_URL: redis://redis:6379
+      REDIS_CACHE_TTL_SECONDS: ${REDIS_CACHE_TTL_SECONDS:-300}
+      REDIS_CACHE_PATCH_FLAG: ${REDIS_CACHE_PATCH_FLAG:-gdl.redis.cache.layer.patched}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+      COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-30d}
+      MAX_DEPTH: ${MAX_DEPTH:-50}
+      STAT_DIRECTORY_SIZE: ${STAT_DIRECTORY_SIZE:-true}
+      STAT_FILE_SIZE: ${STAT_FILE_SIZE:-true}
+      FILE_UPLOAD_LIMIT: ${FILE_UPLOAD_LIMIT:-100MB}
+      PAGINATION_LIMIT: ${PAGINATION_LIMIT:-1000}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1m}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      UPSERT_ON_ACCESS: ${UPSERT_ON_ACCESS:-file}
+      HASH_ALGORITHM: ${HASH_ALGORITHM:-sha256}
+      OAUTH_PROVIDERS: ${OAUTH_PROVIDERS:-[]}
+      MAX_PIXELS: ${MAX_PIXELS:-10000}
+      MAX_SCALE: ${MAX_SCALE:-1000}
+      MAX_BUFFER_SIZE: ${MAX_BUFFER_SIZE:-100MB}
+      MAX_SEARCH_RESULTS: ${MAX_SEARCH_RESULTS:-1000}
+      SIDECAR_FILE: ${SIDECAR_FILE:-true}
+      SIDECAR_FILE_EXTENSION: ${SIDECAR_FILE_EXTENSION:-.json}
+      LOG_LEVEL: ${LOG_LEVEL:-2}
+      TRANSCODE_VIDEO: ${TRANSCODE_VIDEO:-true}
+      TRANSCODE_AUDIO: ${TRANSCODE_AUDIO:-true}
+      USE_SYSTEM_FFMPEG: ${USE_SYSTEM_FFMPEG:-false}
+      FFMPEG_PATH: ${FFMPEG_PATH:-/usr/bin/ffmpeg}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    volumes:
+      - gdl-data:/data
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:3030/api/health/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' localhost:27017/test | grep -q 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gdl-data:
+  mongodb-data:

@@ -9,7 +9,7 @@
   <script defer type="module" src="/js/min/announcements.min.js"></script>
   <div id="navbar" class="backdrop-blur-md border-b border-x border-white/20 w-full lg:max-w-[65%] rounded-b-xl shadow-lg mb-6">
     <div class="flex flex-wrap items-center justify-between p-4">
-      <a href="/" class="flex items-center">
+      <a href="<%= basePath || '' %>/" class="flex items-center">
         <p id="navbar-title" class="self-center text-2xl mr-auto ml-0 font-semibold whitespace-nowrap text-white hover:text-blue-400 transition-colors duration-300"></p>
       </a>
       <div class="flex lg:order-2">
@@ -24,14 +24,14 @@
       <div id="mobile-navbar-menu" class="backdrop-blur-md absolute right-4 top-[65%] w-56 rounded-xl shadow-lg border border-white/20 z-50 lg:hidden" hidden>
         <ul class="flex flex-col space-y-2 p-4">
           <li>
-            <a href="/" class="<%= currentPage === 'home' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-white rounded font-normal hover:text-blue-400' %>" <%= currentPage === 'home' ? 'aria-current="page"' : '' %>>
+            <a href="<%= basePath || '' %>/" class="<%= currentPage === 'home' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-white rounded font-normal hover:text-blue-400' %>" <%= currentPage === 'home' ? 'aria-current="page"' : '' %>>
               Home
               <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
             </a>
           </li>
           <hr>
           <li>
-            <a href="/files/" class="<%= currentPage === 'files' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-white rounded font-normal hover:text-blue-400' %>" <%= currentPage === 'files' ? 'aria-current="page"' : '' %>>
+            <a href="<%= basePath || '' %>/files/" class="<%= currentPage === 'files' ? 'block py-2 pl-3 pr-4 text-white bg-blue-700 rounded font-medium' : 'block py-2 pl-3 pr-4 text-white rounded font-normal hover:text-blue-400' %>" <%= currentPage === 'files' ? 'aria-current="page"' : '' %>>
               Files
               <span class="absolute left-0 bottom-0 w-0 h-0.5 bg-blue-400 transition-all duration-300 group-hover:w-full"></span>
             </a>

@@ -7,7 +7,6 @@ const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
 const {
   initSessionStore,
-  getSessionStoreKind,
   shutdownSessionStore,
 } = require('./utils/sessionStore')
 const passport = require('./utils/passport')
@@ -18,6 +17,7 @@ const swaggerUi = require('swagger-ui-express')
 const helmet = require('helmet').default
 const log = require('./utils/logHandler')
 const sendResponse = require('./utils/resUtils')
+const { startCron, stopCron } = require('./utils/cron')
 const BodyParser = require('body-parser')
 const rateLimit = require('express-rate-limit')
 const {
@@ -34,6 +34,7 @@ const {
   RATE_LIMIT_WINDOW,
   RATE_LIMIT_MAX,
 } = /** @type {any} */ (require('./config'))
+
 async function initSwagger() {
   try {
     const yaml = require('js-yaml')
@@ -56,6 +57,7 @@ async function initSwagger() {
     throw error
   }
 }
+
 if (BASE_PATH) {
   app.get('/', (req, res) => {
     res.redirect(302, `${BASE_PATH}/`)
@@ -64,11 +66,10 @@ if (BASE_PATH) {
     res.redirect(307, `${BASE_PATH}/`)
   })
 }
+
 async function initDB() {
   initDbCacheLayer()
   await initSessionStore()
-  const sessionStoreKind = getSessionStoreKind()
-  const cookieMaxAgeMs = COOKIE_MAX_AGE
   let mongodb = null
   try {
     mongodb = await require('mongoose').connect(MONGODB_URL)
@@ -76,49 +77,11 @@ async function initDB() {
     if (mongodb === null) throw new Error('MongoDB connection failed')
     const gridfsUtils = require('./utils/gridfsUtils')
     gridfsUtils.initGridFS()
-    if (sessionStoreKind === 'mongo') {
-      const db = mongodb.connection.db
-      if (!db) throw new Error('Database connection unavailable')
-      const sessions = db.collection('sessions')
-      try {
-        await sessions.createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
-        log.info('TTL index created on sessions collection')
-      } catch (indexError) {
-        log.debug(
-          'TTL index already exists or creation failed:',
-          indexError instanceof Error ? indexError.message : String(indexError)
-        )
-      }
-      const cutoffDate = new Date(Date.now() - cookieMaxAgeMs)
-      const result = await sessions.deleteMany({
-        $or: [
-          { expires: { $lt: cutoffDate } },
-          { 'expires.$date': { $lt: cutoffDate } },
-        ],
-      })
-      log.info(`Expired sessions cleaned up (${result.deletedCount} removed)`)
-    } else {
-      log.info('Redis-backed session store enabled')
-    }
-    const cutoffDate = new Date(Date.now() - cookieMaxAgeMs)
-    const User = require('./models/User')
-    const userResult = await User.updateMany(
-      {},
-      {
-        $pull: {
-          sessions: {
-            expires: { $lt: cutoffDate },
-          },
-        },
-      }
-    )
-    log.info(
-      `User sessions cleaned up (${userResult.modifiedCount} users updated)`
-    )
   } catch (error) {
     throw error
   }
 }
+
 async function webVars() {
   return {
     title: NAME,
@@ -127,8 +90,10 @@ async function webVars() {
     keywords: process.env.npm_package_keywords || 'keywords',
     url: await HOST,
     image: '/svg/nodejs.svg',
+    basePath: BASE_PATH,
   }
 }
+
 async function renderApp() {
   const pages = [
     'home',
@@ -197,6 +162,7 @@ async function renderApp() {
     }
   })
 }
+
 async function initApp() {
   app.set('trust proxy', true)
   app.use(setReqVars)
@@ -316,6 +282,7 @@ async function initApp() {
     next()
   })
 }
+
 async function initRoutes() {
   app.use(
     `${BASE_PATH}`,
@@ -374,25 +341,36 @@ async function initRoutes() {
     )
   )
 }
+
 process.on('uncaughtException', (error) => {
   log.error('Uncaught Exception:', error)
   process.exit(1)
 })
+
 process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled Rejection at:', promise, 'reason:', reason)
   process.exit(1)
 })
+
 process.on('SIGTERM', async () => {
+  stopCron()
   try {
     await shutdownSessionStore()
     log.info('Session store shut down')
   } catch (error) {
     log.error('Failed to shut down session store:', error)
   }
+  try {
+    await require('mongoose').connection.close()
+    log.info('MongoDB connection shut down')
+  } catch (error) {
+    log.error('Failed to shut down MongoDB connection:', error)
+  }
   server.close(() => {
     log.info('Process terminated')
   })
 })
+
 async function verifyConfig() {
   try {
     await require('fs').promises.access(BASE_DIR)
@@ -431,10 +409,10 @@ const banner = async () => {
   log.info(chalk.gray('Directory:'), chalk.green(BASE_DIR))
   log.info(chalk.dim('━'.repeat(50)))
 }
+
 async function main() {
   try {
     await verifyConfig()
-    await processFiles()
     await initDB()
     await initApp()
     await initSwagger()
@@ -446,11 +424,19 @@ async function main() {
       log.info(`Server is listening on port ${PORT}`)
       log.info(`Server is running in ${NODE_ENV} mode`)
       banner()
+      void processFiles().catch((fileError) => {
+        log.error('Failed to process files:', fileError)
+      })
+      void startCron().catch((cronError) => {
+        log.error('Failed to start cron tasks:', cronError)
+      })
     })
   } catch (error) {
     log.error('Failed to start server:', error)
     process.exit(1)
   }
 }
+
 main()
+
 module.exports = app

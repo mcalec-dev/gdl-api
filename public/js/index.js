@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as helpers from './helpers/format.min.js'
 
 export const formatSize = () => helpers.formatSize()
@@ -22,15 +23,13 @@ export function formatDate(timestamp) {
 }
 
 /**
- * Fetches the API name from the server
- * Makes a request to /api to retrieve server information
  * @async
- * @returns {Promise<string|undefined>} The server name or undefined if fetch fails
+ * @returns {Promise<string|undefined>}
  */
 export async function getName() {
   let name
   try {
-    const host = document.location.origin + '/api'
+    const host = document.location.origin + (window.BASE_PATH || '') + '/api'
     if (!host) throw new Error('No API host available')
     const res = await fetch(host)
     if (res && typeof res.json === 'function') {
@@ -47,11 +46,9 @@ export async function getName() {
 }
 
 /**
- * Parses emoji shortcodes in text and replaces them with icon SVGs
- * Looks for patterns like :emoji_name: and replaces with corresponding icons
  * @async
- * @param {string} text - Text containing emoji shortcodes
- * @returns {Promise<string>} Text with emoji shortcodes replaced by icons
+ * @param {string} text
+ * @returns {Promise<string>}
  */
 export async function parseEmojis(text) {
   return text.replace(/:([a-zA-Z0-9_+-]+):/g, async (match, key) => {
@@ -73,7 +70,7 @@ export async function getIcons() {
     })
 }
 
-/** @param {string|Error} error */
+/** @param {string|Error|undefined} error */
 export function handleError(error) {
   console.log('An error occurred:', error)
   return console.error(error)

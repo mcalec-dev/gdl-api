@@ -1,31 +1,54 @@
-'use strict'
+// @ts-ignore
 import * as utils from '../min/index.min.js'
-import scroll from 'https://utils.mcalec.dev/scroll.js/scroll.min.js'
+let scroll = {
+  lock: () => {},
+  unlock: () => {},
+}
+let _scrollLoaded = false
+
+async function loadScrollModule() {
+  if (_scrollLoaded) return
+  _scrollLoaded = true
+
+  try {
+    const module =
+      // @ts-ignore
+      await import('https://utils.mcalec.dev/scroll.js/scroll.min.js')
+    scroll = module?.default ?? module
+  } catch (error) {
+    console.warn(
+      'Unable to load scroll module; proceeding without scroll locking.',
+      error
+    )
+  }
+}
+
+function ensureScrollModule() {
+  void loadScrollModule()
+}
+
 let contextMenu = null
 let _contextOutsideHandler = null
 let icons = null
 let frontendBasePath = ''
 let apiBasePath = ''
+
 /**
- * Sets the icon object used throughout the context menu
- * @param {Object} i - Icon object containing SVG icons for various menu items
+ * @param {Object} i
  */
 export function setContextIcons(i) {
   icons = i
 }
+
 /**
- * Sets the base paths for frontend and API URLs used in context menu handlers
- * @param {string} frontend - Base path for frontend URLs
- * @param {string} api - Base path for API URLs
+ * @param {string} frontend
+ * @param {string} api
  */
 export function setContextBasePaths(frontend, api) {
   frontendBasePath = frontend
   apiBasePath = api
 }
-/**
- * Creates the context menu container element if it doesn't already exist
- * Appends it to the document body and hides it by default
- */
+
 export function createContextMenu() {
   if (contextMenu) return
   contextMenu = document.getElementById('context-menu-container')
@@ -36,10 +59,7 @@ export function createContextMenu() {
   }
   contextMenu.hidden = true
 }
-/**
- * Hides the context menu, restores scrolling, and cleans up event handlers
- * Also removes any open submenu containers and resets the outside click handler
- */
+
 function hideContextMenu() {
   scroll.unlock()
   if (!contextMenu) return
@@ -52,11 +72,8 @@ function hideContextMenu() {
   }
 }
 /**
- * Sets up context menu event listeners for elements matching the selector
- * @param {string} selector - CSS selector for elements that should show context menu
- * @param {Function} menuItemsCallback - Callback function that returns menu structure
- *                                       Called with (itemElem, event) parameters
- *                                       Should return {header: {icon, label}, items: Array}
+ * @param {string} selector
+ * @param {Function} menuItemsCallback
  */
 export function setupContextMenu(selector, menuItemsCallback) {
   if (!contextMenu) createContextMenu()
@@ -73,14 +90,13 @@ export function setupContextMenu(selector, menuItemsCallback) {
   })
 }
 /**
- * Displays the context menu at the mouse position
- * Renders menu structure, positions it, sets up handlers, and registers outside-click detection
  * @private
- * @param {MouseEvent} e - The context menu event
- * @param {Element} itemElem - The element that triggered the context menu
- * @param {Function} menuItemsCallback - Callback to generate menu structure
+ * @param {MouseEvent} e
+ * @param {Element} itemElem
+ * @param {Function} menuItemsCallback
  */
 function showGenericContextMenu(e, itemElem, menuItemsCallback) {
+  ensureScrollModule()
   scroll.lock()
   if (!contextMenu) createContextMenu()
   contextMenu.innerHTML = ''
@@ -399,7 +415,7 @@ export function setupFileItemContextMenu() {
           if (!uuid) return
           try {
             const a = document.createElement('a')
-            a.href = `/api/download/?uuid=${uuid}`
+            a.href = `${window.BASE_PATH || ''}/api/download/?uuid=${uuid}`
             a.download = ''
             document.body.appendChild(a)
             a.click()

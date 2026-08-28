@@ -25,76 +25,114 @@ function normalizeResizeOptions(options) {
     quality,
   }
 }
-/** @param {keyof import('sharp').KernelEnum | undefined} kernel @param {number | undefined} scale */
-function resolveKernel(kernel, scale) {
+
+/** @param {keyof import('sharp').KernelEnum | undefined} kernel @param {number | undefined} scale @param {string} imagePath */
+function resolveKernel(kernel, scale, imagePath) {
   if (kernel && !validKernels.includes(kernel)) {
-    log.warn('Invalid kernel provided:', kernel)
+    log.warn(
+      'Invalid kernel:',
+      kernel,
+      'for image:',
+      imagePath,
+      ': using a scale-based default'
+    )
     return typeof scale === 'number' && scale > 100 ? 'lanczos3' : 'mitchell'
   }
   return kernel
 }
+
 /** @param {string} imagePath @param {ResizeInput} input */
 async function resizeImage(imagePath, input) {
   let { width, height, scale, kernel, quality } = normalizeResizeOptions(input)
   if (!imagePath) {
-    log.warn('No image path provided for resizing')
+    log.warn('Cannot resize image:', imagePath, 'no image path was provided')
     return null
   }
   if (!width && !height && !scale) {
-    log.warn('No resize parameters provided')
+    log.warn(
+      'Cannot resize image:',
+      imagePath,
+      'no resize parameters were provided'
+    )
     return undefined
   }
   if (scale === 100) {
-    log.info('Scale is 100, no resizing needed')
+    log.info('Skipping resize for:', imagePath, 'scale is 100%')
     return undefined
   }
-  kernel = resolveKernel(kernel, scale)
+  kernel = resolveKernel(kernel, scale, imagePath)
   if (!quality || quality === undefined || quality === null) {
-    log.debug('Quality is doesnt exist or is not defined', quality)
+    log.debug(
+      'Using default quality for:',
+      imagePath,
+      'no quality was provided'
+    )
     quality = 0
   }
   let mtime
   try {
     mtime = await getSafeMtime(imagePath)
     if (!mtime) {
+      log.warn('Cannot resize image:', imagePath, 'file is too large')
       return null
     }
   } catch (error) {
-    log.error('Failed to read file stats:', error)
+    log.error('Failed to read file stats for:', imagePath, error)
     return null
   }
   if (
     Number.isFinite(MAX_SCALE) &&
     typeof scale === 'number' &&
     scale > MAX_SCALE
-  )
+  ) {
+    log.warn(
+      'Cannot resize image:',
+      imagePath,
+      'scale exceeds the maximum allowed scale'
+    )
     return null
+  }
   if (
     Number.isFinite(MAX_PIXELS) &&
     typeof height === 'number' &&
     height > MAX_PIXELS
-  )
+  ) {
+    log.warn(
+      'Cannot resize image:',
+      imagePath,
+      'height exceeds the maximum allowed pixel size'
+    )
     return null
+  }
   if (
     Number.isFinite(MAX_PIXELS) &&
     typeof width === 'number' &&
     width > MAX_PIXELS
-  )
+  ) {
+    log.warn(
+      'Cannot resize image:',
+      imagePath,
+      'width exceeds the maximum allowed pixel size'
+    )
     return null
+  }
   /** @type {import('sharp').ResizeOptions} */
   let resizeOptions = {}
   let metadata
   try {
     metadata = await sharp(imagePath, {
-      failOnError: false,
       limitInputPixels: false,
     }).metadata()
     if (!metadata) {
-      log.debug('Invalid or missing image metadata')
+      log.debug(
+        'Cannot resize image:',
+        imagePath,
+        'image metadata is missing or invalid'
+      )
       return null
     }
   } catch (error) {
-    log.error('Failed to read image metadata:', error)
+    log.error('Failed to read image metadata for:', imagePath, error)
     return null
   }
   if (scale) {
@@ -117,7 +155,6 @@ async function resizeImage(imagePath, input) {
   }
   try {
     const transformer = sharp(imagePath, {
-      failOnError: false,
       limitInputPixels: false,
     })
       .resize(resizeOptions)
@@ -128,10 +165,11 @@ async function resizeImage(imagePath, input) {
     })
     return transformer
   } catch (error) {
-    log.error('Sharp resize error:', error)
+    log.error('Failed to create resize transformer for:', imagePath, error)
     return null
   }
 }
+
 module.exports = {
   resizeImage,
   validKernels,

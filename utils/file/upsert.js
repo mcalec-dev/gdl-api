@@ -17,8 +17,11 @@ const { getStoredSize } = require('./listing')
 const { isImageFile } = require('./typeGuards')
 const { getFileMime, calculateFileHash } = require('./mimeAndHash')
 const { readSidecarFile, isSidecarObject } = require('./sidecar')
+
 /** @type {Promise<void> | null} */
 let fileNameIndexNormalizationPromise = null
+
+/** @returns {Promise<void>} */
 async function ensureFileNameIndexAllowsDuplicates() {
   if (fileNameIndexNormalizationPromise) {
     return fileNameIndexNormalizationPromise
@@ -49,6 +52,7 @@ async function ensureFileNameIndexAllowsDuplicates() {
   })()
   return fileNameIndexNormalizationPromise
 }
+
 /** @param {any} dirObj */
 async function upsertDirectoryEntry(dirObj) {
   if (
@@ -118,8 +122,12 @@ async function upsertDirectoryEntry(dirObj) {
     return { result: null, isNew: false }
   }
 }
-/** @param {any} fileObj */
-async function upsertFileEntry(fileObj) {
+
+/**
+ * @param {any} fileObj
+ * @param {boolean} [returnStats=false]
+ */
+async function upsertFileEntry(fileObj, returnStats = false) {
   if (!fileObj || !fileObj.paths || !fileObj.paths.relative) {
     log.debug('Invalid file object for upsert:', fileObj)
     return null
@@ -141,7 +149,6 @@ async function upsertFileEntry(fileObj) {
       }
     }
     if (!existing) {
-      log.debug('Creating new file entry:', fileObj.paths.relative)
       const createdFile = await File.findOneAndUpdate(
         filter,
         {
@@ -169,8 +176,7 @@ async function upsertFileEntry(fileObj) {
           returnDocument: 'after',
         }
       )
-      log.debug('Upserted new file entry:', fileObj.paths.relative)
-      return createdFile
+      return returnStats ? { result: createdFile, isNew: true } : createdFile
     } else {
       existing = await File.findOneAndUpdate(
         filter,
@@ -198,8 +204,7 @@ async function upsertFileEntry(fileObj) {
         },
         { returnDocument: 'after' }
       )
-      log.debug('Updated existing file entry:', fileObj.paths.relative)
-      return existing
+      return returnStats ? { result: existing, isNew: false } : existing
     }
   } catch (/** @type {any} */ error) {
     log.error('Error upserting file entry:', {
@@ -208,6 +213,7 @@ async function upsertFileEntry(fileObj) {
     })
   }
 }
+
 /** @param {string} realPath */
 async function upsertAccessedItem(realPath) {
   if (!realPath) {
@@ -308,6 +314,7 @@ async function upsertAccessedItem(realPath) {
     })
   }
 }
+
 /**
  * @param {string} realPath
  * @param {boolean} [isDirectory]
@@ -328,28 +335,26 @@ async function maybeUpsertAccessed(realPath, isDirectory = false) {
  */
 async function deleteEntry(realPath, isDirectory) {
   if (!realPath) return
+  let pathExists = true
   try {
     await fs.access(realPath)
-    return
-  } catch {}
+  } catch {
+    pathExists = false
+  }
+  if (pathExists) return
   try {
     if (isDirectory === true) {
-      const result = await Directory.findOneAndDelete({
+      await Directory.findOneAndDelete({
         'paths.local': realPath,
       })
-      if (result) log.debug('Deleted stale directory entry from DB:', realPath)
     }
     if (isDirectory === false) {
-      const result = await File.findOneAndDelete({ 'paths.local': realPath })
-      if (result) log.debug('Deleted stale file entry from DB:', realPath)
+      await File.findOneAndDelete({ 'paths.local': realPath })
     } else {
-      const [fileResult, dirResult] = await Promise.all([
+      await Promise.all([
         File.findOneAndDelete({ 'paths.local': realPath }),
         Directory.findOneAndDelete({ 'paths.local': realPath }),
       ])
-      if (fileResult) log.debug('Deleted stale file entry from DB:', realPath)
-      if (dirResult)
-        log.debug('Deleted stale directory entry from DB:', realPath)
     }
   } catch (error) {
     log.error('Error deleting DB entry:', error)

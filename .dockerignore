@@ -1,0 +1,12 @@
+.git
+.github
+.vscode
+node_modules
+.env
+.env.*
+*.log
+*.bak
+*.tmp
+coverage
+dist
+public/min

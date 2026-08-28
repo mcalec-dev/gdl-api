@@ -15,8 +15,10 @@ import {
   TRANSCODE_AUDIO_CODEC,
 } from './settings.min.js'
 
-let frontendBasePath = document.location.origin + '/files'
-let apiBasePath = document.location.origin + '/api/files'
+let frontendBasePath =
+  document.location.origin + (window.BASE_PATH || '') + '/files'
+let apiBasePath =
+  document.location.origin + (window.BASE_PATH || '') + '/api/files'
 let currentDirectoryData = null
 let currentFetchController = null
 let currentSort = 'name'
