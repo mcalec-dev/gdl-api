@@ -489,7 +489,7 @@ router.get(
           const kernelParam = req.query.kernel
           const kernel =
             typeof kernelParam === 'string' && isValidKernel(kernelParam)
-              ? kernelParam
+              ? /** @type {keyof import('sharp').KernelEnum} */ (kernelParam)
               : undefined
           const scaleParam =
             typeof req.query.scale === 'number' ||

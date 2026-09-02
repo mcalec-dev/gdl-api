@@ -2,6 +2,7 @@ const path = require('path')
 const log = require('../logHandler')
 const { DISALLOWED_EXTENSIONS } = /** @type {any} */ (require('../../config'))
 const { isSidecarFile } = require('./sidecar')
+
 /** @param {string} filePath */
 function hasAllowedExtension(filePath) {
   if (!filePath) return false
@@ -20,6 +21,7 @@ function hasAllowedExtension(filePath) {
     : false
   return !isDisallowed
 }
+
 /** @param {string} filename @param {string[]} extensions */
 function hasAnyExtension(filename, extensions) {
   if (!filename || !Array.isArray(extensions) || extensions.length === 0) {
@@ -28,6 +30,7 @@ function hasAnyExtension(filename, extensions) {
   const normalized = filename.toLowerCase()
   return extensions.some((ext) => normalized.endsWith(ext))
 }
+
 /** @param {string | null | undefined} param */
 function allowedQualityParams(param) {
   const ALLOWED_PARAMS = {
@@ -45,6 +48,7 @@ function allowedQualityParams(param) {
   log.warn('Invalid quality parameter:', param)
   return null
 }
+
 /** @param {string} param */
 function isValidKernel(param) {
   const VAILD_KERNELS = [
@@ -61,26 +65,32 @@ function isValidKernel(param) {
     typeof param === 'string' && VAILD_KERNELS.includes(param.toLowerCase())
   )
 }
+
 /** @param {string} filename */
 function isDocFile(filename) {
   return hasAnyExtension(filename, ['.doc', '.docx'])
 }
+
 /** @param {string} filename */
 function isImageFile(filename) {
   return hasAnyExtension(filename, ['.jpg', '.jpeg', '.png', '.webp', '.avif'])
 }
+
 /** @param {string} filename */
 function isVideoFile(filename) {
   return hasAnyExtension(filename, ['.mp4', '.mkv', '.webm', '.avi', '.mov'])
 }
+
 /** @param {string} filename */
 function isAudioFile(filename) {
   return hasAnyExtension(filename, ['.mp3', '.wav', '.flac', '.aac', '.ogg'])
 }
+
 /** @param {string} filename */
 function isSwfFile(filename) {
   return hasAnyExtension(filename, ['.swf'])
 }
+
 /** @param {string} filename */
 function isDisallowedExtension(filename) {
   if (!filename) return false
@@ -91,6 +101,7 @@ function isDisallowedExtension(filename) {
       ext === `.${disallowedExt.toLowerCase()}`
   )
 }
+
 module.exports = {
   hasAllowedExtension,
   hasAnyExtension,

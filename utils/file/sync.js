@@ -18,6 +18,7 @@ const {
   upsertDirectoryEntry,
   upsertFileEntry,
 } = require('./upsert')
+
 /**
  * @param {string} dirPath
  * @param {string} [relativePath]
@@ -56,7 +57,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         log.error(`Error getting stats for ${entryPath}:`, statError)
         continue
       }
-      const paths = buildPaths(dirPath, entryRelativePath, BASE_PATH)
+      const paths = buildPaths(BASE_DIR, entryRelativePath, BASE_PATH)
       if (entry.isDirectory()) {
         const { collection, author } = deriveCollectionAuthor(entryRelativePath)
         const upsertResult = await upsertDirectoryEntry({
@@ -132,6 +133,7 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
     throw error
   }
 }
+
 async function syncAllFilesToDatabase() {
   try {
     log.debug('Syncing database...')
@@ -161,6 +163,7 @@ async function syncAllFilesToDatabase() {
     }
   }
 }
+
 async function initializeDatabaseSync() {
   try {
     log.debug('Initializing database sync...')
@@ -170,6 +173,7 @@ async function initializeDatabaseSync() {
     log.error('Failed to initialize database sync:', error)
   }
 }
+
 /**
  * @param {any[]} items
  * @param {string} [parentPath]
@@ -248,6 +252,7 @@ async function createDbEntriesForContents(items, parentPath = '') {
     return { created: 0, updated: 0 }
   }
 }
+
 module.exports = {
   scanAndSyncDirectory,
   syncAllFilesToDatabase,

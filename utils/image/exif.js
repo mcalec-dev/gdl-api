@@ -1,4 +1,5 @@
 const { HOST, NAME } = /** @type {any} */ (require('../../config'))
+
 /** @param {Date | string | number} date */
 function formatExifDateTime(date) {
   const d = new Date(date)
@@ -10,6 +11,7 @@ function formatExifDateTime(date) {
   const seconds = String(d.getSeconds()).padStart(2, '0')
   return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`
 }
+
 /** @param {Date} mtime */
 async function buildExifPayload(mtime) {
   const host = await Promise.resolve(HOST)
@@ -45,6 +47,7 @@ async function buildExifPayload(mtime) {
   }
   return exif
 }
+
 module.exports = {
   formatExifDateTime,
   buildExifPayload,

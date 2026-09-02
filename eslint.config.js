@@ -61,6 +61,13 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['tasks/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+    },
+  },
+  {
     ...json.configs.recommended,
     files: ['**/*.json'],
   },

@@ -4,13 +4,16 @@ const crypto = require('crypto')
 const log = require('../logHandler')
 const mimeTypes = require('mime-types')
 const { HASH_ALGORITHM } = /** @type {any} */ (require('../../config'))
+
 /** @type {((buffer: Uint8Array) => Promise<{mime: string, ext: string} | undefined>) | null} */
 let fileTypeFromBufferResolver = null
+
 /** @param {string | null | undefined} type */
 function normalizeMimeType(type) {
   if (!type) return null
   return type.replace('application/mp4', 'video/mp4')
 }
+
 /**
  * @param {string} name
  * @returns {string | null}
@@ -20,6 +23,7 @@ function getMimeType(name) {
   const mime = mimeTypes.lookup(name.toLowerCase())
   return normalizeMimeType(typeof mime === 'string' ? mime : null)
 }
+
 /** @param {string} file */
 async function getFileMime(file) {
   if (!file) return null
@@ -70,6 +74,7 @@ async function getFileMime(file) {
   if (fallbackType === false || !fallbackType) return null
   return normalizeMimeType(fallbackType)
 }
+
 /** @param {string} filePath */
 async function calculateFileHash(filePath) {
   if (!filePath || !HASH_ALGORITHM) return null
@@ -88,6 +93,7 @@ async function calculateFileHash(filePath) {
     return null
   }
 }
+
 module.exports = {
   normalizeMimeType,
   getMimeType,

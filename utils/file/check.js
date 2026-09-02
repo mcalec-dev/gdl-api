@@ -1,14 +1,16 @@
 const path = require('path')
 const fs = require('fs').promises
 const uuid = require('uuid')
+const sharp = require('sharp')
 const File = require('../../models/File')
-const config = /** @type {any} */ (require('../../config'))
 const { buildPaths, deriveCollectionAuthor } = require('../pathUtils')
 const { getImageMeta } = require('../image/metadata.js')
-const { isImageFile } = require('./typeGuards')
+const { isImageFile, isVideoFile, isAudioFile } = require('./typeGuards')
 const { getFileMime, calculateFileHash } = require('./mimeAndHash')
 const { readSidecarFile } = require('./sidecar')
 const log = require('../logHandler')
+const { spawnFfprobe } = require('../ffmpeg/ffprobe')
+const config = /** @type {any} */ (require('../../config'))
 
 const { BASE_DIR, BASE_PATH } = config
 
@@ -30,11 +32,6 @@ const fileFields = new Set([
 ])
 
 /** @param {unknown} value */
-function hasValue(value) {
-  return value !== undefined && value !== null && value !== ''
-}
-
-/** @param {unknown} value */
 function hasStringValue(value) {
   return typeof value === 'string' && value.trim() !== ''
 }
@@ -44,23 +41,72 @@ function isDate(value) {
   return value instanceof Date && !Number.isNaN(value.getTime())
 }
 
+/** @param {string} filePath @returns {Promise<boolean | null>} */
+function checkMediaIntegrity(filePath) {
+  if (isImageFile(filePath)) {
+    return sharp(filePath, { limitInputPixels: false })
+      .metadata()
+      .then(() => true)
+      .catch((error) => {
+        log.error(`Failed to read image metadata for: ${filePath}`, error)
+        return false
+      })
+  }
+  if (!isVideoFile(filePath) && !isAudioFile(filePath)) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const process = spawnFfprobe([
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ])
+    let stderr = ''
+    process.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+    process.on('error', (/** @type {any} */ error) => {
+      if (error.code === 'ENOENT') {
+        log.warn(`Skipping media integrity check; ffprobe is unavailable: ${filePath}`)
+      } else {
+        log.warn(`Unable to run ffprobe for: ${filePath}`, error)
+      }
+      resolve(null)
+    })
+    process.on('close', (code) => {
+      if (code === 0) {
+        resolve(true)
+      } else {
+        log.error(
+          `Failed media integrity check for: ${filePath}`,
+          stderr.trim() || `ffprobe exited with code ${code}`
+        )
+        resolve(false)
+      }
+    })
+  })
+}
+
 /**
  * @param {string} localPath
- * @returns {Promise<{ found: boolean, updated: boolean }>}
+ * @returns {Promise<{ found: boolean, updated: boolean, valid: boolean | null }>}
  */
 async function checkFileRecord(localPath) {
   if (typeof localPath !== 'string' || !localPath) {
-    return { found: false, updated: false }
+    return { found: false, updated: false, valid: null }
   }
   const record = await File.findOne({ 'paths.local': localPath })
-  if (!record) return { found: false, updated: false }
+  if (!record) return { found: false, updated: false, valid: null }
   let stats
   try {
     stats = await fs.stat(localPath)
   } catch (error) {
     log.debug(`Unable to check file record path: ${localPath}`, error)
-    return { found: true, updated: false }
+    return { found: true, updated: false, valid: null }
   }
+  const valid = await checkMediaIntegrity(localPath)
   const relativePath = path
     .relative(path.resolve(BASE_DIR), localPath)
     .replace(/\\/g, '/')
@@ -130,7 +176,7 @@ async function checkFileRecord(localPath) {
     )
   }
   if (Object.keys(updates).length === 0) {
-    return { found: true, updated: false }
+    return { found: true, updated: false, valid }
   }
   const { $unset: unset, ...setUpdates } = updates
   await File.updateOne(
@@ -140,18 +186,20 @@ async function checkFileRecord(localPath) {
       ...(unset ? { $unset: unset } : {}),
     }
   )
-  return { found: true, updated: true }
+  return { found: true, updated: true, valid }
 }
 
-/** @returns {Promise<{ checked: number, updated: number }>} */
+/** @returns {Promise<{ checked: number, updated: number, invalid: number }>} */
 async function checkAllFileRecords() {
   const records = await File.find({}, { 'paths.local': 1 }).lean()
   let updated = 0
+  let invalid = 0
   for (const record of records) {
     const result = await checkFileRecord(record.paths?.local || '')
     if (result.updated) updated++
+    if (result.valid === false) invalid++
   }
-  return { checked: records.length, updated }
+  return { checked: records.length, updated, invalid }
 }
 
 module.exports = { checkFileRecord, checkAllFileRecords }

@@ -13,7 +13,9 @@ const validKernels = [
   'mks2013',
   'mks2021',
 ]
+
 /** @typedef {{ width?: number, height?: number, scale?: number, kernel?: keyof import('sharp').KernelEnum, quality?: number }} ResizeInput */
+
 /** @param {ResizeInput} options */
 function normalizeResizeOptions(options) {
   const { width, height, scale, kernel, quality } = options

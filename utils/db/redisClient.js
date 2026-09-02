@@ -1,10 +1,13 @@
 const { createClient } = require('redis')
 const log = require('../logHandler')
-/** @typedef {import('redis').RedisClientType} RedisClient */
+
 /** @type {RedisClient | null} */
 let redisClient = null
 /** @type {Promise<RedisClient | null> | null} */
 let connectPromise = null
+
+/** @typedef {import('redis').RedisClientType} RedisClient */
+
 /** @param {string | null | undefined} redisUrl */
 async function ensureRedisClient(redisUrl) {
   try {
@@ -36,6 +39,8 @@ async function ensureRedisClient(redisUrl) {
     return null
   }
 }
+
+/** @returns {Promise<void>} */
 async function closeRedisClient() {
   const client = redisClient
   redisClient = null
@@ -59,6 +64,7 @@ async function closeRedisClient() {
     log.warn('Redis client shutdown failed:', error?.message)
   }
 }
+
 /**
  * @template T
  * @param {string | null | undefined} redisUrl
@@ -82,6 +88,7 @@ async function redisGet(key, redisUrl) {
     return null
   }
 }
+
 /** @param {string} key @param {any} value @param {string | null | undefined} redisUrl @param {number | null | undefined} ttlSeconds */
 async function redisSet(key, value, redisUrl, ttlSeconds) {
   try {
@@ -100,6 +107,7 @@ async function redisSet(key, value, redisUrl, ttlSeconds) {
     return
   }
 }
+
 /** @param {string} key @param {string | null | undefined} redisUrl */
 async function redisDel(key, redisUrl) {
   try {
@@ -110,6 +118,7 @@ async function redisDel(key, redisUrl) {
     return
   }
 }
+
 /** @param {string} collection @param {string | null | undefined} redisUrl */
 async function redisDeleteCollectionKeys(collection, redisUrl) {
   try {
@@ -140,6 +149,7 @@ async function redisDeleteCollectionKeys(collection, redisUrl) {
     return
   }
 }
+
 module.exports = {
   ensureRedisClient,
   closeRedisClient,

@@ -1,11 +1,6 @@
-const ffmpegStatic = require('ffmpeg-static')
-const { spawn } = require('child_process')
-const config = require('../../config')
 const log = require('../logHandler')
 const { getMimeType } = require('../file/mimeAndHash')
-const ffmpeg = config.USE_SYSTEM_FFMPEG
-  ? config.FFMPEG_PATH || 'ffmpeg'
-  : ffmpegStatic
+const { spawnFfmpeg } = require('../ffmpeg/ffmpeg')
 /**
  * @typedef {'audio' | 'video' | 'video_audio'} TranscodeMode
  * @typedef {{mode: 'audio', audioCodec: string, container: string} | {mode: 'video', videoCodec: string, container: string} | {mode: 'video_audio', videoCodec: string, audioCodec: string, container: string}} TranscodeOptions
@@ -143,9 +138,7 @@ function convertVideo(inputPath, videoCodec, audioCodec, container) {
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
       /** @type {unknown} */ (
-        spawn(String(ffmpeg), args, {
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
+        spawnFfmpeg(args)
       )
     )
   ffmpegProcess.on('error', (error) => {
@@ -183,9 +176,7 @@ function convertAudio(inputPath, audioCodec, container) {
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
       /** @type {unknown} */ (
-        spawn(String(ffmpeg), args, {
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
+        spawnFfmpeg(args)
       )
     )
   ffmpegProcess.on('error', (error) => {

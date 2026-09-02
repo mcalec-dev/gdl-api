@@ -3,6 +3,7 @@ const REDIS_URL = config.REDIS_URL
 const REDIS_CACHE_TTL_SECONDS = config.REDIS_CACHE_TTL_SECONDS
 const log = require('../logHandler')
 const { withRedisClient } = require('./redisClient')
+
 /**
  * @param {string[]} keys
  * @param {string | null | undefined} [redisUrl]
@@ -30,6 +31,7 @@ async function cacheGetManyJson(keys, redisUrl = REDIS_URL) {
     return {}
   }
 }
+
 /**
  * @param {Record<string, any>} entries
  * @param {number | null | undefined} [ttlSeconds]
@@ -57,6 +59,7 @@ async function cacheSetManyJson(
     log.debug('Redis MSET(setEx) failed, continuing with MongoDB truth:', error?.message)
   }
 }
+
 module.exports = {
   cacheGetManyJson,
   cacheSetManyJson,

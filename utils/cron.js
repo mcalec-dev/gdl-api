@@ -3,18 +3,17 @@ const path = require('path')
 const { pathToFileURL } = require('url')
 const cron = require('node-cron')
 const log = require('./logHandler')
-
 const configPath = path.join(__dirname, '..', 'cron.json')
 const tasksPath = path.join(__dirname, '..', 'tasks')
+
+/** @type {Map<string, RegisteredTask>} */
+let registeredTasks = new Map()
 
 /**
  * @typedef {{ name: string, enabled?: boolean, startup?: boolean, manual?: boolean, interval?: string | null }} CronTaskDefinition
  * @typedef {{ enabled?: boolean, tasks: CronTaskDefinition[] }} CronConfig
  * @typedef {{ definition: CronTaskDefinition, handler: Function, timer?: import('node-cron').ScheduledTask, running: boolean }} RegisteredTask
  */
-
-/** @type {Map<string, RegisteredTask>} */
-const registeredTasks = new Map()
 
 /** @param {CronTaskDefinition} task */
 function assertTaskDefinition(task) {

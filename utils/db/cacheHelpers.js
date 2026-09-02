@@ -3,6 +3,14 @@ const REDIS_URL = config.REDIS_URL
 const REDIS_CACHE_TTL_SECONDS = config.REDIS_CACHE_TTL_SECONDS
 const REDIS_CACHE_PATCH_FLAG = config.REDIS_CACHE_PATCH_FLAG
 const { redisSet, redisDel, redisDeleteCollectionKeys } = require('./redisClient')
+
+/**
+ * @returns {{
+ *   redisUrl: string | null | undefined,
+ *   cacheTtlSeconds: number | null | undefined,
+ *   patchFlag: symbol,
+ * }}
+ */
 function getDbCacheSettings() {
   return {
     redisUrl: REDIS_URL,
@@ -10,6 +18,7 @@ function getDbCacheSettings() {
     patchFlag: Symbol.for(REDIS_CACHE_PATCH_FLAG),
   }
 }
+
 /** @param {string} collection @param {unknown} id */
 function getCacheKey(collection, id) {
   return `${collection}:${String(id)}`
@@ -22,6 +31,7 @@ function extractValue(value) {
   }
   return value
 }
+
 /** @param {any} filter @returns {string | number | null} */
 function extractCacheId(filter) {
   if (!filter || typeof filter !== 'object') return null
@@ -40,6 +50,7 @@ function extractCacheId(filter) {
   }
   return null
 }
+
 /** @param {any} doc @returns {any} */
 function toPlainDocument(doc) {
   if (!doc) return null
@@ -54,6 +65,7 @@ function toPlainDocument(doc) {
   }
   return null
 }
+
 /** @param {string} collection @param {any} filter @param {string | null | undefined} redisUrl */
 async function invalidateFromFilter(collection, filter, redisUrl) {
   const id = extractCacheId(filter)
@@ -63,6 +75,7 @@ async function invalidateFromFilter(collection, filter, redisUrl) {
   }
   await redisDeleteCollectionKeys(collection, redisUrl)
 }
+
 /** @param {string} collection @param {any} doc @param {string | null | undefined} redisUrl @param {number | null | undefined} ttlSeconds */
 async function writeDocToCache(collection, doc, redisUrl, ttlSeconds) {
   if (!doc || typeof doc !== 'object') return
@@ -75,6 +88,7 @@ async function writeDocToCache(collection, doc, redisUrl, ttlSeconds) {
     ttlSeconds
   )
 }
+
 /** @param {any} model @param {any} payload @param {boolean} isLean */
 function hydrateCachedResult(model, payload, isLean) {
   if (payload === null || payload === undefined) return null
@@ -84,10 +98,12 @@ function hydrateCachedResult(model, payload, isLean) {
   }
   return model.hydrate(payload)
 }
+
 /** @param {string} op */
 function shouldUseReadThroughCache(op) {
   return op === 'findOne' || op === 'findById'
 }
+
 /** @param {string} op */
 function shouldHandleWriteInvalidation(op) {
   return (
@@ -97,6 +113,7 @@ function shouldHandleWriteInvalidation(op) {
     op === 'findOneAndUpdate'
   )
 }
+
 /** @param {string} op */
 function shouldHandleDeleteInvalidation(op) {
   return (
@@ -106,6 +123,7 @@ function shouldHandleDeleteInvalidation(op) {
     op === 'findByIdAndDelete'
   )
 }
+
 module.exports = {
   getDbCacheSettings,
   getCacheKey,

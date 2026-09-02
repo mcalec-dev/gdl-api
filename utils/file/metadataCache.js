@@ -1,10 +1,12 @@
 const log = require('../logHandler')
 const { cacheGetManyJson, cacheSetManyJson } = require('../db/bulkCache.js')
 const File = require('../../models/File')
+
 /** @param {string} relativePath */
 function getFileMetadataCacheKey(relativePath) {
   return `filemeta:${relativePath}`
 }
+
 /**
  * @param {string[]} relativePaths
  */
@@ -47,9 +49,8 @@ async function getCachedFileMetadata(relativePaths) {
     }
   }
 }
-/**
- * @param {Record<string, any>} metadataMap
- */
+
+/** @param {Record<string, any>} metadataMap */
 async function setCachedFileMetadata(metadataMap) {
   if (!metadataMap || typeof metadataMap !== 'object') return
   try {
@@ -68,6 +69,7 @@ async function setCachedFileMetadata(metadataMap) {
     log.debug('Redis setEx failed for file metadata cache:', error?.message)
   }
 }
+
 /**
  * @param {string[]} relativePaths
  * @param {{ useCache?: boolean }} [options]
@@ -125,6 +127,7 @@ async function batchFetchFileMetadata(relativePaths, options = {}) {
     return {}
   }
 }
+
 module.exports = {
   getFileMetadataCacheKey,
   getCachedFileMetadata,

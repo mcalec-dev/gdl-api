@@ -24,9 +24,15 @@ const safeDisallowedDirs = Array.isArray(DISALLOWED_DIRS) ? DISALLOWED_DIRS : []
 const safeDisallowedFiles = Array.isArray(DISALLOWED_FILES)
   ? DISALLOWED_FILES
   : []
+
+/**
+ * @param {boolean} isDirectory
+ * @returns
+ */
 function shouldIncludeSize(isDirectory = false) {
   return isDirectory ? STAT_DIRECTORY_SIZE === true : STAT_FILE_SIZE === true
 }
+
 /**
  * @param {import('fs').Stats | null | undefined} stats
  * @param {boolean} [isDirectory]
@@ -36,6 +42,7 @@ function getDisplaySize(stats, isDirectory = false) {
   const size = stats?.size
   return Number.isFinite(size) ? size : null
 }
+
 /**
  * @param {import('fs').Stats | null | undefined} stats
  * @param {boolean} [isDirectory]
@@ -44,6 +51,7 @@ function getStoredSize(stats, isDirectory = false) {
   const size = getDisplaySize(stats, isDirectory)
   return Number.isFinite(size) ? size : 0
 }
+
 /**
  * @param {{ size?: number } | null | undefined} item
  * @param {boolean} [isDirectory]
@@ -53,6 +61,7 @@ function getStoredItemSize(item, isDirectory = false) {
   const size = item?.size
   return Number.isFinite(size) ? size : 0
 }
+
 /** @param {string} dirName @param {boolean} [isRoot] */
 async function isExcluded(dirName, isRoot = false) {
   if (!dirName) return true
@@ -85,6 +94,7 @@ async function isExcluded(dirName, isRoot = false) {
     return true
   return false
 }
+
 /**
  * @param {any[]} contents
  * @param {string} [sortBy]
@@ -130,6 +140,7 @@ function sortContents(contents, sortBy = 'name', direction = 'none') {
     return direction === 'asc' ? comparison : -comparison
   })
 }
+
 /** @param {any} query */
 function parseSortQuery(query) {
   const allowed = ['name', 'modified', 'type', 'size', 'created']
@@ -143,6 +154,7 @@ function parseSortQuery(query) {
   }
   return { sortBy: 'name', direction: 'none' }
 }
+
 /**
  * @param {import('fs').Dirent} entry
  * @param {string} baseDir
@@ -238,6 +250,7 @@ async function formatListingEntry(
     return null
   }
 }
+
 module.exports = {
   shouldIncludeSize,
   getDisplaySize,

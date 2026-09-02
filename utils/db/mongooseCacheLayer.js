@@ -13,6 +13,8 @@ const {
   shouldHandleWriteInvalidation,
   shouldHandleDeleteInvalidation,
 } = require('./cacheHelpers')
+
+/** @returns {void} */
 function initDbCacheLayer() {
   const settings = getDbCacheSettings()
   const mongoosePatched = /** @type {any} */ (mongoose)
@@ -139,6 +141,7 @@ function initDbCacheLayer() {
     return saved
   }
 }
+
 module.exports = {
   initDbCacheLayer,
 }

@@ -1,6 +1,6 @@
 {
   "name": "gdl-api",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "gdl-api express server",
   "author": "McAlec",
   "keywords": [
@@ -54,6 +54,7 @@
     "express-useragent": "^2",
     "fast-glob": "^3",
     "ffmpeg-static": "^5",
+    "ffprobe-static": "^3.1.0",
     "figlet": "^1",
     "file-type": "^22",
     "filename-reserved-regex": "^4",

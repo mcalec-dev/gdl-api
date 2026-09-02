@@ -10,11 +10,24 @@ const windowsReservedNameRegex =
   filenameReservedRegexModule.default?.windowsReservedNameRegex
 const normalizePath = require('normalize-path')
 const resolvePath = require('resolve-path')
+
+/** @param {string} filePath */
+const pathExists = async (filePath) => {
+  try {
+    await require('fs').promises.access(filePath)
+    return true
+  } catch (/** @type {any} */ error) {
+    if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return false
+    throw error
+  }
+}
+
 /**
  * @param {string} s
  * @returns {string}
  */
 const normalizeString = (s) => s.trim().normalize('NFC')
+
 /**
  * @param {string | null | undefined} input
  * @returns {string | null}
@@ -44,6 +57,7 @@ const sanitizePathComponent = (input) => {
   }
   return sanitized
 }
+
 /**
  * @param {string | null | undefined} rawPath
  * @returns {string[] | null}
@@ -55,6 +69,7 @@ const sanitizePathSegments = (rawPath) => {
   if (sanitized.some((component) => component == null)) return null
   return /** @type {string[]} */ (sanitized)
 }
+
 /**
  * @param {string} baseDir
  * @param {...(string | null | undefined)} pathComponents
@@ -80,6 +95,7 @@ const safePath = (baseDir, ...pathComponents) => {
     return null
   }
 }
+
 /**
  * @param {string} targetPath
  * @param {string} baseDir
@@ -102,6 +118,7 @@ const isPathSafe = (targetPath, baseDir) => {
     return false
   }
 }
+
 /**
  * @param {string} pathStr
  * @returns {string}
@@ -114,6 +131,7 @@ const normalizeAndEncodePath = (pathStr) => {
     .map((seg) => encodeURIComponent(seg))
     .join('/')
 }
+
 /**
  * @param {{collection?: string, author?: string, splat?: string}} params
  * @returns {{
@@ -137,6 +155,7 @@ const validateRequestParams = (params) => {
     isValid: collection !== null,
   }
 }
+
 /**
  * @param {string} baseApiPath
  * @param {string} relativePath
@@ -152,6 +171,7 @@ const safeApiPath = (baseApiPath, relativePath) => {
   const result = `${baseApiPath}/${encoded}`.replace(/\/+/g, '/')
   return result.endsWith('/') ? result : result + '/'
 }
+
 /**
  * @param {string} filename
  * @param {string[]} [allowedExtensions=[]]
@@ -165,6 +185,7 @@ const hasAllowedFileExtension = (filename, allowedExtensions = []) => {
     (e) => (e.startsWith('.') ? e : `.${e}`).toLowerCase() === ext
   )
 }
+
 /**
  * @param {string} localBase
  * @param {string} [relativePath='']
@@ -199,6 +220,7 @@ const buildPaths = (localBase, relativePath, baseApiPath = '') => {
     return null
   }
 }
+
 /**
  * @param {string} relativePath
  * @returns {{ collection: string | null, author: string | null }}
@@ -217,6 +239,7 @@ const deriveCollectionAuthor = (relativePath) => {
     return { collection: null, author: null }
   }
 }
+
 module.exports = {
   normalizeString,
   normalizePath,
@@ -227,6 +250,7 @@ module.exports = {
   isPathSafe,
   validateRequestParams,
   safeApiPath,
+  pathExists,
   hasAllowedFileExtension,
   buildPaths,
   deriveCollectionAuthor,

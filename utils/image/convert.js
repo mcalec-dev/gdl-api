@@ -1,12 +1,14 @@
 const sharp = require('sharp')
 const log = require('../logHandler')
-/** @typedef {{ q?: number, w?: number, h?: number, x?: number, k?: string }} ResizeInput */
+
+/** @typedef {{ q?: number, w?: number, h?: number, x?: number, k?: keyof import('sharp').KernelEnum }} ResizeInput */
+
 /** @param {string} imagePath @param {string} format @param {ResizeInput} [options={}] */
 async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
   let transformer
   try {
     transformer = sharp(imagePath, {
-      failOnError: false,
+      failOn: 'none',
       limitInputPixels: true,
     })
     if (x || w || h) {
@@ -14,7 +16,7 @@ async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
       let resizeOptions = {}
       if (x) {
         const metadata = await sharp(imagePath, {
-          failOnError: false,
+          failOn: 'none',
           limitInputPixels: false,
         }).metadata()
         if (!metadata || !metadata.width || !metadata.height) {
@@ -39,13 +41,16 @@ async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
     switch (format.toLowerCase()) {
       case 'jpeg':
       case 'jpg':
+        {
+          const quality = q ?? 80
         transformer = transformer.jpeg({
           // integer 1-100 (default 80)
-          quality: q || 80,
-          // 4:4:4 when quality is greater than 90 (default 4:2:0)
-          chromaSubsampling: q <= 90 ? '4:4:4' : '4:2:0',
+          quality,
+          // 4:4:4 when quality is greater than 75 (default 4:2:0)
+          chromaSubsampling: quality <= 75 ? '4:4:4' : '4:2:0',
         })
         break
+        }
       case 'png':
         transformer = transformer.png({
           // integer 0-9 (default 6)
@@ -91,6 +96,7 @@ async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
     return null
   }
 }
+
 module.exports = {
   convertImage,
 }

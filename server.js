@@ -71,15 +71,11 @@ async function initDB() {
   initDbCacheLayer()
   await initSessionStore()
   let mongodb = null
-  try {
-    mongodb = await require('mongoose').connect(MONGODB_URL)
-    if (mongodb != null) log.info('MongoDB connected')
-    if (mongodb === null) throw new Error('MongoDB connection failed')
-    const gridfsUtils = require('./utils/gridfsUtils')
-    gridfsUtils.initGridFS()
-  } catch (error) {
-    throw error
-  }
+  mongodb = await require('mongoose').connect(MONGODB_URL)
+  if (mongodb != null) log.info('MongoDB connected')
+  if (mongodb === null) throw new Error('MongoDB connection failed')
+  const gridfsUtils = require('./utils/gridfsUtils')
+  gridfsUtils.initGridFS()
 }
 
 async function webVars() {
@@ -242,19 +238,8 @@ async function initApp() {
   app.use(
     express.json({
       type: 'application/json',
-    })
+    }),
   )
-  app.use((req, res, next) => {
-    if (
-      !req.path.match(
-        /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|mp4|webm)$/i
-      )
-    ) {
-      res.setHeader('Cache-Control', 'no-cache')
-    }
-    res.setHeader('X-Content-Type-Options', 'nosniff')
-    next()
-  })
   app.use(
     `${BASE_PATH}`,
     express.static('public', {
@@ -264,7 +249,7 @@ async function initApp() {
       redirect: true,
       dotfiles: 'ignore',
       setHeaders: (res) => {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        res.setHeader('Cache-Control', 'no-cache')
       },
     })
   )

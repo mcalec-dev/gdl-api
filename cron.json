@@ -35,6 +35,13 @@
 			"startup": false,
 			"interval": "0 * * * *",
 			"manual": true
+		},
+		{
+			"name": "sidecar-metadata",
+			"enabled": true,
+			"startup": false,
+			"interval": "15 * * * *",
+			"manual": true
 		}
 	]
 }

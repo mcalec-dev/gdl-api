@@ -1,13 +1,13 @@
 const log = require('../logHandler')
 const { cacheGetManyJson, cacheSetManyJson } = require('../db/bulkCache.js')
+
 /**
- * Generate a cache key for a paginated listing result
- * @param {string} dirPath - The directory path
- * @param {number} page - Page number (1-indexed)
- * @param {number} limit - Results per page
- * @param {string} sortBy - Sort field
- * @param {string} direction - Sort direction
- * @param {boolean} includeMetadata - Whether metadata was included
+ * @param {string} dirPath
+ * @param {number} page
+ * @param {number} limit
+ * @param {string} sortBy
+ * @param {string} direction
+ * @param {boolean} includeMetadata
  */
 function getPaginationCacheKey(
   dirPath,
@@ -21,8 +21,8 @@ function getPaginationCacheKey(
   const metaFlag = includeMetadata ? '1' : '0'
   return `listing:${normalized}:p${page}:l${limit}:${sortBy}:${direction}:m${metaFlag}`
 }
+
 /**
- * Get cached pagination result
  * @param {string} dirPath
  * @param {number} page
  * @param {number} limit
@@ -49,7 +49,6 @@ async function getCachedPaginationResult(
     )
     const cached = await cacheGetManyJson([key])
     const result = cached[key]
-
     if (result && Array.isArray(result.items)) {
       log.debug('Cache hit for pagination:', { dirPath, page, limit })
       return { items: result.items, totalCount: result.totalCount || 0 }
@@ -60,8 +59,8 @@ async function getCachedPaginationResult(
     return null
   }
 }
+
 /**
- * Set cached pagination result
  * @param {string} dirPath
  * @param {number} page
  * @param {number} limit
@@ -101,11 +100,8 @@ async function setCachedPaginationResult(
     log.debug('Pagination cache write failed:', error?.message)
   }
 }
-/**
- * Invalidate pagination cache for a directory
- * (Called when directory contents change)
- * @param {string} dirPath
- */
+
+/** @param {string} dirPath */
 async function invalidatePaginationCache(dirPath) {
   try {
     log.debug('Pagination cache will expire via TTL for:', dirPath)
@@ -113,6 +109,7 @@ async function invalidatePaginationCache(dirPath) {
     log.debug('Pagination cache invalidation failed:', error?.message)
   }
 }
+
 module.exports = {
   getPaginationCacheKey,
   getCachedPaginationResult,
