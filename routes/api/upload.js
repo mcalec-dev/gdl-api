@@ -6,6 +6,8 @@ const { FILE_UPLOAD_LIMIT } = /** @type {any} */ (require('../../config'))
 const router = express.Router()
 const log = require('../../utils/logHandler')
 const sendResponse = require('../../utils/resUtils')
+const cache = require('../../utils/cache')
+const { cacheControl } = require('../../utils/cacheControl')
 const storage = multer.memoryStorage()
 const upload = multer({
   storage,
@@ -13,8 +15,10 @@ const upload = multer({
     fileSize: FILE_UPLOAD_LIMIT,
   },
 })
+
 router.post(
   '',
+  cacheControl('noStore'),
   requireRole('user'),
   upload.single('file'),
   async (req, res) => {
@@ -25,6 +29,11 @@ router.post(
       const fileId = await uploadFile(req.file.buffer, req.file.originalname, {
         contentType: req.file.mimetype,
       })
+      await Promise.all([
+        cache.delPattern('files:'),
+        cache.delPattern('search:'),
+        cache.del('stats:overview'),
+      ])
       log.info(`File uploaded: ${req.file.originalname} (ID: ${fileId})`)
       return sendResponse(res, 200).json({
         message: 'File uploaded successfully',
@@ -34,6 +43,7 @@ router.post(
       log.error('Upload error:', error)
       return sendResponse.error(res, 500, 'File upload failed')
     }
-  }
+  },
 )
+
 module.exports = router

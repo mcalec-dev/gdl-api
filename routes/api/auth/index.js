@@ -2,6 +2,8 @@ const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
 const sendResponse = require('../../../utils/resUtils')
+const { cacheControl } = require('../../../utils/cacheControl')
+
 try {
   log.debug('Mounting check route')
   router.use('/check', require('./check'))
@@ -16,7 +18,8 @@ try {
 } catch (error) {
   log.error('Error mounting auth routes:', error)
 }
-router.get('/', async (req, res) => {
+
+router.get('/', cacheControl('publicStatic'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return sendResponse(res, 200).json({
     urls: {
@@ -28,4 +31,5 @@ router.get('/', async (req, res) => {
     },
   })
 })
+
 module.exports = router

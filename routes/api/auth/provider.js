@@ -5,7 +5,9 @@ const passport = require('../../../utils/passport')
 const { OAUTH_PROVIDERS } = /** @type {any} */ (require('../../../config'))
 const sendResponse = require('../../../utils/resUtils')
 const { getHostUrl } = require('../../../utils/urlUtils')
-router.get('/', async (req, res) => {
+const { cacheControl } = require('../../../utils/cacheControl')
+
+router.get('/', cacheControl('publicStatic'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return sendResponse(res, 200).json({
     urls: {
@@ -16,8 +18,10 @@ router.get('/', async (req, res) => {
     },
   })
 })
+
 router.get(
   ['/callback/:provider', '/callback/:provider/'],
+  cacheControl('noStore'),
   (req, res, next) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
@@ -52,10 +56,12 @@ router.get(
         return res.redirect(302, '/')
       }
     })(req, res, next)
-  }
+  },
 )
+
 router.get(
   ['/login/:provider', '/login/:provider/'],
+  cacheControl('noStore'),
   async (req, res, next) => {
     const provider = req.params.provider
     if (!OAUTH_PROVIDERS.includes(provider)) {
@@ -72,10 +78,12 @@ router.get(
       log.error('Failed to authenticate OAuth:', error)
       return sendResponse.error(res, 500, 'Failed to authenticate OAuth')
     }
-  }
+  },
 )
+
 router.get(
   ['/link/:provider', '/link/:provider/'],
+  cacheControl('noStore'),
   requireRole('user'),
   async (req, res, next) => {
     const provider = req.params.provider
@@ -97,10 +105,12 @@ router.get(
       log.error('Failed to authenticate OAuth:', error)
       return sendResponse.error(res, 500, 'Failed to authenticate OAuth')
     }
-  }
+  },
 )
+
 router.get(
   ['/unlink/:provider', '/unlink/:provider/'],
+  cacheControl('noStore'),
   requireRole('user'),
   async (req, res) => {
     const provider = req.params.provider
@@ -115,13 +125,13 @@ router.get(
       }
       const hasPassword = !!req.user.password
       const otherOAuthProviders = Object.keys(req.user.oauth || {}).filter(
-        (p) => p !== provider && req.user.oauth[p]?.id
+        (p) => p !== provider && req.user.oauth[p]?.id,
       )
       if (!hasPassword && otherOAuthProviders.length === 0) {
         return sendResponse.error(
           res,
           400,
-          'Cannot unlink the only authentication method'
+          'Cannot unlink the only authentication method',
         )
       }
       if (!req.user.oauth) req.user.oauth = {}
@@ -135,6 +145,7 @@ router.get(
       log.error('Error unlinking provider:', error)
       return sendResponse.error(res, 500, 'Failed to unlink provider')
     }
-  }
+  },
 )
+
 module.exports = router

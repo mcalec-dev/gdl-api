@@ -813,10 +813,10 @@
 						pools.map(async (pool) => {
 							try {
 								const [fullPool, rawPool] = await Promise.all([
-									fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}?includeFiles=true`),
+									fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}/files`),
 									fetchJson(`/api/pool/${encodeURIComponent(pool.uuid)}`),
 								])
-								const fileDocs = Array.isArray(fullPool?.files) ? fullPool.files : []
+								const fileDocs = Array.isArray(fullPool) ? fullPool : []
 								const fileRefs = Array.isArray(rawPool?.files) ? rawPool.files : []
 								return {
 									...pool,
@@ -1073,9 +1073,9 @@
 					])
 					const foundFiles = Array.isArray(files) ? files : []
 					const refs = Array.isArray(rawPool?.files) ? rawPool.files : []
-					const foundByUuid = new Set(foundFiles.map((file) => String(file?.uuid || '')))
+						const foundByUuid = new Set(foundFiles.map((file) => String(file?.uuid || '').toLowerCase()))
 					const missingFiles = refs
-						.filter((uuid) => uuid && !foundByUuid.has(String(uuid)))
+						.filter((uuid) => uuid && !foundByUuid.has(String(uuid).toLowerCase()))
 						.map((uuid) => ({
 							uuid,
 							name: `Unavailable file (${String(uuid).slice(0, 8)}...)`,
@@ -1089,9 +1089,9 @@
 				} catch {
 					const fallbackFiles = Array.isArray(pool.files) ? pool.files : []
 					const fallbackRefs = Array.isArray(pool.fileRefs) ? pool.fileRefs : []
-					const foundByUuid = new Set(fallbackFiles.map((file) => String(file?.uuid || '')))
+					const foundByUuid = new Set(fallbackFiles.map((file) => String(file?.uuid || '').toLowerCase()))
 					const missingFiles = fallbackRefs
-						.filter((uuid) => uuid && !foundByUuid.has(String(uuid)))
+						.filter((uuid) => uuid && !foundByUuid.has(String(uuid).toLowerCase()))
 						.map((uuid) => ({
 							uuid,
 							name: `Unavailable file (${String(uuid).slice(0, 8)}...)`,

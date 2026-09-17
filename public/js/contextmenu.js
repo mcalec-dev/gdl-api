@@ -1,5 +1,15 @@
 // @ts-ignore
 import * as utils from '../min/index.min.js'
+
+/** @typedef {{clientX: number, clientY: number}} ContextMenuPoint */
+/** @typedef {{label?: string, icon?: string, divider?: boolean, submenu?: ContextMenuItem[], handler?: () => void | Promise<void>}} ContextMenuItem */
+/** @typedef {{icon?: string, label?: string}} ContextMenuHeader */
+/** @typedef {{header?: ContextMenuHeader, items: ContextMenuItem[]}} ContextMenuData */
+/** @typedef {{nav?: {next?: string, link?: string, download?: string, copy?: string}, [key: string]: string | {next?: string, link?: string, download?: string, copy?: string} | undefined}} ContextIcons */
+/** @typedef {HTMLDivElement & {_currentMenuData?: ContextMenuData, _originalPosition?: {left: number, top: number}}} ContextMenuElement */
+/** @typedef {{lock: () => void, unlock: () => void}} ScrollModule */
+
+/** @type {ScrollModule} */
 let scroll = {
   lock: () => {},
   unlock: () => {},
@@ -9,7 +19,6 @@ let _scrollLoaded = false
 async function loadScrollModule() {
   if (_scrollLoaded) return
   _scrollLoaded = true
-
   try {
     const module =
       // @ts-ignore
@@ -18,7 +27,7 @@ async function loadScrollModule() {
   } catch (error) {
     console.warn(
       'Unable to load scroll module; proceeding without scroll locking.',
-      error
+      error,
     )
   }
 }
@@ -27,14 +36,21 @@ function ensureScrollModule() {
   void loadScrollModule()
 }
 
+/** @type {ContextMenuElement | null} */
 let contextMenu = null
+/** @type {((event: PointerEvent) => void) | null} */
 let _contextOutsideHandler = null
+/** @type {ContextIcons | null} */
 let icons = null
 let frontendBasePath = ''
 let apiBasePath = ''
+let _lastTouchContextMenuAt = 0
+
+const TOUCH_HOLD_DELAY = 500
+const TOUCH_MOVE_TOLERANCE = 10
 
 /**
- * @param {Object} i
+ * @param {ContextIcons} i
  */
 export function setContextIcons(i) {
   icons = i
@@ -51,7 +67,9 @@ export function setContextBasePaths(frontend, api) {
 
 export function createContextMenu() {
   if (contextMenu) return
-  contextMenu = document.getElementById('context-menu-container')
+  contextMenu = /** @type {ContextMenuElement | null} */ (
+    document.getElementById('context-menu-container')
+  )
   if (!contextMenu) {
     contextMenu = document.createElement('div')
     contextMenu.id = 'context-menu-container'
@@ -71,14 +89,28 @@ function hideContextMenu() {
     _contextOutsideHandler = null
   }
 }
+
+/**
+ * @param {EventTarget | null} target
+ * @param {string} selector
+ * @returns {HTMLElement | null}
+ */
+function closestHtmlElement(target, selector) {
+  return target instanceof HTMLElement ? target.closest(selector) : null
+}
+
 /**
  * @param {string} selector
- * @param {Function} menuItemsCallback
+ * @param {(itemElem: HTMLElement, point: ContextMenuPoint) => ContextMenuData | null | undefined} menuItemsCallback
  */
 export function setupContextMenu(selector, menuItemsCallback) {
   if (!contextMenu) createContextMenu()
   document.addEventListener('contextmenu', (e) => {
-    const itemElem = e.target.closest(selector)
+    if (Date.now() - _lastTouchContextMenuAt < TOUCH_HOLD_DELAY) {
+      e.preventDefault()
+      return
+    }
+    const itemElem = closestHtmlElement(e.target, selector)
     if (itemElem) {
       e.preventDefault()
       e.stopPropagation()
@@ -88,10 +120,75 @@ export function setupContextMenu(selector, menuItemsCallback) {
       hideContextMenu()
     }
   })
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let touchTimer = null
+  /** @type {{clientX: number, clientY: number} | null} */
+  let touchStart = null
+  /** @type {HTMLElement | null} */
+  let touchItem = null
+  const clearTouchHold = () => {
+    if (touchTimer) {
+      clearTimeout(touchTimer)
+      touchTimer = null
+    }
+    touchStart = null
+    touchItem = null
+  }
+  document.addEventListener(
+    'touchstart',
+    /** @param {TouchEvent} e */
+    (e) => {
+      const itemElem = closestHtmlElement(e.target, selector)
+      if (!itemElem || e.touches.length === 0) return
+      const touch = e.touches[0]
+      if (e.touches.length >= 2) {
+        e.preventDefault()
+        clearTouchHold()
+        _lastTouchContextMenuAt = Date.now()
+        showGenericContextMenu(
+          { clientX: touch.clientX, clientY: touch.clientY },
+          itemElem,
+          menuItemsCallback,
+        )
+        return
+      }
+      clearTouchHold()
+      touchItem = itemElem
+      touchStart = { clientX: touch.clientX, clientY: touch.clientY }
+      touchTimer = setTimeout(() => {
+        if (!touchItem || !touchStart) return
+        _lastTouchContextMenuAt = Date.now()
+        showGenericContextMenu(
+          { clientX: touchStart.clientX, clientY: touchStart.clientY },
+          touchItem,
+          menuItemsCallback,
+        )
+        touchTimer = null
+      }, TOUCH_HOLD_DELAY)
+    },
+    { passive: false },
+  )
+  document.addEventListener(
+    'touchmove',
+    /** @param {TouchEvent} e */
+    (e) => {
+      if (!touchStart || e.touches.length === 0) return
+      const touch = e.touches[0]
+      if (
+        Math.abs(touch.clientX - touchStart.clientX) > TOUCH_MOVE_TOLERANCE ||
+        Math.abs(touch.clientY - touchStart.clientY) > TOUCH_MOVE_TOLERANCE
+      ) {
+        clearTouchHold()
+      }
+    },
+    { passive: true },
+  )
+  document.addEventListener('touchend', clearTouchHold)
+  document.addEventListener('touchcancel', clearTouchHold)
 }
 /**
  * @private
- * @param {MouseEvent} e
+ * @param {{clientX: number, clientY: number}} e
  * @param {Element} itemElem
  * @param {Function} menuItemsCallback
  */
@@ -99,41 +196,43 @@ function showGenericContextMenu(e, itemElem, menuItemsCallback) {
   ensureScrollModule()
   scroll.lock()
   if (!contextMenu) createContextMenu()
-  contextMenu.innerHTML = ''
+  if (!contextMenu) return
+  const menu = contextMenu
+  menu.innerHTML = ''
   const menuData = menuItemsCallback(itemElem, e)
   if (!menuData || !menuData.items) return
-  contextMenu._currentMenuData = menuData
-  renderContextMenu(menuData, contextMenu)
-  positionContextMenu(e, contextMenu)
-  contextMenu._originalPosition = {
-    left: parseInt(contextMenu.style.left),
-    top: parseInt(contextMenu.style.top),
+  menu._currentMenuData = menuData
+  renderContextMenu(menuData, menu)
+  positionContextMenu(e, menu)
+  menu._originalPosition = {
+    left: parseInt(menu.style.left),
+    top: parseInt(menu.style.top),
   }
   setupContextMenuHandlers()
   if (_contextOutsideHandler) {
     document.removeEventListener('pointerdown', _contextOutsideHandler, true)
     _contextOutsideHandler = null
   }
-  _contextOutsideHandler = function outsideHandler(ev) {
+  /** @param {PointerEvent} ev */
+  const outsideHandler = (ev) => {
     if (
-      !contextMenu.contains(ev.target) &&
-      !ev.target.closest('.submenu-container')
+      !menu.contains(ev.target instanceof HTMLElement ? ev.target : null) &&
+      !closestHtmlElement(ev.target, '.submenu-container')
     ) {
       ev.preventDefault()
       ev.stopPropagation()
       hideContextMenu()
-      document.removeEventListener('pointerdown', _contextOutsideHandler, true)
+      document.removeEventListener('pointerdown', outsideHandler, true)
       _contextOutsideHandler = null
     }
   }
-  document.addEventListener('pointerdown', _contextOutsideHandler, true)
+  _contextOutsideHandler = outsideHandler
+  document.addEventListener('pointerdown', outsideHandler, true)
 }
 /**
- * Renders the context menu structure into the container
- * Handles menu items, dividers, and nested submenus with proper styling
  * @private
- * @param {Object} menuData - Menu structure containing header and items
- * @param {Element} container - DOM element to render menu into
+ * @param {ContextMenuData} menuData
+ * @param {ContextMenuElement} container
  */
 function renderContextMenu(menuData, container) {
   container.innerHTML = ''
@@ -208,11 +307,9 @@ function renderContextMenu(menuData, container) {
   container.appendChild(menuItemsContainer)
 }
 /**
- * Positions the context menu based on mouse coordinates
- * Adjusts position to keep menu within viewport bounds
  * @private
- * @param {MouseEvent} e - The context menu event with clientX/clientY coordinates
- * @param {Element} contextMenu - The menu container element to position
+ * @param {{clientX: number, clientY: number}} e
+ * @param {ContextMenuElement} contextMenu
  */
 function positionContextMenu(e, contextMenu) {
   const viewportW = window.innerWidth
@@ -235,11 +332,7 @@ function positionContextMenu(e, contextMenu) {
   contextMenu.style.left = left + 'px'
   contextMenu.style.top = top + 'px'
 }
-/**
- * Repositions the context menu if expanded submenus would push it off-screen
- * Ensures the menu stays within viewport bounds when submenus are shown
- * @private
- */
+/** @private */
 function repositionContextMenuIfNeeded() {
   if (!contextMenu || contextMenu.hidden) return
   const viewportW = window.innerWidth
@@ -263,29 +356,33 @@ function repositionContextMenuIfNeeded() {
     contextMenu.style.top = newTop + 'px'
   }
 }
-/**
- * Attaches click, hover, and interaction handlers to the context menu
- * Handles both regular menu items and submenu toggle functionality
- * @private
- */
+/** @private */
 function setupContextMenuHandlers() {
-  const menuItemsContainer = contextMenu.querySelector('.menu-items')
+  if (!contextMenu) return
+  const menu = contextMenu
+  const menuItemsContainer = /** @type {HTMLElement | null} */ (
+    contextMenu.querySelector('.menu-items')
+  )
   if (!menuItemsContainer) return
   menuItemsContainer.addEventListener('click', (ev) => {
-    const menuItem = ev.target.closest('.menu-item:not(.submenu-item)')
+    const menuItem = closestHtmlElement(
+      ev.target,
+      '.menu-item:not(.submenu-item)',
+    )
     if (!menuItem) {
-      const submenuItem = ev.target.closest('.submenu-item')
+      const submenuItem = closestHtmlElement(ev.target, '.submenu-item')
       if (submenuItem) {
         ev.preventDefault()
         ev.stopPropagation()
         ev.stopImmediatePropagation()
-        const parentIndex = parseInt(submenuItem.dataset.parentIndex)
-        const subIndex = parseInt(submenuItem.dataset.subIndex)
-        const allItems = contextMenu._currentMenuData.items
+        const parentIndex = parseInt(submenuItem.dataset.parentIndex || '')
+        const subIndex = parseInt(submenuItem.dataset.subIndex || '')
+        const menuData = menu._currentMenuData
+        const allItems = menuData ? menuData.items : []
         const submenu = allItems[parentIndex].submenu
         if (!isNaN(subIndex) && submenu && submenu[subIndex]) {
           hideContextMenu()
-          submenu[subIndex].handler()
+          submenu[subIndex].handler?.()
         }
       }
       return
@@ -293,90 +390,90 @@ function setupContextMenuHandlers() {
     ev.preventDefault()
     ev.stopPropagation()
     ev.stopImmediatePropagation()
-    const index = parseInt(menuItem.dataset.index)
+    const index = parseInt(menuItem.dataset.index || '')
     const hasSubmenu = menuItem.dataset.hasSubmenu === 'true'
     if (hasSubmenu) {
       toggleSubmenu(menuItem, index)
     } else {
-      const allItems = contextMenu._currentMenuData.items
+      const menuData = menu._currentMenuData
+      const allItems = menuData ? menuData.items : []
       if (!isNaN(index) && allItems[index]) {
         hideContextMenu()
-        allItems[index].handler()
+        allItems[index].handler?.()
       }
     }
   })
   menuItemsContainer.addEventListener('mouseover', (ev) => {
-    const menuItem = ev.target.closest('.menu-item')
+    const menuItem = closestHtmlElement(ev.target, '.menu-item')
     if (menuItem) {
       menuItem.style.background = 'rgba(255,255,255,0.08)'
     }
   })
   menuItemsContainer.addEventListener('mouseout', (ev) => {
-    const menuItem = ev.target.closest('.menu-item')
+    const menuItem = closestHtmlElement(ev.target, '.menu-item')
     if (menuItem) {
       menuItem.style.background = 'none'
     }
   })
 }
 /**
- * Toggles the visibility of a submenu and handles menu repositioning
- * Closes any other open submenus and updates chevron rotation state
- * Restores original menu position when the last submenu is closed
  * @private
- * @param {Element} menuItem - The menu item with the submenu
- * @param {number} parentIndex - Index of the parent menu item
+ * @param {Element} menuItem
+ * @param {number} parentIndex
  */
 function toggleSubmenu(menuItem, parentIndex) {
-  const submenuWrapper = contextMenu.querySelector(
-    `.submenu-wrapper[data-parent-index="${parentIndex}"]`
+  if (!contextMenu) return
+  const menu = contextMenu
+  const submenuWrapper = /** @type {HTMLElement | null} */ (
+    menu.querySelector(`.submenu-wrapper[data-parent-index="${parentIndex}"]`)
   )
   if (!submenuWrapper) return
   const isHidden = submenuWrapper.classList.contains('hidden')
-  contextMenu
-    .querySelectorAll('.submenu-wrapper:not(.hidden)')
-    .forEach((wrapper) => {
-      if (wrapper !== submenuWrapper) {
-        wrapper.classList.add('hidden')
-        const parentIdx = parseInt(wrapper.dataset.parentIndex)
-        const chevron = contextMenu.querySelector(
-          `.menu-item[data-index="${parentIdx}"] [data-chevron]`
+  /** @type {NodeListOf<HTMLElement>} */
+  const openSubmenus = menu.querySelectorAll('.submenu-wrapper:not(.hidden)')
+  openSubmenus.forEach((wrapper) => {
+    if (wrapper !== submenuWrapper) {
+      wrapper.classList.add('hidden')
+      const parentIdx = parseInt(wrapper.dataset.parentIndex || '')
+      const chevron = /** @type {HTMLElement | null} */ (
+        menu.querySelector(
+          `.menu-item[data-index="${parentIdx}"] [data-chevron]`,
         )
-        if (chevron) {
-          chevron.style.transform = 'rotate(0deg)'
-        }
+      )
+      if (chevron) {
+        chevron.style.transform = 'rotate(0deg)'
       }
-    })
+    }
+  })
   if (isHidden) {
     submenuWrapper.classList.remove('hidden')
-    const chevron = menuItem.querySelector('[data-chevron]')
+    const chevron = /** @type {HTMLElement | null} */ (
+      menuItem.querySelector('[data-chevron]')
+    )
     if (chevron) {
       chevron.style.transform = 'rotate(90deg)'
     }
     repositionContextMenuIfNeeded()
   } else {
     submenuWrapper.classList.add('hidden')
-    const chevron = menuItem.querySelector('[data-chevron]')
+    const chevron = /** @type {HTMLElement | null} */ (
+      menuItem.querySelector('[data-chevron]')
+    )
     if (chevron) {
       chevron.style.transform = 'rotate(0deg)'
     }
-    if (contextMenu._originalPosition) {
-      contextMenu.style.left = contextMenu._originalPosition.left + 'px'
-      contextMenu.style.top = contextMenu._originalPosition.top + 'px'
+    if (menu._originalPosition) {
+      menu.style.left = menu._originalPosition.left + 'px'
+      menu.style.top = menu._originalPosition.top + 'px'
     }
   }
 }
-/**
- * Sets up context menu for file/directory items with file-specific actions
- * Provides options like Copy URL, Open in New Tab, Download, Copy Image, and Copy submenu
- * Submenu includes options to copy Hash and UUID
- * Requires file items to have data attributes: file-type, path, uuid, hash
- * @requires setContextIcons, setContextBasePaths to be called first
- */
+/** @requires setContextIcons */
 export function setupFileItemContextMenu() {
   if (!contextMenu) createContextMenu()
   setupContextMenu('.file-item[data-file-type]', (itemElem) => {
-    const fileType = itemElem.dataset.fileType
-    const itemPath = itemElem.dataset.path
+    const fileType = itemElem.dataset.fileType || ''
+    const itemPath = itemElem.dataset.path || ''
     const encodedPath = itemPath.split('/').map(encodeURIComponent).join('/')
     const fileUrl = `${apiBasePath}/${encodedPath}`
     const dirUrl = `${frontendBasePath}/${itemPath}`
@@ -415,7 +512,10 @@ export function setupFileItemContextMenu() {
           if (!uuid) return
           try {
             const a = document.createElement('a')
-            a.href = `${window.BASE_PATH || ''}/api/download/?uuid=${uuid}`
+            const basePath = /** @type {Window & {BASE_PATH?: string}} */ (
+              window
+            ).BASE_PATH
+            a.href = `${basePath || ''}/api/download/?uuid=${uuid}`
             a.download = ''
             document.body.appendChild(a)
             a.click()
@@ -432,7 +532,7 @@ export function setupFileItemContextMenu() {
           const uuid = String(itemElem.dataset.uuid || '').trim()
           if (!uuid || uuid === 'null' || uuid === 'undefined') {
             const error = new Error(
-              'This file is missing a UUID and cannot be added to a pool'
+              'This file is missing a UUID and cannot be added to a pool',
             )
             utils.statusMessage(error.message, true)
             utils.handleError(error)
@@ -511,7 +611,7 @@ export function setupFileItemContextMenu() {
     }
     return {
       header: {
-        icon: icons?.[fileType] || '',
+        icon: typeof icons?.[fileType] === 'string' ? icons[fileType] : '',
         label: itemPath.split('/').pop(),
       },
       items: menuItems,

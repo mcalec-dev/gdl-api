@@ -4,6 +4,9 @@ const { requireRole } = require('../../utils/authUtils')
 const File = require('../../models/File')
 const fs = require('fs').promises
 const sendResponse = require('../../utils/resUtils')
+const { cacheControl } = require('../../utils/cacheControl')
+const { checkETag } = require('../../utils/etag')
+
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -39,6 +42,9 @@ async function handleDownload(req, res) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
     res.setHeader('Content-Type', file.mime || 'application/octet-stream')
     res.setHeader('Content-Length', stat.size)
+    res.setHeader('Accept-Ranges', 'bytes')
+    res.setHeader('Last-Modified', new Date(file.modified).toUTCString())
+    if (checkETag(req, res, file.hash)) return
     const fileStream = require('fs').createReadStream(filePath)
     fileStream.pipe(res)
     fileStream.on('error', (error) => {
@@ -52,10 +58,23 @@ async function handleDownload(req, res) {
     return sendResponse.error(res, 500, 'Error processing download request')
   }
 }
-router.get('/', requireRole('user'), async (req, res) => {
-  await handleDownload(req, res)
-})
-router.post('/', requireRole('user'), async (req, res) => {
-  await handleDownload(req, res)
-})
+
+router.get(
+  '/',
+  cacheControl('privateImmutable'),
+  requireRole('user'),
+  async (req, res) => {
+    await handleDownload(req, res)
+  },
+)
+
+router.post(
+  '/',
+  cacheControl('privateImmutable'),
+  requireRole('user'),
+  async (req, res) => {
+    await handleDownload(req, res)
+  },
+)
+
 module.exports = router

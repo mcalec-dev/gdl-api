@@ -53,6 +53,16 @@ const { safePath, validateRequestParams } = require('../../utils/pathUtils')
 const { resizeImage } = require('../../utils/image/resize.js')
 const { convertImage } = require('../../utils/image/convert.js')
 const { applyMetadata } = require('../../utils/image/metadata.js')
+const { cacheControl } = require('../../utils/cacheControl')
+const { checkETag } = require('../../utils/etag')
+
+/** @param {Array<Record<string, any>>} entries */
+function listingETag(entries) {
+  return entries.reduce((latest, entry) => {
+    const modified = entry?.modified ? new Date(entry.modified).getTime() : 0
+    return Math.max(latest, Number.isFinite(modified) ? modified : 0)
+  }, 0)
+}
 
 /**
  * @param {string} realPath
@@ -132,7 +142,8 @@ function streamTranscodedMedia(req, res, filePath, options) {
 }
 
 /**
- * @param {unknown} cacheQuery
+ * @param {string | undefined} cacheQuery
+ * @returns {{ isValid: boolean, useCache: boolean }}
  */
 function parseCacheQuery(cacheQuery) {
   if (cacheQuery === undefined) {
@@ -151,123 +162,131 @@ function parseCacheQuery(cacheQuery) {
   return { isValid: false, useCache: true }
 }
 
-router.get('/', requireRole('user'), async (req, res) => {
-  if (!req.user) {
-    return sendResponse(res, 401)
-  }
-  const cacheMode = parseCacheQuery(req.query.cache)
-  if (!cacheMode.isValid) {
-    return sendResponse(res, 400, 'Invalid cache parameter')
-  }
-  try {
-    const normalizedDir = path.resolve(BASE_DIR)
-    const { sortBy, direction } = parseSortQuery(req.query)
-    const limitRaw = parseInt(
-      typeof req.query.limit === 'string' ? req.query.limit : '',
-      10
-    )
-    /** @type {boolean} */
-    const hasPagination = !isNaN(limitRaw) && limitRaw > 0
-    /** @type {number | 0} */
-    const limit = hasPagination ? Math.min(limitRaw, PAGINATION_LIMIT) : 0
-    const pageRaw = hasPagination
-      ? parseInt(typeof req.query.page === 'string' ? req.query.page : '', 10)
-      : 1
-    const page = hasPagination && !isNaN(pageRaw) && pageRaw >= 1 ? pageRaw : 1
-    const shouldFetchMetadata = req.query.meta === 'true'
-    if (hasPagination && cacheMode.useCache) {
-      const cached = await getCachedPaginationResult(
-        normalizedDir,
-        page,
-        limit,
-        sortBy,
-        direction,
-        shouldFetchMetadata
-      )
-      if (cached) {
-        log.debug('Returning cached pagination result for root directory')
-        return sendResponse(res, 200).json(cached.items)
-      }
+router.get(
+  '/',
+  cacheControl('privateShort'),
+  requireRole('user'),
+  async (req, res) => {
+    if (!req.user) {
+      return sendResponse(res, 401)
     }
-    const stats = await fs.stat(normalizedDir)
-    if (!stats.isDirectory()) {
-      log.debug(normalizedDir, 'is not a directory')
-      return sendResponse(res, 500)
+    const cacheMode = parseCacheQuery(req.query.cache)
+    if (!cacheMode.isValid) {
+      return sendResponse(res, 400, 'Invalid cache parameter')
     }
-    let entries = []
     try {
-      entries = await fs.readdir(normalizedDir, { withFileTypes: true })
-      log.debug(`Found ${entries.length} entries in root directory`)
-      await maybeUpsertAccessed(normalizedDir, true)
-    } catch (error) {
-      log.error('Failed to read root directory:', error)
-      return sendResponse(res, 500)
-    }
-    const allFileRelativePaths = entries
-      .filter((entry) => entry.isFile())
-      .map((entry) => entry.name)
-    let metadataMap = {}
-    if (allFileRelativePaths.length > 0) {
-      metadataMap = await batchFetchFileMetadata(allFileRelativePaths, {
-        useCache: cacheMode.useCache,
-      })
-    }
-    const results = await Promise.all(
-      entries.map((entry) =>
-        formatListingEntry(
-          entry,
+      const normalizedDir = path.resolve(BASE_DIR)
+      const { sortBy, direction } = parseSortQuery(req.query)
+      const limitRaw = parseInt(
+        typeof req.query.limit === 'string' ? req.query.limit : '',
+        10,
+      )
+      /** @type {boolean} */
+      const hasPagination = !isNaN(limitRaw) && limitRaw > 0
+      /** @type {number | 0} */
+      const limit = hasPagination ? Math.min(limitRaw, PAGINATION_LIMIT) : 0
+      const pageRaw = hasPagination
+        ? parseInt(typeof req.query.page === 'string' ? req.query.page : '', 10)
+        : 1
+      const page =
+        hasPagination && !isNaN(pageRaw) && pageRaw >= 1 ? pageRaw : 1
+      const shouldFetchMetadata = req.query.meta === 'true'
+      if (hasPagination && cacheMode.useCache) {
+        const cached = await getCachedPaginationResult(
           normalizedDir,
-          normalizedDir,
-          req,
-          false,
-          metadataMap
+          page,
+          limit,
+          sortBy,
+          direction,
+          shouldFetchMetadata,
         )
+        if (cached) {
+          log.debug('Returning cached pagination result for root directory')
+          if (checkETag(req, res, listingETag(cached.items))) return
+          return sendResponse(res, 200).json(cached.items)
+        }
+      }
+      const stats = await fs.stat(normalizedDir)
+      if (!stats.isDirectory()) {
+        log.debug(normalizedDir, 'is not a directory')
+        return sendResponse(res, 500)
+      }
+      let entries = []
+      try {
+        entries = await fs.readdir(normalizedDir, { withFileTypes: true })
+        log.debug(`Found ${entries.length} entries in root directory`)
+        await maybeUpsertAccessed(normalizedDir, true)
+      } catch (error) {
+        log.error('Failed to read root directory:', error)
+        return sendResponse(res, 500)
+      }
+      const allFileRelativePaths = entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+      let metadataMap = {}
+      if (allFileRelativePaths.length > 0) {
+        metadataMap = await batchFetchFileMetadata(allFileRelativePaths, {
+          useCache: cacheMode.useCache,
+        })
+      }
+      const results = await Promise.all(
+        entries.map((entry) =>
+          formatListingEntry(
+            entry,
+            normalizedDir,
+            normalizedDir,
+            req,
+            false,
+            metadataMap,
+          ),
+        ),
       )
-    )
-    const filteredResults = results.filter(Boolean)
-    const files = filteredResults.filter(
-      (entry) => entry && entry.type === 'file'
-    )
-    const sortedFiltered = sortContents(filteredResults, sortBy, direction)
-    const sortedFiles = sortContents(files, sortBy, direction)
-    let paginatedFiltered = sortedFiltered
-    let paginatedFiles = sortedFiles
-    if (hasPagination) {
-      const start = (page - 1) * limit
-      paginatedFiltered = sortedFiltered.slice(start, start + limit)
-      paginatedFiles = sortedFiles.slice(start, start + limit)
-    }
-    const entriesToSync = hasPagination
-      ? req.user
-        ? paginatedFiltered
-        : paginatedFiles
-      : req.user
-        ? filteredResults
-        : sortedFiles
-    try {
-      await createDbEntriesForContents(entriesToSync, '')
-    } catch (syncError) {
-      log.error('Error syncing entries to database:', syncError)
-    }
-    const responseData = req.user ? paginatedFiltered : paginatedFiles
-    if (hasPagination && cacheMode.useCache) {
-      await setCachedPaginationResult(
-        normalizedDir,
-        page,
-        limit,
-        sortBy,
-        direction,
-        shouldFetchMetadata,
-        responseData,
-        sortedFiltered.length
+      const filteredResults = results.filter(Boolean)
+      const files = filteredResults.filter(
+        (entry) => entry && entry.type === 'file',
       )
+      const sortedFiltered = sortContents(filteredResults, sortBy, direction)
+      const sortedFiles = sortContents(files, sortBy, direction)
+      let paginatedFiltered = sortedFiltered
+      let paginatedFiles = sortedFiles
+      if (hasPagination) {
+        const start = (page - 1) * limit
+        paginatedFiltered = sortedFiltered.slice(start, start + limit)
+        paginatedFiles = sortedFiles.slice(start, start + limit)
+      }
+      const entriesToSync = hasPagination
+        ? req.user
+          ? paginatedFiltered
+          : paginatedFiles
+        : req.user
+          ? filteredResults
+          : sortedFiles
+      try {
+        await createDbEntriesForContents(entriesToSync, '')
+      } catch (syncError) {
+        log.error('Error syncing entries to database:', syncError)
+      }
+      const responseData = req.user ? paginatedFiltered : paginatedFiles
+      if (hasPagination && cacheMode.useCache) {
+        await setCachedPaginationResult(
+          normalizedDir,
+          page,
+          limit,
+          sortBy,
+          direction,
+          shouldFetchMetadata,
+          responseData,
+          sortedFiltered.length,
+        )
+      }
+      if (checkETag(req, res, listingETag(responseData))) return
+      return sendResponse(res, 200).json(responseData)
+    } catch (error) {
+      log.error('Error in root directory listing:', error)
+      return sendResponse(res, 500)
     }
-    return sendResponse(res, 200).json(responseData)
-  } catch (error) {
-    log.error('Error in root directory listing:', error)
-    return sendResponse(res, 500)
-  }
-})
+  },
+)
 
 router.get(
   [
@@ -276,6 +295,7 @@ router.get(
     '/:collection/:author',
     '/:collection/:author/*splat',
   ],
+  cacheControl('privateShort'),
   async (req, res) => {
     const cacheMode = parseCacheQuery(req.query.cache)
     if (!cacheMode.isValid) {
@@ -302,7 +322,7 @@ router.get(
     if (!realPath) {
       log.debug(
         'Path construction resulted in unsafe path for components:',
-        pathComponents
+        pathComponents,
       )
       return sendResponse(res, 400, 'Invalid path parameters')
     }
@@ -313,7 +333,7 @@ router.get(
     if (isDirectSidecarRequest) {
       log.debug(
         'Bypassing disallowed checks for direct sidecar request:',
-        relativePath
+        relativePath,
       )
     }
     if (!isDirectSidecarRequest && (await isExcluded(relativePath))) {
@@ -350,7 +370,7 @@ router.get(
       const { sortBy, direction } = parseSortQuery(req.query)
       const limitRawDir = parseInt(
         typeof req.query.limit === 'string' ? req.query.limit : '',
-        10
+        10,
       )
       const hasPagination = !isNaN(limitRawDir) && limitRawDir > 0
       const limit = hasPagination
@@ -369,13 +389,14 @@ router.get(
           limit,
           sortBy,
           direction,
-          shouldFetchMetadata
+          shouldFetchMetadata,
         )
         if (cached) {
           log.debug(
             'Returning cached pagination result for directory:',
-            relativePath
+            relativePath,
           )
+          if (checkETag(req, res, listingETag(cached.items))) return
           return sendResponse(res, 200).json(cached.items)
         }
       }
@@ -401,9 +422,9 @@ router.get(
             resolvedBaseDir,
             req,
             true,
-            metadataMap
-          )
-        )
+            metadataMap,
+          ),
+        ),
       )
       const validContents = formattedContents.filter(Boolean)
       const sorted = sortContents(validContents, sortBy, direction)
@@ -435,9 +456,10 @@ router.get(
           direction,
           shouldFetchMetadata,
           paginated,
-          sorted.length
+          sorted.length,
         )
       }
+      if (checkETag(req, res, listingETag(paginated))) return
       return sendResponse(res, 200).json(paginated)
     } else {
       try {
@@ -503,12 +525,12 @@ router.get(
           const rawParam = req.query.raw === 'true' || req.query.raw === ''
           if (rawParam && (scale || kernel || shouldConvertToGif)) {
             log.debug(
-              'Raw parameter cannot be used with scale, kernel, or gif conversion'
+              'Raw parameter cannot be used with scale, kernel, or gif conversion',
             )
             return sendResponse.error(
               res,
               400,
-              'raw cannot be used with other parameters'
+              'raw cannot be used with other parameters',
             )
           }
           if (rawParam) {
@@ -569,7 +591,7 @@ router.get(
             const transformer = await resizeImage(realPath, resizeOptions)
             if (transformer === undefined) {
               log.debug(
-                'No resizing needed, applying metadata to original file'
+                'No resizing needed, applying metadata to original file',
               )
               const metadataTransformer = await applyMetadata(realPath)
               if (metadataTransformer) {
@@ -616,7 +638,7 @@ router.get(
         const transcodeOptions = getTranscodeOptions(
           convertParam,
           isVideoFile(realPath),
-          isAudioFile(realPath)
+          isAudioFile(realPath),
         )
         if (convertParam && !transcodeOptions) {
           return sendResponse(res, 400, 'Invalid convert parameter')
@@ -641,7 +663,7 @@ router.get(
         }
         if (!req.headers.range) {
           log.debug(
-            'Request does not have any range headers - sending file instead'
+            'Request does not have any range headers - sending file instead',
           )
           await maybeUpsertAccessed(realPath, false)
           return res.sendFile(realPath)
@@ -710,7 +732,7 @@ router.get(
         return sendResponse(res, 500)
       }
     }
-  }
+  },
 )
 
 module.exports = router

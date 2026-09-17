@@ -2,6 +2,7 @@ const fs = require('fs').promises
 const path = require('path')
 const { isExcluded } = require('../file/listing.js')
 const { hasAllowedExtension } = require('../file/typeGuards.js')
+const Stats = require('../../models/Stats.js')
 const config = /** @type {any} */ (require('../../config.js'))
 const log = require('../logHandler.js')
 const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
@@ -261,6 +262,17 @@ async function generateStatsSnapshot() {
   return stats
 }
 
+async function persistStatsSnapshot() {
+  const snapshot = await generateStatsSnapshot()
+  await Stats.findOneAndUpdate(
+    {},
+    { $set: snapshot },
+    { upsert: true, returnDocument: 'after' },
+  )
+  log.info('Stats snapshot persisted')
+}
+
 module.exports = {
   generateStatsSnapshot,
+  persistStatsSnapshot,
 }

@@ -4,6 +4,8 @@ const { NAME, BASE_PATH, HOST } = /** @type {any} */ (require('../../config'))
 const log = require('../../utils/logHandler')
 const { getHostUrl } = require('../../utils/urlUtils')
 const sendResponse = require('../../utils/resUtils')
+const { cacheControl } = require('../../utils/cacheControl')
+
 try {
   log.debug('Mounting admin route')
   router.use('/admin', require('./admin/index'))
@@ -32,7 +34,8 @@ try {
 } catch (error) {
   log.error('Error mounting routes:', error)
 }
-router.get('/', async (req, res) => {
+
+router.get('/', cacheControl('publicStatic'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return sendResponse(res, 200).json({
     name: String(NAME),
@@ -57,4 +60,5 @@ router.get('/', async (req, res) => {
     },
   })
 })
+
 module.exports = router

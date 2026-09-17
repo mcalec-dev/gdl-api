@@ -6,11 +6,13 @@ const validator = require('validator')
 const { COOKIE_MAX_AGE } = /** @type {any} */ (require('../../../config'))
 const sendResponse = require('../../../utils/resUtils')
 const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
-router.post('/', async (req, res) => {
+const { cacheControl } = require('../../../utils/cacheControl')
+
+router.post('/', cacheControl('noStore'), async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     log.debug(
       'User already logged in:',
-      /** @type {any} */ (req.user)?.username
+      /** @type {any} */ (req.user)?.username,
     )
     return sendResponse.error(res, 403, 'Already logged in')
   }
@@ -20,7 +22,7 @@ router.post('/', async (req, res) => {
     return sendResponse.error(
       res,
       400,
-      'Username/email and password are required'
+      'Username/email and password are required',
     )
   }
   if (email && !validator.isEmail(email)) {
@@ -84,4 +86,5 @@ router.post('/', async (req, res) => {
     return sendResponse.error(res, 500, 'Failed to login')
   }
 })
+
 module.exports = router

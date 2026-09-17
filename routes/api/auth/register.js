@@ -5,7 +5,9 @@ const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const sendResponse = require('../../../utils/resUtils')
 const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
-router.post('/', async (req, res) => {
+const { cacheControl } = require('../../../utils/cacheControl')
+
+router.post('/', cacheControl('noStore'), async (req, res) => {
   const { username, email, password } = req.body
   if (!username || !password) {
     log.debug('Username or password not provided')
@@ -57,7 +59,7 @@ router.post('/', async (req, res) => {
             return sendResponse(
               res,
               500,
-              'Error saving session after registration login'
+              'Error saving session after registration login',
             )
           }
           log.info('Login after registration succeeded:', user.username)
@@ -66,12 +68,12 @@ router.post('/', async (req, res) => {
       } catch (error) {
         log.error(
           'Failed to login user after registration (post-login):',
-          error
+          error,
         )
         return sendResponse.error(
           res,
           500,
-          'Error during post-login session handling'
+          'Error during post-login session handling',
         )
       }
     })
@@ -80,4 +82,5 @@ router.post('/', async (req, res) => {
     return sendResponse.error(res, 500, 'Error during registration login')
   }
 })
+
 module.exports = router

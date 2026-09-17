@@ -2,6 +2,8 @@ const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { getHostUrl } = require('../../../utils/urlUtils')
 const sendResponse = require('../../../utils/resUtils')
+const { cacheControl } = require('../../../utils/cacheControl')
+
 try {
   log.debug('Mounting announcements route')
   router.use('/announcements', require('./announcements'))
@@ -14,7 +16,8 @@ try {
 } catch (error) {
   log.error('Error initializing user routes:', error)
 }
-router.get('/', async (req, res) => {
+
+router.get('/', cacheControl('privateVeryShort'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return sendResponse(res, 200).json({
     user: req.user,
@@ -25,4 +28,5 @@ router.get('/', async (req, res) => {
     },
   })
 })
+
 module.exports = router

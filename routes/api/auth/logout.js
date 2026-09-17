@@ -2,7 +2,9 @@ const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const User = require('../../../models/User')
 const sendResponse = require('../../../utils/resUtils')
-router.post('/', async (req, res) => {
+const { cacheControl } = require('../../../utils/cacheControl')
+
+router.post('/', cacheControl('noStore'), async (req, res) => {
   if (!req.user || !req.isAuthenticated()) {
     log.debug('User is not logged in')
     return sendResponse.error(res, 401, 'Not logged in')
@@ -14,7 +16,7 @@ router.post('/', async (req, res) => {
     if (sessionUuid) {
       const result = await User.updateOne(
         { _id: user._id },
-        { $pull: { sessions: { uuid: sessionUuid } } }
+        { $pull: { sessions: { uuid: sessionUuid } } },
       )
       if (result.modifiedCount > 0) {
         log.debug('Removed current session from user:', user.username)
@@ -47,4 +49,5 @@ router.post('/', async (req, res) => {
     })
   })
 })
+
 module.exports = router

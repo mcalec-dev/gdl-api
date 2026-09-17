@@ -4,6 +4,8 @@ const { requireRole } = require('../../../utils/authUtils')
 const log = require('../../../utils/logHandler')
 const sendResponse = require('../../../utils/resUtils')
 const { getUserColor, updateColor } = require('../../../utils/colorUtils')
+const cache = require('../../../utils/cache')
+const { cacheControl } = require('../../../utils/cacheControl')
 
 /**
  * @typedef {object} UserColorObject
@@ -12,97 +14,123 @@ const { getUserColor, updateColor } = require('../../../utils/colorUtils')
  * @property {boolean|null} [enabled]
  */
 
-router.get('/', requireRole('user'), async (req, res) => {
-  try {
-    log.debug('Getting color for user:', req.user.username)
-    const user = await User.findOne({ uuid: req.user.uuid })
-    if (!user) {
-      log.debug('User not found:', req.user.uuid)
-      return sendResponse.error(res, 404, 'User not found')
+router.get(
+  '/',
+  cacheControl('privateShort'),
+  requireRole('user'),
+  async (req, res) => {
+    try {
+      log.debug('Getting color for user:', req.user.username)
+      const userId = String(/** @type {any} */ (req.user)?.uuid)
+      const color = await cache
+        .wrap(`user:color:${userId}`, 60, async () => {
+          const user = await User.findOne({ uuid: req.user.uuid })
+          if (!user) throw new Error('User not found')
+          const value = getUserColor(user.color, user.uuid)
+          await User.findOneAndUpdate(
+            { uuid: req.user.uuid },
+            { color: value },
+            { new: true },
+          )
+          return value
+        })
+        .catch((error) => {
+          if (error.message === 'User not found') return null
+          throw error
+        })
+      if (color === null) return sendResponse.error(res, 404, 'User not found')
+      log.debug('Ensured color is saved for user:', req.user.username)
+      return sendResponse(res, 200).json({
+        color,
+      })
+    } catch (error) {
+      log.error('Failed to get user color:', error)
+      return sendResponse.error(res, 500, 'Failed to retrieve color settings')
     }
-    const color = getUserColor(user.color, user.uuid)
-    await User.findOneAndUpdate(
-      { uuid: req.user.uuid },
-      { color },
-      { new: true }
-    )
-    log.debug('Ensured color is saved for user:', req.user.username)
-    return sendResponse(res, 200).json({
-      color,
-    })
-  } catch (error) {
-    log.error('Failed to get user color:', error)
-    return sendResponse.error(res, 500, 'Failed to retrieve color settings')
-  }
-})
+  },
+)
 
-router.put('/', requireRole('user'), async (req, res) => {
-  try {
-    const { lightness, enabled } = req.body
-    if (
-      lightness !== undefined &&
-      (typeof lightness !== 'number' || lightness < 0 || lightness > 100)
-    ) {
-      return sendResponse.error(
-        res,
-        400,
-        'Lightness must be a number between 0 and 100'
+router.put(
+  '/',
+  cacheControl('noStore'),
+  requireRole('user'),
+  async (req, res) => {
+    try {
+      const { lightness, enabled } = req.body
+      if (
+        lightness !== undefined &&
+        (typeof lightness !== 'number' || lightness < 0 || lightness > 100)
+      ) {
+        return sendResponse.error(
+          res,
+          400,
+          'Lightness must be a number between 0 and 100',
+        )
+      }
+      if (enabled !== undefined && typeof enabled !== 'boolean') {
+        return sendResponse.error(res, 400, 'Enabled must be a boolean')
+      }
+      if (lightness === undefined && enabled === undefined) {
+        return sendResponse.error(
+          res,
+          400,
+          'At least one of lightness or enabled must be provided',
+        )
+      }
+      log.debug('Updating color for user:', req.user.username, {
+        lightness,
+        enabled,
+      })
+      const user = await User.findOne({ uuid: req.user.uuid })
+      if (!user) {
+        log.debug('User not found:', req.user.uuid)
+        return sendResponse.error(res, 404, 'User not found')
+      }
+      const currentColor = getUserColor(user.color, user.uuid)
+      const updatedColor = updateColor(currentColor, { lightness, enabled })
+      user.color = updatedColor
+      await user.save()
+      await cache.del(
+        `user:color:${String(/** @type {any} */ (req.user)?.uuid)}`,
       )
+      log.info('Updated color for user:', req.user.username, updatedColor)
+      return sendResponse(res, 200).json({
+        color: updatedColor,
+      })
+    } catch (error) {
+      log.error('Failed to update user color:', error)
+      return sendResponse.error(res, 500, 'Failed to update color settings')
     }
-    if (enabled !== undefined && typeof enabled !== 'boolean') {
-      return sendResponse.error(res, 400, 'Enabled must be a boolean')
-    }
-    if (lightness === undefined && enabled === undefined) {
-      return sendResponse.error(
-        res,
-        400,
-        'At least one of lightness or enabled must be provided'
-      )
-    }
-    log.debug('Updating color for user:', req.user.username, {
-      lightness,
-      enabled,
-    })
-    const user = await User.findOne({ uuid: req.user.uuid })
-    if (!user) {
-      log.debug('User not found:', req.user.uuid)
-      return sendResponse.error(res, 404, 'User not found')
-    }
-    const currentColor = getUserColor(user.color, user.uuid)
-    const updatedColor = updateColor(currentColor, { lightness, enabled })
-    user.color = updatedColor
-    await user.save()
-    log.info('Updated color for user:', req.user.username, updatedColor)
-    return sendResponse(res, 200).json({
-      color: updatedColor,
-    })
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    log.error('Failed to update user color:', error)
-    return sendResponse.error(res, 500, 'Failed to update color settings')
-  }
-})
+  },
+)
 
-router.post('/reset', requireRole('user'), async (req, res) => {
-  try {
-    log.debug('Resetting color for user:', req.user.username)
-    const user = await User.findOne({ uuid: req.user.uuid })
-    if (!user) {
-      log.debug('User not found:', req.user.uuid)
-      return sendResponse.error(res, 404, 'User not found')
+router.post(
+  '/reset',
+  cacheControl('noStore'),
+  requireRole('user'),
+  async (req, res) => {
+    try {
+      log.debug('Resetting color for user:', req.user.username)
+      const user = await User.findOne({ uuid: req.user.uuid })
+      if (!user) {
+        log.debug('User not found:', req.user.uuid)
+        return sendResponse.error(res, 404, 'User not found')
+      }
+      const resetColor = getUserColor(undefined, user.uuid)
+      user.color = resetColor
+      await user.save()
+      await cache.del(
+        `user:color:${String(/** @type {any} */ (req.user)?.uuid)}`,
+      )
+      log.info('Reset color for user:', req.user.username)
+      return sendResponse(res, 200).json({
+        color: resetColor,
+      })
+    } catch (error) {
+      log.error('Failed to reset user color:', error)
+      return sendResponse.error(res, 500, 'Failed to reset color settings')
     }
-    const resetColor = getUserColor(undefined, user.uuid)
-    user.color = resetColor
-    await user.save()
-    log.info('Reset color for user:', req.user.username)
-    return sendResponse(res, 200).json({
-      color: resetColor,
-    })
-  } catch (error) {
-    log.error('Failed to reset user color:', error)
-    return sendResponse.error(res, 500, 'Failed to reset color settings')
-  }
-})
+  },
+)
 
 module.exports = router
