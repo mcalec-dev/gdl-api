@@ -12,7 +12,7 @@ RUN npm ci
 COPY --chown=node:node . .
 RUN mkdir -p /data && chown node:node /data
 
-RUN BASE_DIR=/data npm run build
+RUN npm run build
 
 RUN chown -R node:node /app
 

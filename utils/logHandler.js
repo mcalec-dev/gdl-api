@@ -1,6 +1,5 @@
 const chalk = require('chalk')
 const util = require('util')
-const config = require('../config')
 /** @typedef {'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL'} LogLevel */
 const LOG_LEVELS = {
   DEBUG: 0,
@@ -23,9 +22,7 @@ function parseLevel(level) {
     LOG_LEVELS.DEBUG
   )
 }
-let currentLogLevel = parseLevel(
-  /** @type {string | number | null | undefined} */ (config.LOG_LEVEL)
-)
+let currentLogLevel = parseLevel(process.env.LOG_LEVEL)
 /**
  * @param {unknown[]} args
  */
