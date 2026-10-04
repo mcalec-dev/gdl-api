@@ -36,16 +36,17 @@ Uploaded file contents are stored in MongoDB GridFS.
 Build and run the standalone image:
 
 ```sh
+cp .env.example .env
+# Set SESSION_SECRET and adjust MONGODB_URL / REDIS_URL for the standalone container.
 docker build -t gdl-api .
-docker run --rm -p 3030:3030 \
-  -e MONGODB_URL=mongodb://host.docker.internal:27017/gdl \
-  -e SESSION_SECRET=replace-this-secret \
-  -e HOST=localhost:3030 \
+docker run --rm --env-file .env \
+  -e BASE_DIR=/data \
+  -p "3030:${PORT:-3030}" \
   -v "$(pwd)/data:/data" \
   gdl-api
 ```
 
-For a local MongoDB and Redis stack, copy `.env.example` to `.env`, set a strong `SESSION_SECRET`, then run:
+For a local MongoDB and Redis stack, set `MONGODB_URL=mongodb://mongodb:27017/gdl` and `REDIS_URL=redis://redis:6379` in `.env`, set a strong `SESSION_SECRET`, then run:
 
 ```sh
 docker compose up --build

@@ -1,4 +1,4 @@
-const MongoStore = require('connect-mongo')
+const { MongoStore } = require('connect-mongo')
 const { RedisStore } = require('connect-redis')
 const ms = require('ms')
 const log = require('./logHandler')
@@ -14,17 +14,27 @@ let store = null
 let initPromise = null
 /** @type {'redis' | 'mongo' | 'uninitialized'} */
 let storeKind = 'uninitialized'
-/** @param {unknown} session */
+/**
+ * @param {unknown} session
+ * @returns {import('express-session').SessionData}
+ */
 function unserializeSession(session) {
   if (typeof session !== 'string') {
-    return session
+    return /** @type {import('express-session').SessionData} */ (
+      /** @type {unknown} */ (session)
+    )
   }
   try {
-    return JSON.parse(session)
+    return /** @type {import('express-session').SessionData} */ (
+      JSON.parse(session)
+    )
   } catch {
-    return session
+    return /** @type {import('express-session').SessionData} */ (
+      /** @type {unknown} */ (session)
+    )
   }
 }
+/** @returns {number} */
 function getCookieMaxAgeMs() {
   if (typeof COOKIE_MAX_AGE === 'number' && Number.isFinite(COOKIE_MAX_AGE)) {
     return COOKIE_MAX_AGE
@@ -49,17 +59,18 @@ async function initSessionStore() {
     const ttlSeconds = Math.max(1, Math.floor(cookieMaxAgeMs / 1000))
     const redisClient = await ensureRedisClient(REDIS_URL)
     if (redisClient) {
-      store = new RedisStore({
+      const redisStore = new RedisStore({
         client: redisClient,
         prefix: 'sess:',
         ttl: ttlSeconds,
         disableTouch: false,
       })
+      store = redisStore
       storeKind = 'redis'
       log.info('Session store initialized with Redis')
-      return store
+      return redisStore
     }
-    store = MongoStore.create({
+    const mongoStore = MongoStore.create({
       mongoUrl: MONGODB_URL,
       collectionName: 'sessions',
       ttl: ttlSeconds,
@@ -67,9 +78,10 @@ async function initSessionStore() {
       autoRemove: 'native',
       unserialize: unserializeSession,
     })
+    store = mongoStore
     storeKind = 'mongo'
     log.warn('Redis unavailable for sessions, falling back to MongoDB store')
-    return store
+    return mongoStore
   })()
   try {
     return await initPromise
@@ -83,7 +95,10 @@ function getSessionStore() {
 function getSessionStoreKind() {
   return storeKind
 }
-/** @param {'clear' | 'length'} methodName */
+/**
+ * @param {'clear' | 'length'} methodName
+ * @returns {Promise<unknown | null>}
+ */
 async function callStoreMethod(methodName) {
   const activeStore = await initSessionStore()
   const method = activeStore?.[methodName]
@@ -92,6 +107,10 @@ async function callStoreMethod(methodName) {
   }
   return new Promise((resolve, reject) => {
     let settled = false
+    /**
+     * @param {unknown} [error]
+     * @param {unknown} [value]
+     */
     const finish = (error, value) => {
       if (settled) {
         return
@@ -104,10 +123,7 @@ async function callStoreMethod(methodName) {
       resolve(value ?? null)
     }
     try {
-      const maybePromise = method.call(activeStore, finish)
-      if (maybePromise && typeof maybePromise.then === 'function') {
-        maybePromise.then((value) => finish(null, value)).catch(finish)
-      }
+      method.call(activeStore, finish)
     } catch (error) {
       finish(error)
     }
