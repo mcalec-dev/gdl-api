@@ -50,6 +50,22 @@ function parseIntegerEnv(value, envName) {
 /**
  * @param {unknown} value
  * @param {string} envName
+ * @returns {number | undefined}
+ */
+function parseBytesEnv(value, envName) {
+  if (typeof value !== 'string') return undefined
+  const normalized = value
+    .trim()
+    .replace(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([kmgtp])$/i, '$1$2B')
+  const parsed = bytes(normalized)
+  if (typeof parsed !== 'number' || !Number.isFinite(parsed)) {
+    throw new Error(`${envName} must be a valid byte size`)
+  }
+  return parsed
+}
+/**
+ * @param {unknown} value
+ * @param {string} envName
  * @returns {unknown[]}
  */
 function parseJsonArrayEnv(value, envName) {
@@ -242,7 +258,7 @@ const schema = {
   },
   FILE_UPLOAD_LIMIT: {
     env: 'FILE_UPLOAD_LIMIT',
-    parse: (v) => (typeof v === 'string' ? bytes(v) : undefined),
+    parse: (v) => parseBytesEnv(v, 'FILE_UPLOAD_LIMIT'),
     type: 'number',
   },
   HASH_ALGORITHM: { env: 'HASH_ALGORITHM', parse: (v) => v, type: 'string' },
@@ -258,7 +274,7 @@ const schema = {
   },
   MAX_BUFFER_SIZE: {
     env: 'MAX_BUFFER_SIZE',
-    parse: (v) => (typeof v === 'string' ? bytes(v) : undefined),
+    parse: (v) => parseBytesEnv(v, 'MAX_BUFFER_SIZE'),
     type: 'number',
   },
   MAX_SEARCH_RESULTS: {
