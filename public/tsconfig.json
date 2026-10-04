@@ -9,7 +9,7 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": [],
     "noEmit": true,
-    "checkJs": true,
+    "checkJs": true
   },
   "include": ["**/*.js"],
   "exclude": ["node_modules/**/*", "min/**/*"]

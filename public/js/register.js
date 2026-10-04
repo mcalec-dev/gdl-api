@@ -39,11 +39,11 @@ async function init() {
         showError(error)
       })
       const data = await response.json()
-      if (response.ok) {
-        window.location.href = `${window.BASE_PATH || ''}/dashboard`
-      } else {
+      if (!response.ok) {
         utils.handleError(data.error)
         showError(data.error)
+      } else {
+        window.location.href = '/dashboard'
       }
     } catch (error) {
       utils.handleError(error)

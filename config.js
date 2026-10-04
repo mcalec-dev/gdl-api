@@ -1,68 +1,21 @@
 const ms = require('ms')
 const bytes = require('bytes')
 const dotenv = require('dotenv')
-const https = require('https')
-const http = require('http')
 const path = require('path')
 const fs = require('fs')
 dotenv.config({ quiet: true })
-/**
- * @typedef {'array' | 'number' | 'boolean' | 'string' | 'object'} ExpectedType
- */
+/** @typedef {'array' | 'number' | 'boolean' | 'string' | 'object'} ExpectedType */
 /**
  * @typedef {{
- *   env: string | null,
+ *   env: string,
  *   parse: (value: string | undefined) => unknown,
- *   type: ExpectedType | ExpectedType[],
- *   allowPromise?: boolean
+ *   type: ExpectedType | ExpectedType[]
  * }} SchemaEntry
  */
-/** @param {string | undefined} host */
-function checkHostOnline(host) {
-  return new Promise((resolve) => {
-    if (!host) return resolve(false)
-    const url =
-      host.startsWith('http://') || host.startsWith('https://')
-        ? host
-        : `http://${host}`
-    const protocol = url.startsWith('https') ? https : http
-    const req = protocol.get(url, (res) => {
-      const statusCode = res.statusCode ?? 0
-      return resolve(statusCode >= 200 && statusCode < 500)
-    })
-    req.on('error', () => resolve(false))
-    req.setTimeout(3000, () => {
-      req.destroy()
-      return resolve(false)
-    })
-  })
-}
-/** @returns {Promise<string | undefined>} */
-async function getHost() {
-  const log = require('./utils/logHandler')
-  const host = process.env.HOST
-  const altHost = process.env.ALT_HOST
-  if (!host) return undefined
-  if (!altHost) return host
-  if (!host && !altHost) return undefined
-  if (host === altHost) return host
-  const hostOnline = await checkHostOnline(host)
-  const altHostOnline = await checkHostOnline(altHost)
-  try {
-    if (hostOnline) {
-      log.debug('Primary host is online:', host)
-      return host
-    }
-    if (altHostOnline) {
-      log.debug('Alternate host is online:', altHost)
-      return altHost
-    }
-  } catch (error) {
-    log.warn('Both hosts are offline:', error)
-    return undefined
-  }
-}
-/** @param {unknown} value */
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 function parseBooleanEnv(value) {
   if (value === undefined || value === null) return false
   const v = String(value).trim().toLowerCase()
@@ -82,7 +35,11 @@ function parseBooleanEnv(value) {
   }
   throw new Error(`Invalid boolean value: ${value}`)
 }
-/** @param {unknown} value @param {string} envName */
+/**
+ * @param {unknown} value
+ * @param {string} envName
+ * @returns {number}
+ */
 function parseIntegerEnv(value, envName) {
   const parsed = parseInt(String(value), 10)
   if (!Number.isFinite(parsed)) {
@@ -90,15 +47,11 @@ function parseIntegerEnv(value, envName) {
   }
   return parsed
 }
-/** @param {unknown} value @param {string} envName */
-function parseNumberEnv(value, envName) {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`${envName} must be a valid number`)
-  }
-  return parsed
-}
-/** @param {unknown} value @param {string} envName */
+/**
+ * @param {unknown} value
+ * @param {string} envName
+ * @returns {unknown[]}
+ */
 function parseJsonArrayEnv(value, envName) {
   if (typeof value !== 'string') {
     throw new Error(`${envName} must be a valid JSON array`)
@@ -114,7 +67,11 @@ function parseJsonArrayEnv(value, envName) {
   }
   return parsed
 }
-/** @param {unknown} value @param {string} envName */
+/**
+ * @param {unknown} value
+ * @param {string} envName
+ * @returns {number}
+ */
 function parseMsEnv(value, envName) {
   if (typeof value !== 'string') {
     throw new Error(`${envName} must be a valid duration string`)
@@ -125,7 +82,10 @@ function parseMsEnv(value, envName) {
   }
   return parsed
 }
-/** @param {unknown} value */
+/**
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
 function parseOptionalTrimmedString(value) {
   if (typeof value !== 'string') return undefined
   const trimmed = value.trim()
@@ -135,24 +95,9 @@ function parseOptionalTrimmedString(value) {
  * @param {string} key
  * @param {unknown} value
  * @param {ExpectedType | ExpectedType[]} expectedTypes
- * @param {boolean} [allowPromise=false]
  */
-function validateParsedEnvType(
-  key,
-  value,
-  expectedTypes,
-  allowPromise = false
-) {
+function validateParsedEnvType(key, value, expectedTypes) {
   if (value === undefined || value === null) return
-  if (
-    allowPromise &&
-    typeof value === 'object' &&
-    value !== null &&
-    'then' in value &&
-    typeof value.then === 'function'
-  ) {
-    return
-  }
   const types = Array.isArray(expectedTypes) ? expectedTypes : [expectedTypes]
   const isValid = types.some((expectedType) => {
     switch (expectedType) {
@@ -176,7 +121,10 @@ function validateParsedEnvType(
     )
   }
 }
-/** @param {unknown} baseDirPath */
+/**
+ * @param {unknown} baseDirPath
+ * @returns {string}
+ */
 function validatePath(baseDirPath) {
   if (!baseDirPath || typeof baseDirPath !== 'string') {
     throw new Error('BASE_DIR environment variable must be set and be a string')
@@ -208,7 +156,7 @@ const schema = {
     type: 'number',
   },
   NAME: { env: 'NAME', parse: (v) => v, type: 'string' },
-  HOST: { env: null, parse: getHost, type: 'string', allowPromise: true },
+  HOST: { env: 'HOST', parse: parseOptionalTrimmedString, type: 'string' },
   BIND: { env: 'BIND', parse: (v) => v, type: 'string' },
   BASE_PATH: { env: 'BASE_PATH', parse: (v) => v, type: 'string' },
   BASE_DIR: { env: 'BASE_DIR', parse: validatePath, type: 'string' },
@@ -386,14 +334,11 @@ const schema = {
 /** @type {Record<string, unknown>} */
 const config = {}
 for (const [key, entry] of Object.entries(schema)) {
-  const { env, parse, type, allowPromise } = entry
+  const { env, parse, type } = entry
   const value = env ? process.env[env] : undefined
   const parsed = parse(value)
-  validateParsedEnvType(key, parsed, type, allowPromise)
+  validateParsedEnvType(key, parsed, type)
   config[key] = parsed
 }
-const hostValue = config['HOST']
-config['HOST'] =
-  hostValue instanceof Promise ? hostValue.then((host) => host) : undefined
 console.info('Config loaded successfully')
 module.exports = config

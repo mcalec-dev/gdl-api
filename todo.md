@@ -23,3 +23,4 @@
 - add cache control configuration for `sendResponse`
 
 - bug with files cron task deleting all records for a cleanup, counting them as "stale" when they are not, needs to be fixed
+- allow videos to be converted into gif format via `?gif=true` query param on `/files` endpoint

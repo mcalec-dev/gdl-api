@@ -70,8 +70,9 @@ if (BASE_PATH) {
 async function initDB() {
   initDbCacheLayer()
   await initSessionStore()
+  const uri = MONGODB_URL.toString()
   let mongodb = null
-  mongodb = await require('mongoose').connect(MONGODB_URL)
+  mongodb = await require('mongoose').connect(uri)
   if (mongodb != null) log.info('MongoDB connected')
   if (mongodb === null) throw new Error('MongoDB connection failed')
   const gridfsUtils = require('./utils/gridfsUtils')
@@ -364,13 +365,6 @@ async function verifyConfig() {
     log.error('Base directory inaccessible:', BASE_DIR)
     log.error(error instanceof Error ? error.stack : String(error))
     process.exit(1)
-  }
-  try {
-    await HOST
-    log.debug('Host available:', HOST)
-  } catch (error) {
-    log.error('Host unavailable', HOST)
-    log.error(error instanceof Error ? error.stack : String(error))
   }
 }
 const banner = async () => {

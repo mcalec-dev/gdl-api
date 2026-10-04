@@ -5,12 +5,7 @@ const User = require('../models/User')
 const log = require('./logHandler')
 const { getRequestIp, getRequestUserAgent } = require('./requestUtils')
 const config = /** @type {any} */ (require('../config'))
-const HOST =
-  typeof process.env.HOST === 'string' && process.env.HOST.trim()
-    ? process.env.HOST.trim()
-    : typeof process.env.ALT_HOST === 'string' && process.env.ALT_HOST.trim()
-      ? process.env.ALT_HOST.trim()
-      : ''
+const HOST = typeof config.HOST === 'string' ? config.HOST : ''
 const BASE_PATH = typeof config.BASE_PATH === 'string' ? config.BASE_PATH : ''
 const SESSION_MAX_AGE =
   typeof config.COOKIE_MAX_AGE === 'number'
