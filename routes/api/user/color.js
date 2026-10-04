@@ -8,6 +8,12 @@ const cache = require('../../../utils/cache')
 const { cacheControl } = require('../../../utils/cacheControl')
 
 /**
+ * @typedef {object} AuthenticatedUser
+ * @property {string} uuid
+ * @property {string} username
+ */
+
+/**
  * @typedef {object} UserColorObject
  * @property {number|null} [hue]
  * @property {number|null} [lightness]
@@ -20,15 +26,18 @@ router.get(
   requireRole('user'),
   async (req, res) => {
     try {
-      log.debug('Getting color for user:', req.user.username)
-      const userId = String(/** @type {any} */ (req.user)?.uuid)
+      const currentUser = /** @type {AuthenticatedUser} */ (
+        /** @type {unknown} */ (req.user)
+      )
+      log.debug('Getting color for user:', currentUser.username)
+      const userId = currentUser.uuid
       const color = await cache
         .wrap(`user:color:${userId}`, 60, async () => {
-          const user = await User.findOne({ uuid: req.user.uuid })
+          const user = await User.findOne({ uuid: currentUser.uuid })
           if (!user) throw new Error('User not found')
           const value = getUserColor(user.color, user.uuid)
           await User.findOneAndUpdate(
-            { uuid: req.user.uuid },
+            { uuid: currentUser.uuid },
             { color: value },
             { new: true },
           )
@@ -39,7 +48,7 @@ router.get(
           throw error
         })
       if (color === null) return sendResponse.error(res, 404, 'User not found')
-      log.debug('Ensured color is saved for user:', req.user.username)
+        log.debug('Ensured color is saved for user:', currentUser.username)
       return sendResponse(res, 200).json({
         color,
       })
@@ -56,6 +65,9 @@ router.put(
   requireRole('user'),
   async (req, res) => {
     try {
+      const currentUser = /** @type {AuthenticatedUser} */ (
+        /** @type {unknown} */ (req.user)
+      )
       const { lightness, enabled } = req.body
       if (
         lightness !== undefined &&
@@ -77,23 +89,21 @@ router.put(
           'At least one of lightness or enabled must be provided',
         )
       }
-      log.debug('Updating color for user:', req.user.username, {
+      log.debug('Updating color for user:', currentUser.username, {
         lightness,
         enabled,
       })
-      const user = await User.findOne({ uuid: req.user.uuid })
+      const user = await User.findOne({ uuid: currentUser.uuid })
       if (!user) {
-        log.debug('User not found:', req.user.uuid)
+        log.debug('User not found:', currentUser.uuid)
         return sendResponse.error(res, 404, 'User not found')
       }
       const currentColor = getUserColor(user.color, user.uuid)
       const updatedColor = updateColor(currentColor, { lightness, enabled })
       user.color = updatedColor
       await user.save()
-      await cache.del(
-        `user:color:${String(/** @type {any} */ (req.user)?.uuid)}`,
-      )
-      log.info('Updated color for user:', req.user.username, updatedColor)
+      await cache.del(`user:color:${currentUser.uuid}`)
+      log.info('Updated color for user:', currentUser.username, updatedColor)
       return sendResponse(res, 200).json({
         color: updatedColor,
       })
@@ -110,19 +120,20 @@ router.post(
   requireRole('user'),
   async (req, res) => {
     try {
-      log.debug('Resetting color for user:', req.user.username)
-      const user = await User.findOne({ uuid: req.user.uuid })
+      const currentUser = /** @type {AuthenticatedUser} */ (
+        /** @type {unknown} */ (req.user)
+      )
+      log.debug('Resetting color for user:', currentUser.username)
+      const user = await User.findOne({ uuid: currentUser.uuid })
       if (!user) {
-        log.debug('User not found:', req.user.uuid)
+        log.debug('User not found:', currentUser.uuid)
         return sendResponse.error(res, 404, 'User not found')
       }
       const resetColor = getUserColor(undefined, user.uuid)
       user.color = resetColor
       await user.save()
-      await cache.del(
-        `user:color:${String(/** @type {any} */ (req.user)?.uuid)}`,
-      )
-      log.info('Reset color for user:', req.user.username)
+      await cache.del(`user:color:${currentUser.uuid}`)
+      log.info('Reset color for user:', currentUser.username)
       return sendResponse(res, 200).json({
         color: resetColor,
       })

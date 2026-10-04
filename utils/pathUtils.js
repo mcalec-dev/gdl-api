@@ -40,7 +40,13 @@ const sanitizePathComponent = (input) => {
     return null
   }
   let sanitized = normalizedInput
-  sanitized = sanitized.replace(/[<>:"/\\|?*\u0000-\u001F\u0080-\u009F]/g, '_')
+  sanitized = sanitized.replace(/[<>:"/\\|?*]/g, '_')
+  sanitized = [...sanitized]
+    .map((character) => {
+      const code = character.charCodeAt(0)
+      return code <= 0x1f || (code >= 0x7f && code <= 0x9f) ? '_' : character
+    })
+    .join('')
   sanitized = sanitized.replace(/^\.+/, '_')
   sanitized = sanitized.replace(/\.+$/, '')
   sanitized = sanitized.replace(/_+/g, '_')
@@ -82,7 +88,7 @@ const safePath = (baseDir, ...pathComponents) => {
       .flatMap((c) => {
         const str = String(c)
         return str
-          .split(/[\/,]+/)
+          .split(/[,/]+/)
           .map((s) => s.trim())
           .filter(Boolean)
       })

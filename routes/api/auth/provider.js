@@ -7,6 +7,28 @@ const sendResponse = require('../../../utils/resUtils')
 const { getHostUrl } = require('../../../utils/urlUtils')
 const { cacheControl } = require('../../../utils/cacheControl')
 
+/**
+ * @typedef {object} OAuthAccount
+ * @property {string} [id]
+ * @property {string} [username]
+ * @property {string} [email]
+ * @property {string} [avatar]
+ */
+
+/**
+ * @typedef {object} AuthenticatedUser
+ * @property {string} id
+ * @property {string} username
+ * @property {string} [password]
+ * @property {Record<string, OAuthAccount | undefined>} [oauth]
+ * @property {() => Promise<unknown>} save
+ */
+
+/** @param {unknown} provider @returns {provider is string} */
+function isAllowedProvider(provider) {
+  return typeof provider === 'string' && OAUTH_PROVIDERS.includes(provider)
+}
+
 router.get('/', cacheControl('publicStatic'), async (req, res) => {
   const baseURL = (await getHostUrl(req)) + '/api'
   return sendResponse(res, 200).json({
@@ -24,38 +46,45 @@ router.get(
   cacheControl('noStore'),
   (req, res, next) => {
     const provider = req.params.provider
-    if (!OAUTH_PROVIDERS.includes(provider)) {
+    if (!isAllowedProvider(provider)) {
       log.debug('Provider mismatch:', provider)
       return sendResponse.error(res, 400, 'Invalid provider')
     }
-    passport.authenticate(provider, async (err, oauthUser) => {
-      if (err) {
-        log.error('OAuth error:', err)
-        return res.redirect(302, '/')
-      }
-      if (!oauthUser) {
-        log.debug('No OAuth user returned')
-        return res.redirect(302, '/')
-      }
-      try {
-        if (req.user && oauthUser.id === req.user.id) {
-          if (!req.user.oauth) req.user.oauth = {}
-          req.user.oauth[provider] = oauthUser.oauth[provider]
-          await req.user.save()
-          return res.redirect(302, '/dashboard')
+    passport.authenticate(
+      provider,
+      /** @param {unknown} err @param {AuthenticatedUser | false | null} oauthUser */
+      async (err, oauthUser) => {
+        if (err) {
+          log.error('OAuth error:', err)
+          return res.redirect(302, '/')
         }
-        req.login(oauthUser, (loginErr) => {
-          if (loginErr) {
-            log.error('Error logging in after OAuth:', loginErr)
-            return res.redirect(302, '/')
+        if (!oauthUser) {
+          log.debug('No OAuth user returned')
+          return res.redirect(302, '/')
+        }
+        try {
+          const currentUser = /** @type {AuthenticatedUser | undefined} */ (
+            /** @type {unknown} */ (req.user)
+          )
+          if (currentUser && oauthUser.id === currentUser.id) {
+            if (!currentUser.oauth) currentUser.oauth = {}
+            currentUser.oauth[provider] = oauthUser.oauth?.[provider]
+            await currentUser.save()
+            return res.redirect(302, '/dashboard')
           }
-          return res.redirect(302, '/dashboard')
-        })
-      } catch (error) {
-        log.error('Callback processing error:', error)
-        return res.redirect(302, '/')
-      }
-    })(req, res, next)
+          req.login(oauthUser, (loginErr) => {
+            if (loginErr) {
+              log.error('Error logging in after OAuth:', loginErr)
+              return res.redirect(302, '/')
+            }
+            return res.redirect(302, '/dashboard')
+          })
+        } catch (error) {
+          log.error('Callback processing error:', error)
+          return res.redirect(302, '/')
+        }
+      },
+    )(req, res, next)
   },
 )
 
@@ -64,7 +93,7 @@ router.get(
   cacheControl('noStore'),
   async (req, res, next) => {
     const provider = req.params.provider
-    if (!OAUTH_PROVIDERS.includes(provider)) {
+    if (!isAllowedProvider(provider)) {
       log.debug('Provider mismatch:', provider)
       return sendResponse.error(res, 400, 'Invalid provider')
     }
@@ -87,19 +116,22 @@ router.get(
   requireRole('user'),
   async (req, res, next) => {
     const provider = req.params.provider
-    if (!OAUTH_PROVIDERS.includes(provider)) {
+    if (!isAllowedProvider(provider)) {
       log.debug('Provider mismatch:', provider)
       return sendResponse.error(res, 400, 'Invalid provider')
     }
-    if (req.user.oauth?.[provider]?.id) {
+    const currentUser = /** @type {AuthenticatedUser} */ (
+      /** @type {unknown} */ (req.user)
+    )
+    if (currentUser.oauth?.[provider]?.id) {
       log.debug('Provider already linked')
       return sendResponse.error(res, 400, 'Provider already linked')
     }
     try {
       const options =
         provider === 'github'
-          ? { scope: ['user:email'], state: req.user.id }
-          : { scope: ['identify', 'email'], state: req.user.id }
+          ? { scope: ['user:email'], state: currentUser.id }
+          : { scope: ['identify', 'email'], state: currentUser.id }
       passport.authenticate(provider, options)(req, res, next)
     } catch (error) {
       log.error('Failed to authenticate OAuth:', error)
@@ -114,18 +146,21 @@ router.get(
   requireRole('user'),
   async (req, res) => {
     const provider = req.params.provider
-    if (!OAUTH_PROVIDERS.includes(provider)) {
+    if (!isAllowedProvider(provider)) {
       log.debug('Provider mismatch:', provider)
       return sendResponse.error(res, 400, 'Invalid provider')
     }
     try {
-      if (!req.user.oauth?.[provider]?.id) {
+      const currentUser = /** @type {AuthenticatedUser} */ (
+        /** @type {unknown} */ (req.user)
+      )
+      if (!currentUser.oauth?.[provider]?.id) {
         log.debug('No provider found')
         return sendResponse.error(res, 400, 'Provider not linked')
       }
-      const hasPassword = !!req.user.password
-      const otherOAuthProviders = Object.keys(req.user.oauth || {}).filter(
-        (p) => p !== provider && req.user.oauth[p]?.id,
+      const hasPassword = !!currentUser.password
+      const otherOAuthProviders = Object.keys(currentUser.oauth || {}).filter(
+        (p) => p !== provider && currentUser.oauth?.[p]?.id,
       )
       if (!hasPassword && otherOAuthProviders.length === 0) {
         return sendResponse.error(
@@ -134,12 +169,12 @@ router.get(
           'Cannot unlink the only authentication method',
         )
       }
-      if (!req.user.oauth) req.user.oauth = {}
-      delete req.user.oauth[provider]
-      if (Object.keys(req.user.oauth).length === 0) {
-        req.user.oauth = undefined
+      if (!currentUser.oauth) currentUser.oauth = {}
+      delete currentUser.oauth[provider]
+      if (Object.keys(currentUser.oauth).length === 0) {
+        currentUser.oauth = undefined
       }
-      await req.user.save()
+      await currentUser.save()
       return sendResponse(res, 204)
     } catch (error) {
       log.error('Error unlinking provider:', error)
