@@ -2,7 +2,9 @@ const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
 const passport = require('../../../utils/passport')
-const { OAUTH_PROVIDERS } = /** @type {any} */ (require('../../../config'))
+const { OAUTH_PROVIDERS, BASE_PATH } = /** @type {any} */ (
+  require('../../../config')
+)
 const sendResponse = require('../../../utils/resUtils')
 const { getHostUrl } = require('../../../utils/urlUtils')
 const { cacheControl } = require('../../../utils/cacheControl')
@@ -77,7 +79,19 @@ router.get(
               log.error('Error logging in after OAuth:', loginErr)
               return res.redirect(302, '/')
             }
-            return res.redirect(302, '/dashboard')
+            const sessionUuid = /** @type {any} */ (req).oauthSessionUuid
+            if (!sessionUuid || !req.session) {
+              log.error('OAuth session UUID was not initialized')
+              return res.status(500).send('Session initialization failed')
+            }
+            req.session.uuid = sessionUuid
+            return req.session.save((saveErr) => {
+              if (saveErr) {
+                log.error('Failed to persist OAuth session:', saveErr)
+                return res.status(500).send('Failed to save session')
+              }
+              return res.redirect(302, `${BASE_PATH}/dashboard/`)
+            })
           })
         } catch (error) {
           log.error('Callback processing error:', error)

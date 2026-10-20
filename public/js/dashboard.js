@@ -106,7 +106,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                           <span>${session.uuid}</span>
                         </div>
                         <div class="flex gap-2 mt-2">
-                          <button id="delete-btn" class="px-2 py-1 bg-red-600 text-white rounded items-center text-center" onclick="deleteSession('${session.uuid}')">Delete</button>
+                          <button type="button" data-revoke-session="${session.uuid}" class="px-2 py-1 bg-red-600 text-white rounded items-center text-center">
+                            Delete
+                          </button>
                         </div>
                       </div>
                     `
@@ -124,6 +126,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button id="logout" class="px-12 py-3 rounded bg-red-600 text-white font-semibold flex items-center justify-center">Logout</button>
         </div>
       `
+
+      content.addEventListener('click', (event) => {
+        const target = /** @type {HTMLElement | null} */ (event.target)
+        const button = target?.closest('[data-revoke-session]')
+        if (!button || !content.contains(button)) {
+          return
+        }
+        const sessionUuid = button.getAttribute('data-revoke-session')
+        if (!sessionUuid) {
+          return
+        }
+        void deleteSession(sessionUuid)
+      })
       document
         .getElementById('link-github')
         .addEventListener('click', async () => {

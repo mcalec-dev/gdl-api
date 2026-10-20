@@ -1,26 +1,9 @@
 const router = require('express').Router()
+const log = require('../../../utils/logHandler')
 const User = require('../../../models/User')
 const { requireRole } = require('../../../utils/authUtils')
-const log = require('../../../utils/logHandler')
 const sendResponse = require('../../../utils/resUtils')
 const { cacheControl } = require('../../../utils/cacheControl')
-
-/**
- * @typedef {object} UserSession
- * @property {string} uuid
- * @property {Date} created
- * @property {Date} modified
- * @property {Date} expires
- * @property {string} ip
- * @property {string} useragent
- */
-
-/**
- * @typedef {object} AuthenticatedUser
- * @property {string} uuid
- * @property {string} [username]
- * @property {UserSession[]} [sessions]
- */
 
 router.get(
   '/',
@@ -28,11 +11,17 @@ router.get(
   requireRole('user'),
   async (req, res) => {
     try {
-      const requestUser = /** @type {AuthenticatedUser} */ (req.user)
-      log.debug('Getting sessions for:', requestUser.username || 'user')
-      return sendResponse(res, 200).json(requestUser.sessions || [])
+      const user = /** @type {any} */ (req.user)
+      const record = await User.collection.findOne(
+        { uuid: user.uuid },
+        { projection: { sessions: 1 } },
+      )
+      if (!record) {
+        return sendResponse.error(res, 404, 'User not found')
+      }
+      return res.status(200).json(record.sessions || [])
     } catch (error) {
-      log.error('Failed to get sessions for user:', error)
+      log.error('Failed to get user sessions:', error)
       return sendResponse.error(res, 500, 'Failed to retrieve sessions')
     }
   },
@@ -43,26 +32,41 @@ router.delete(
   cacheControl('noStore'),
   requireRole('user'),
   async (req, res) => {
-    const { uuid } = req.params
-    if (!uuid) {
-      log.debug('No UUID provided for session deletion')
-      return sendResponse.error(res, 400, 'UUID parameter is required')
+    const sessionUuid = req.params.uuid
+    const user = /** @type {any} */ (req.user)
+    if (!sessionUuid) {
+      return sendResponse.error(res, 400, 'Session UUID is required')
     }
     try {
-      const requestUser = /** @type {AuthenticatedUser} */ (req.user)
-      const result = await User.updateOne(
-        { uuid: requestUser.uuid },
-        { $pull: { sessions: { uuid } } },
+      const result = await User.collection.updateOne(
+        {
+          uuid: user.uuid,
+          'sessions.uuid': sessionUuid,
+        },
+        {
+          $pull: {
+            sessions: { uuid: sessionUuid },
+          },
+        },
       )
-      if (result.matchedCount === 0) {
-        log.debug('User not found for session deletion:', requestUser.uuid)
-        return sendResponse.error(res, 404, 'User not found')
+      if (result.modifiedCount === 0) {
+        return sendResponse.error(res, 404, 'Session not found')
       }
-      log.info('Deleted session', uuid, 'for user:', requestUser.username)
-      return sendResponse(res, 204)
+      log.info('Revoked session:', sessionUuid, 'for user:', user.username)
+      if (req.session?.uuid === sessionUuid) {
+        return req.session.destroy((error) => {
+          if (error) {
+            log.error('Failed to destroy session:', error)
+            return sendResponse.error(res, 500, 'Failed to destroy session')
+          }
+          res.clearCookie('connect.sid', { path: '/' })
+          return res.sendStatus(204)
+        })
+      }
+      return res.sendStatus(204)
     } catch (error) {
-      log.error('Failed to delete session for user:', error)
-      return sendResponse.error(res, 500, 'Failed to delete session')
+      log.error('Failed to revoke session:', error)
+      return sendResponse.error(res, 500, 'Failed to revoke session')
     }
   },
 )

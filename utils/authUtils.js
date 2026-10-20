@@ -1,5 +1,7 @@
 const log = require('./logHandler')
+const User = require('../models/User')
 const { countActiveSessions: countStoreSessions } = require('./sessionStore')
+
 /** @param {import('express').Response} res @param {number} status @param {string} message */
 function sendAuthError(res, status, message) {
   return res.status(status).json({
@@ -7,10 +9,12 @@ function sendAuthError(res, status, message) {
     status,
   })
 }
+
 /** @param {any} user @param {string} role */
 function userHasRole(user, role) {
   return Boolean(user && Array.isArray(user.roles) && user.roles.includes(role))
 }
+
 /** @param {string} role */
 function requireRole(role) {
   if (!role) {
@@ -34,6 +38,7 @@ function requireRole(role) {
     return sendAuthError(res, 403, 'Forbidden')
   }
 }
+
 /** @param {string[]} roles */
 function requireAnyRole(roles) {
   const requiredRoles = Array.isArray(roles) ? roles : []
@@ -52,6 +57,7 @@ function requireAnyRole(roles) {
     return sendAuthError(res, 403, 'Forbidden')
   }
 }
+
 /** @type {import('express').RequestHandler} */
 function requireAuth(req, res, next) {
   const reqAny = /** @type {any} */ (req)
@@ -84,12 +90,71 @@ function requireAuth(req, res, next) {
   )
   return next()
 }
+
+/**
+ * @type {import('express').RequestHandler}
+ */
+async function enforceActiveSession(req, res, next) {
+  if (!req.isAuthenticated?.()) {
+    return next()
+  }
+  const user = /** @type {any} */ (req.user)
+  const sessionData = /** @type {any} */ (req.session)
+  const userUuid = user?.uuid
+  const sessionUuid = sessionData?.uuid
+  try {
+    let isActive = false
+    if (userUuid && sessionUuid) {
+      const activeUser = await User.collection.findOne(
+        {
+          uuid: String(userUuid),
+          status: { $nin: ['inactive', 'banned'] },
+          sessions: {
+            $elemMatch: {
+              uuid: String(sessionUuid),
+              expires: { $gt: new Date() },
+            },
+          },
+        },
+        {
+          projection: { _id: 1 },
+        }
+      )
+      isActive = Boolean(activeUser)
+    }
+    if (isActive) {
+      return next()
+    }
+    const rejectSession = () => {
+      res.clearCookie('connect.sid', { path: '/' })
+      return res.status(401).json({
+        status: 401,
+        message: 'Session expired or revoked',
+      })
+    }
+    if (!req.session) {
+      return rejectSession()
+    }
+    return req.session.destroy((error) => {
+      if (error) {
+        return next(error)
+      }
+      return rejectSession()
+    })
+  } catch (error) {
+    log.error('Failed to validate active session:', error)
+    return next(error)
+  }
+}
+
 async function countActiveSessions() {
   return countStoreSessions()
 }
+
 module.exports = {
   requireRole,
   requireAnyRole,
   requireAuth,
+  enforceActiveSession,
   countActiveSessions,
 }

@@ -34,6 +34,40 @@ let SORT_STATES = {
 
 const fileList = document.getElementById('file-list')
 
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function h(value) {
+  return utils.escapeHtml(String(value ?? ''))
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function safeMediaUrl(value) {
+  try {
+    const url = new URL(
+      String(value),
+      window.location.origin
+    )
+    const prefix =
+      `${window.BASE_PATH || ''}/api/files/`
+    if (
+      url.origin !== window.location.origin ||
+      !['http:', 'https:'].includes(url.protocol) ||
+      !url.pathname.startsWith(prefix)
+    ) {
+      return null
+    }
+    return url.href
+  } catch {
+    return null
+  }
+}
+
 let icons = {}
 async function loadIcons() {
   try {
@@ -703,7 +737,7 @@ async function renderDirectory(contents, path) {
       item.type === 'file' &&
       (itemType === 'image' || itemType === 'video' || itemType === 'audio')
     ) {
-      previewUrl = item.url
+      const candidateUrl = item.url
         ? item.url
         : itemPath
           ? `${apiBasePath}/${itemPath
@@ -711,6 +745,7 @@ async function renderDirectory(contents, path) {
               .map((p) => encodeURIComponent(p))
               .join('/')}`
           : null
+      previewUrl = candidateUrl ? safeMediaUrl(candidateUrl) : null
       if (itemType === 'image' && previewUrl) {
         const imageParams = {}
         if (MIN_IMAGE_SCALE != null) imageParams.scale = MIN_IMAGE_SCALE
@@ -730,7 +765,7 @@ async function renderDirectory(contents, path) {
         <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
           <div class="flex-1 min-w-0 overflow-hidden">
-            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span>
               <br />
@@ -744,7 +779,7 @@ async function renderDirectory(contents, path) {
         <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
-            <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+            <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
             <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span>
               <br />
@@ -759,7 +794,7 @@ async function renderDirectory(contents, path) {
       previewUrl
     ) {
       html += `
-        <div class="file-item ${item.type} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
+        <div class="file-item ${itemType} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
           <div class="w-full h-full">
             ${(() => {
               const iconPlaceholder = `<div class="file-icon-placeholder absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${(icons && icons[itemType]) || (icons && icons.other) || ''}</span></div>`
@@ -767,7 +802,7 @@ async function renderDirectory(contents, path) {
                 return `
                   ${iconPlaceholder}
                   <div class="audio-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
+                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
                   </div>
                 `
               }
@@ -775,7 +810,7 @@ async function renderDirectory(contents, path) {
                 return `
                   ${iconPlaceholder}
                   <div class="image-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" draggable="false" onerror="this.style.display='none'">
+                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" draggable="false" onerror="this.style.display='none'">
                   </div>
                 `
               }
@@ -783,7 +818,7 @@ async function renderDirectory(contents, path) {
                 return `
                   ${iconPlaceholder}
                   <div class="video-preview-container aspect-video h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${previewUrl}" alt="${item.name}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
+                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
                   </div>
                 `
               }
@@ -798,7 +833,7 @@ async function renderDirectory(contents, path) {
             })()}
           </div>
           <div class="file-details absolute inset-x-0 bottom-0 duration-300 z-20 bg-black/85 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
             <div class="flex-col text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
               <span>${utils.formatDate(item.modified)}</span><br>
               <span>${utils.formatSize(item.size)}</span>
@@ -812,7 +847,7 @@ async function renderDirectory(contents, path) {
           <div class="flex items-center w-full gap-3">
             <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${icons?.[itemType] || icons?.other || ''}</div>
             <div class="file-details flex-1 min-w-0">
-              <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${item.name}</div>
+              <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
               <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
                 <span>${utils.formatDate(item.modified)}</span><br>
                 <span>${utils.formatSize(item.size)}</span>

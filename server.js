@@ -9,6 +9,7 @@ const {
   initSessionStore,
   shutdownSessionStore,
 } = require('./utils/sessionStore')
+const { enforceActiveSession } = require('./utils/authUtils')
 const passport = require('./utils/passport')
 const path = require('path')
 const chalk = require('chalk')
@@ -235,6 +236,7 @@ async function initApp() {
   )
   app.use(passport.initialize())
   app.use(passport.session())
+  app.use(enforceActiveSession)
   app.set('view engine', 'ejs')
   app.set('views', path.join(__dirname, 'views'))
   app.use(

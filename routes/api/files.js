@@ -29,7 +29,7 @@ const {
   allowedQualityParams,
   isValidKernel,
 } = require('../../utils/file/typeGuards.js')
-const { isSidecarFile } = require('../../utils/file/sidecar.js')
+const { isAllowedFilesystemEntry } = require('../../utils/file/accessPolicy.js')
 const { getFileMime } = require('../../utils/file/mimeAndHash.js')
 const {
   getTranscodeOptions,
@@ -329,15 +329,8 @@ router.get(
     const relativePath = path
       .relative(resolvedBaseDir, realPath)
       .replace(/\\/g, '/')
-    const isDirectSidecarRequest = isSidecarFile(realPath)
-    if (isDirectSidecarRequest) {
-      log.debug(
-        'Bypassing disallowed checks for direct sidecar request:',
-        relativePath,
-      )
-    }
-    if (!isDirectSidecarRequest && (await isExcluded(relativePath))) {
-      log.debug(`Access denied to: ${relativePath}`)
+    if (await isExcluded(relativePath)) {
+      log.warn('Excluded path requested:', relativePath)
       return sendResponse(res, 403, 'Access to this resource is forbidden')
     }
     try {
@@ -350,6 +343,19 @@ router.get(
         log.error('Failed to clean up stale DB entry:', cleanupError)
       }
       return sendResponse(res, 404, 'File or directory not found')
+    }
+    try {
+      const isAllowed = await isAllowedFilesystemEntry(
+        realPath,
+        resolvedBaseDir,
+      )
+      if (!isAllowed) {
+        log.warn('Filesystem access denied:', relativePath)
+        return sendResponse(res, 403, 'Access to this resource is forbidden')
+      }
+    } catch (error) {
+      log.error('Failed to validate filesystem access:', error)
+      return sendResponse(res, 500, 'Failed to validate filesystem access')
     }
     const stats = await fs.stat(realPath)
     if (stats.isDirectory()) {
@@ -466,15 +472,6 @@ router.get(
         await checkFileRecord(realPath)
       } catch (error) {
         log.error('Error checking file record:', error)
-      }
-      if (
-        !isDirectSidecarRequest &&
-        (!hasAllowedExtension(realPath) ||
-          DISALLOWED_FILES.includes(path.basename(realPath)) ||
-          isDisallowedExtension(path.basename(realPath)))
-      ) {
-        log.debug(`Access denied to file: ${realPath}`)
-        return sendResponse(res, 403, 'Access to this resource is forbidden')
       }
       if (isImageFile(realPath) === true) {
         try {

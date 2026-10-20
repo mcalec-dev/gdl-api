@@ -14,6 +14,7 @@ const SESSION_MAX_AGE =
 const LocalStrategy = require('passport-local').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const DiscordStrategy = require('passport-discord-auth').Strategy
+
 /** @param {import('express').Request | undefined} req */
 function createSessionMetadata(req) {
   const now = new Date()
@@ -25,6 +26,7 @@ function createSessionMetadata(req) {
     useragent: req ? getRequestUserAgent(req) : '',
   }
 }
+
 /** @param {import('express').Request | undefined} req */
 function getOAuthStateUserId(req) {
   if (!req) return undefined
@@ -36,6 +38,7 @@ passport.serializeUser((user, done) => {
   log.debug('Serializing user:', /** @type {any} */ (user).username)
   return done(null, String(/** @type {any} */ (user).uuid))
 })
+
 /** @param {string} uuid @param {(error: any, user?: any) => void} done */
 passport.deserializeUser(async (uuid, done) => {
   try {
@@ -51,6 +54,7 @@ passport.deserializeUser(async (uuid, done) => {
     return done(error)
   }
 })
+
 passport.use(
   new LocalStrategy(
     /** @param {string} username @param {string} password @param {(error: any, user?: any, info?: any) => void} done */
@@ -71,6 +75,7 @@ passport.use(
     }
   )
 )
+
 if (config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET) {
   const callbackURL = `https://${HOST}${BASE_PATH}/api/auth/provider/callback/github`
   passport.use(
@@ -91,6 +96,7 @@ if (config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET) {
       async (req, accessToken, refreshToken, profile, done) => {
         try {
           const uuid = uuidv4()
+          req.oauthSessionUuid = uuid
           const session = { uuid, ...createSessionMetadata(req) }
           const email =
             profile.email || (profile.emails && profile.emails[0]?.value)
@@ -176,6 +182,7 @@ if (config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET) {
     )
   }
 }
+
 if (config.DISCORD_CLIENT_ID && config.DISCORD_CLIENT_SECRET) {
   const callbackURL = `https://${HOST}${BASE_PATH}/api/auth/provider/callback/discord`
   passport.use(
@@ -193,6 +200,7 @@ if (config.DISCORD_CLIENT_ID && config.DISCORD_CLIENT_SECRET) {
         async (req, accessToken, refreshToken, profile, done) => {
           try {
             const uuid = uuidv4()
+            req.oauthSessionUuid = uuid
             const session = { uuid, ...createSessionMetadata(req) }
             const email =
               profile.email || (profile.emails && profile.emails[0]?.value)
