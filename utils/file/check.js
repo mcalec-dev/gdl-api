@@ -44,7 +44,7 @@ function isDate(value) {
 /** @param {string} filePath @returns {Promise<boolean | null>} */
 function checkMediaIntegrity(filePath) {
   if (isImageFile(filePath)) {
-    return sharp(filePath, { limitInputPixels: false })
+    return sharp(filePath)
       .metadata()
       .then(() => true)
       .catch((error) => {

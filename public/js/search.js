@@ -2,6 +2,11 @@
 import * as utils from '../min/index.min.js'
 import { MIN_IMAGE_SCALE } from '../min/settings.min.js'
 
+/** @typedef {'all' | 'file' | 'directory' | 'uuid' | 'hash'} SearchType */
+/** @typedef {'file' | 'directory'} SearchResultType */
+/** @typedef {{ name: string, type: SearchResultType, collection: string, author: string, path: string, url: string, uuid: string | undefined, relevancy: number }} SearchResult */
+/** @typedef {{ results: SearchResult[], count: number, query: string }} SearchResponse */
+
 const API_URL = '/api/search'
 
 const searchInput = document.getElementById('searchInput')
@@ -24,8 +29,10 @@ async function loadIcons() {
 }
 
 function getSearchType() {
-  const type = document.querySelector('input[name="searchType"]:checked').value
-  return type === 'Hash' ? 'hash' : type
+  /** @type {SearchType} */
+  const type =
+    document.querySelector('input[name="searchType"]:checked')?.value || 'all'
+  return type
 }
 function formattedUrl(url, type) {
   try {
@@ -55,7 +62,7 @@ function setupObserver() {
     {
       rootMargin: '50px 0px',
       threshold: 0.1,
-    }
+    },
   )
 }
 
@@ -105,6 +112,7 @@ async function performSearch(query) {
       noResults.textContent = text || 'Search failed'
       return
     }
+    /** @type {SearchResponse} */
     const data = await response.json()
     loading.style.display = 'none'
     if (data.results?.length > 0) {
@@ -278,7 +286,7 @@ async function init() {
 
   if (initialType) {
     const typeButton = document.querySelector(
-      `input[name="searchType"][value="${initialType}"]`
+      `input[name="searchType"][value="${initialType}"]`,
     )
     if (typeButton) typeButton.checked = true
   }

@@ -7,18 +7,12 @@ const log = require('../logHandler')
 async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
   let transformer
   try {
-    transformer = sharp(imagePath, {
-      failOn: 'none',
-      limitInputPixels: true,
-    })
+    transformer = sharp(imagePath).withMetadata()
     if (x || w || h) {
       /** @type {import('sharp').ResizeOptions} */
       let resizeOptions = {}
       if (x) {
-        const metadata = await sharp(imagePath, {
-          failOn: 'none',
-          limitInputPixels: false,
-        }).metadata()
+        const metadata = await transformer.metadata()
         if (!metadata || !metadata.width || !metadata.height) {
           log.warn('Could not read metadata for scaled conversion')
           return null

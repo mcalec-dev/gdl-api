@@ -122,9 +122,7 @@ async function resizeImage(imagePath, input) {
   let resizeOptions = {}
   let metadata
   try {
-    metadata = await sharp(imagePath, {
-      limitInputPixels: false,
-    }).metadata()
+    metadata = await sharp(imagePath).metadata()
     if (!metadata) {
       log.debug(
         'Cannot resize image:',
@@ -156,11 +154,7 @@ async function resizeImage(imagePath, input) {
     resizeOptions.kernel = kernel || (isUpscaling ? 'lanczos3' : 'mitchell')
   }
   try {
-    const transformer = sharp(imagePath, {
-      limitInputPixels: false,
-    })
-      .resize(resizeOptions)
-      .withMetadata()
+    const transformer = sharp(imagePath).resize(resizeOptions).withMetadata()
     const exif = await buildExifPayload(mtime)
     transformer.withMetadata({
       exif,

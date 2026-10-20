@@ -138,6 +138,21 @@ function validateParsedEnvType(key, value, expectedTypes) {
   }
 }
 /**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function parseNodeEnv(value) {
+  if (typeof value !== 'string') {
+    throw new Error('NODE_ENV must be a string')
+  }
+  const trimmed = value.trim().toLowerCase()
+  const vals = ['development', 'production', 'testing', 'dev', 'prod', 'test']
+  if (!vals.includes(trimmed)) {
+    throw new Error(`NODE_ENV must be one of: ${vals.join(', ')}`)
+  }
+  return trimmed
+}
+/**
  * @param {unknown} baseDirPath
  * @returns {string}
  */
@@ -165,7 +180,7 @@ function validatePath(baseDirPath) {
 }
 /** @type {Record<string, SchemaEntry>} */
 const schema = {
-  NODE_ENV: { env: 'NODE_ENV', parse: (v) => v, type: 'string' },
+  NODE_ENV: { env: 'NODE_ENV', parse: (v) => parseNodeEnv(v), type: 'string' },
   PORT: {
     env: 'PORT',
     parse: (v) => parseIntegerEnv(v, 'PORT'),

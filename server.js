@@ -177,21 +177,22 @@ async function initApp() {
       },
     })
   )
-  // @ts-ignore - no type declarations
-  require('morgan-body')(app, {
-    noColors: false,
-    prettify: true,
-    includeNewLine: true,
-    logReqDateTime: true,
-    dateTimeFormat: 'utc',
-    logReqUserAgent: true,
-    logRequestBody: true,
-    logResponseBody: false,
-    logIP: true,
-    theme: 'defaultTheme',
-    immediateReqLog: true,
-  })
-  app.set('trust proxy', true)
+  if (['development', 'dev', 'testing', 'test'].includes(NODE_ENV)) {
+    // @ts-ignore - no type declarations
+    require('morgan-body')(app, {
+      noColors: false,
+      prettify: true,
+      includeNewLine: true,
+      logReqDateTime: true,
+      dateTimeFormat: 'utc',
+      logReqUserAgent: true,
+      logRequestBody: true,
+      logResponseBody: false,
+      logIP: true,
+      theme: 'defaultTheme',
+      immediateReqLog: true,
+    })
+  }
   app.use(require('cookie-parser')())
   app.use(require('express-useragent').express())
   app.use(

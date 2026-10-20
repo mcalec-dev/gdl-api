@@ -660,48 +660,10 @@ router.get(
           }
           await maybeUpsertAccessed(realPath, false)
           return streamTranscodedMedia(req, res, realPath, transcodeOptions)
-        }
-        if (!req.headers.range) {
-          log.debug(
-            'Request does not have any range headers - sending file instead',
-          )
+        } else {
+          log.debug('Sending ', realPath, 'without transcoding')
           await maybeUpsertAccessed(realPath, false)
           return res.sendFile(realPath)
-        }
-        try {
-          const stat = await fs.stat(realPath)
-          const fileSize = stat.size
-          const range = req.headers.range
-          const mimeType = await resolveMediaMimeType(realPath)
-          if (range) {
-            const parts = range.replace(/bytes=/, '').split('-')
-            const start = parseInt(parts[0], 10)
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
-            const chunksize = end - start + 1
-            const fileStream = require('fs').createReadStream(realPath, {
-              start,
-              end,
-            })
-            await maybeUpsertAccessed(realPath, false)
-            res.writeHead(206, {
-              'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-              'Accept-Ranges': 'bytes',
-              'Content-Length': chunksize,
-              'Content-Type': mimeType,
-            })
-            fileStream.pipe(res)
-          } else {
-            res.writeHead(200, {
-              'Content-Length': fileSize,
-              'Content-Type': mimeType,
-              'Accept-Ranges': 'bytes',
-            })
-            require('fs').createReadStream(realPath).pipe(res)
-          }
-          return
-        } catch (error) {
-          log.error('Error streaming media file:', error)
-          return sendResponse(res, 500)
         }
       }
       if (isDocFile(realPath)) {

@@ -11,7 +11,7 @@ async function getSafeMtime(imagePath) {
     log.debug(
       'Cannot process image:',
       imagePath,
-      'file size exceeds the maximum allowed buffer size'
+      'file size exceeds the maximum allowed buffer size',
     )
     return null
   }
@@ -21,9 +21,7 @@ async function getSafeMtime(imagePath) {
 /** @param {string} imagePath */
 async function getImageMeta(imagePath) {
   try {
-    return await sharp(imagePath, {
-      limitInputPixels: false,
-    }).metadata()
+    return await sharp(imagePath).metadata()
   } catch (error) {
     log.error('Failed to read image metadata for:', imagePath, error)
     return null
@@ -57,9 +55,7 @@ async function applyMetadata(imagePath) {
   }
   try {
     const exif = await buildExifPayload(mtime)
-    const transformer = sharp(imagePath, {
-      limitInputPixels: false,
-    }).withMetadata({
+    const transformer = sharp(imagePath).withMetadata({
       exif,
     })
     return transformer
