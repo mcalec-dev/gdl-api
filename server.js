@@ -48,7 +48,7 @@ async function initSwagger() {
     swaggerSpec.servers = [
       {
         url: `https://${await HOST}${BASE_PATH}`,
-        description: 'production',
+        description: NODE_ENV,
       },
     ]
     swaggerSpec.info.version = process.env.npm_package_version
@@ -178,7 +178,7 @@ async function initApp() {
       },
     })
   )
-  if (['development', 'dev', 'testing', 'test'].includes(NODE_ENV)) {
+  if (['development', 'testing'].includes(NODE_ENV)) {
     // @ts-ignore - no type declarations
     require('morgan-body')(app, {
       noColors: false,

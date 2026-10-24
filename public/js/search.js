@@ -24,6 +24,7 @@ async function loadIcons() {
     const i = await utils.getIcons()
     icons = i
   } catch (e) {
+    utils.handleError(e)
     icons = {}
   }
 }
@@ -34,14 +35,15 @@ function getSearchType() {
     document.querySelector('input[name="searchType"]:checked')?.value || 'all'
   return type
 }
-function formattedUrl(url, type) {
+function formattedUrl(url) {
   try {
     const u = new URL(url, window.location.origin)
     if (u.pathname.includes('/api/files')) {
       return `${u.origin}${u.pathname.replace(/^\/api\/files\//, '/files/')}${u.search}${u.hash}`
     }
     return u.toString()
-  } catch (err) {
+  } catch (error) {
+    utils.handleError(error)
     return url
   }
 }

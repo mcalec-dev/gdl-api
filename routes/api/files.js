@@ -6,7 +6,6 @@ const log = require('../../utils/logHandler')
 const sendResponse = require('../../utils/resUtils')
 const {
   BASE_DIR,
-  DISALLOWED_FILES,
   PAGINATION_LIMIT,
   UPSERT_ON_ACCESS,
   TRANSCODE_VIDEO,
@@ -19,25 +18,21 @@ const {
   formatListingEntry,
 } = require('../../utils/file/listing.js')
 const {
-  hasAllowedExtension,
   isDocFile,
   isImageFile,
   isVideoFile,
   isAudioFile,
   isSwfFile,
-  isDisallowedExtension,
   allowedQualityParams,
   isValidKernel,
 } = require('../../utils/file/typeGuards.js')
 const { isAllowedFilesystemEntry } = require('../../utils/file/accessPolicy.js')
-const { getFileMime } = require('../../utils/file/mimeAndHash.js')
 const {
   getTranscodeOptions,
   convertVideo,
   convertAudio,
   getMimeType: getConvertMimeType,
 } = require('../../utils/video/convert.js')
-const mimeTypes = require('mime-types')
 const {
   maybeUpsertAccessed,
   deleteEntry,
@@ -62,22 +57,6 @@ function listingETag(entries) {
     const modified = entry?.modified ? new Date(entry.modified).getTime() : 0
     return Math.max(latest, Number.isFinite(modified) ? modified : 0)
   }, 0)
-}
-
-/**
- * @param {string} realPath
- * @returns {Promise<string>}
- */
-async function resolveMediaMimeType(realPath) {
-  const extMime = mimeTypes.lookup(realPath)
-  if (typeof extMime === 'string' && extMime) {
-    return extMime
-  }
-  const detected = await getFileMime(realPath)
-  if (typeof detected === 'string' && detected) {
-    return detected
-  }
-  return 'application/octet-stream'
 }
 
 /**

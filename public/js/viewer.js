@@ -64,8 +64,9 @@ function getMediaUrl(item) {
   if (item.previewSrc) {
     try {
       return new URL(item.previewSrc, document.location.origin).toString()
-    } catch (err) {
+    } catch (error) {
       if (item.previewSrc.startsWith('http')) {
+        utils.handleError(error)
         return item.previewSrc
       }
       return `${document.location.origin}${item.previewSrc.startsWith('/') ? '' : '/'}${item.previewSrc}`

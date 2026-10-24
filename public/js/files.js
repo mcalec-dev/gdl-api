@@ -5,15 +5,7 @@ import {
   setContextIcons,
   setContextBasePaths,
 } from './contextmenu.min.js'
-import {
-  MIN_IMAGE_SCALE,
-  PAGINATION,
-  IMAGE_KERNEL,
-  TRANSCODE_VIDEO_ENABLED,
-  TRANSCODE_VIDEO_CODEC,
-  TRANSCODE_AUDIO_ENABLED,
-  TRANSCODE_AUDIO_CODEC,
-} from './settings.min.js'
+import { MIN_IMAGE_SCALE, PAGINATION, IMAGE_KERNEL } from './settings.min.js'
 
 let frontendBasePath =
   document.location.origin + (window.BASE_PATH || '') + '/files'
@@ -116,15 +108,6 @@ function getCookie(name) {
     if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
   }
   return null
-}
-
-function constructApiPath(path, params = {}) {
-  const base = `${document.location.origin}/api/files`
-  const pathSegment = path ? `/${path.replace(/^\/+/, '')}` : ''
-  return (
-    utils.constructURL(`${base}${pathSegment}`, params) ||
-    `${base}${pathSegment}`
-  )
 }
 
 function escapeRegExp(string) {

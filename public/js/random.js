@@ -5,14 +5,7 @@ import {
   createContextMenu,
   setContextIcons,
 } from './contextmenu.min.js'
-import {
-  IMAGE_SCALE,
-  IMAGE_KERNEL,
-  TRANSCODE_VIDEO_ENABLED,
-  TRANSCODE_VIDEO_CODEC,
-  TRANSCODE_AUDIO_ENABLED,
-  TRANSCODE_AUDIO_CODEC,
-} from './settings.min.js'
+import { IMAGE_SCALE, IMAGE_KERNEL } from './settings.min.js'
 
 const API_URL = '/api/random'
 const HISTORY_KEY = 'randomMediaHistory'

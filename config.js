@@ -146,7 +146,7 @@ function parseNodeEnv(value) {
     throw new Error('NODE_ENV must be a string')
   }
   const trimmed = value.trim().toLowerCase()
-  const vals = ['development', 'production', 'testing', 'dev', 'prod', 'test']
+  const vals = ['development', 'production', 'testing']
   if (!vals.includes(trimmed)) {
     throw new Error(`NODE_ENV must be one of: ${vals.join(', ')}`)
   }

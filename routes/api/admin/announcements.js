@@ -31,6 +31,7 @@ router.post(
   async (req, res) => {
     try {
       const uuid = require('uuid').v4()
+      const user = /** @type {any} */ (req.user)
       const { title, message, severity } = req.body
       if (!title) {
         return sendResponse(res, 400, 'Title is required')
@@ -39,7 +40,7 @@ router.post(
         title,
         message,
         severity,
-        author: String(/** @type {any} */ req.user?.username),
+        author: String(user?.username),
         created: Date.now(),
         modified: Date.now(),
         uuid,
@@ -62,6 +63,7 @@ router.put(
   async (req, res) => {
     const { uuid } = req.params
     const { title, message, severity } = req.body
+    const user = /** @type {any} */ (req.user)
     if (!uuid || typeof uuid !== 'string') {
       log.debug('Invalid UUID parameter:', uuid)
       return sendResponse.error(res, 400, 'Invalid UUID parameter')
@@ -77,7 +79,7 @@ router.put(
           title: String(title),
           message: String(message),
           severity: String(severity),
-          author: String(/** @type {any} */ req.user?.username),
+          author: String(user?.username),
           modified: Date.now(),
         },
         { returnDocument: 'after' },
