@@ -37,14 +37,20 @@ router.get(
         return null
       })
       if (type === 'file') {
-        if (!entry) {
+        if (!entry || entry.kind !== 'file') {
           log.debug('File not found for UUID:', uuid)
           return sendResponse.error(res, 404, 'File not found')
         }
-        if (checkETag(req, res, entry.data.hash)) return
+        if (
+          'hash' in entry.data &&
+          typeof entry.data.hash === 'string' &&
+          checkETag(req, res, entry.data.hash)
+        ) {
+          return
+        }
         return sendResponse(res, 200).json(entry.data)
       } else if (type === 'directory') {
-        if (!entry) {
+        if (!entry || entry.kind !== 'directory') {
           log.debug('Directory not found for UUID:', uuid)
           return sendResponse.error(res, 404, 'Directory not found')
         }
@@ -58,7 +64,7 @@ router.get(
       log.error('Error retrieving file by UUID:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 module.exports = router

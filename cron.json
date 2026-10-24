@@ -11,21 +11,21 @@
 		{
 			"name": "session-cleanup",
 			"enabled": true,
-			"startup": true,
+			"startup": false,
 			"interval": "0 4 * * *",
 			"manual": true
 		},
 		{
 			"name": "stats",
 			"enabled": true,
-			"startup": true,
-			"interval": "0 * * * *",
+			"startup": false,
+			"interval": "0 2 * * *",
 			"manual": true
 		},
 		{
 			"name": "cleanup",
 			"enabled": true,
-			"startup": true,
+			"startup": false,
 			"interval": "0 3 * * *",
 			"manual": true
 		},
@@ -33,14 +33,14 @@
 			"name": "check-files",
 			"enabled": true,
 			"startup": false,
-			"interval": "0 * * * *",
+			"interval": "0 5 * * *",
 			"manual": true
 		},
 		{
 			"name": "sidecar-metadata",
 			"enabled": true,
 			"startup": false,
-			"interval": "15 * * * *",
+			"interval": "0 6 * * *",
 			"manual": true
 		}
 	]

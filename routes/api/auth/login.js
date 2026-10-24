@@ -1,3 +1,6 @@
+/**
+ * @typedef {import('express-session').Session & { uuid?: string }} SessionWithUuid
+ */
 const router = require('express').Router()
 const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
@@ -5,14 +8,17 @@ const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const { COOKIE_MAX_AGE } = /** @type {any} */ (require('../../../config'))
 const sendResponse = require('../../../utils/resUtils')
-const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
+const {
+  getRequestIp,
+  getRequestUserAgent,
+} = require('../../../utils/requestUtils')
 const { cacheControl } = require('../../../utils/cacheControl')
 
 router.post('/', cacheControl('noStore'), async (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     log.debug(
       'User already logged in:',
-      /** @type {any} */ (req.user)?.username,
+      /** @type {any} */ (req.user)?.username
     )
     return sendResponse.error(res, 403, 'Already logged in')
   }
@@ -22,7 +28,7 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
     return sendResponse.error(
       res,
       400,
-      'Username/email and password are required',
+      'Username/email and password are required'
     )
   }
   if (email && !validator.isEmail(email)) {
@@ -67,8 +73,9 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
           useragent: String(getRequestUserAgent(req)),
         })
         await user.save()
-        req.session.uuid = uuid
-        req.session.save((saveErr) => {
+        const session = /** @type {SessionWithUuid} */ (req.session)
+        session.uuid = uuid
+        session.save((saveErr) => {
           if (saveErr) {
             log.error('Error saving session after login:', saveErr)
             return sendResponse.error(res, 500, 'Failed to save session')

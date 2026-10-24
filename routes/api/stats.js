@@ -15,7 +15,7 @@ router.get(
       const stats = await cache.wrap(
         'stats:overview',
         600,
-        generateStatsSnapshot,
+        generateStatsSnapshot
       )
       log.debug('Stats refresh complete:', {
         collections: stats.collections.total,
@@ -29,7 +29,7 @@ router.get(
       log.error('Error generating stats:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 module.exports = router

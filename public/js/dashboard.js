@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             )
             window.location.reload()
           } else {
-              window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/github`
+            window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/github`
           }
         })
       document
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             )
             window.location.reload()
           } else {
-              window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/discord`
+            window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/discord`
           }
         })
       const logoutBtn = document.getElementById('logout')

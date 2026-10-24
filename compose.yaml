@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3030:${PORT:-3030}"
+      - '3030:${PORT:-3030}'
     env_file:
       - .env
     environment:
@@ -25,7 +25,11 @@ services:
     volumes:
       - mongodb-data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' localhost:27017/test | grep -q 1"]
+      test:
+        [
+          'CMD-SHELL',
+          "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' localhost:27017/test | grep -q 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,7 +38,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

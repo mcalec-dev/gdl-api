@@ -52,7 +52,8 @@ function checkMediaIntegrity(filePath) {
         return false
       })
   }
-  if (!isVideoFile(filePath) && !isAudioFile(filePath)) return Promise.resolve(null)
+  if (!isVideoFile(filePath) && !isAudioFile(filePath))
+    return Promise.resolve(null)
   return new Promise((resolve) => {
     const process = spawnFfprobe([
       '-v',
@@ -69,7 +70,9 @@ function checkMediaIntegrity(filePath) {
     })
     process.on('error', (/** @type {any} */ error) => {
       if (error.code === 'ENOENT') {
-        log.warn(`Skipping media integrity check; ffprobe is unavailable: ${filePath}`)
+        log.warn(
+          `Skipping media integrity check; ffprobe is unavailable: ${filePath}`
+        )
       } else {
         log.warn(`Unable to run ffprobe for: ${filePath}`, error)
       }
@@ -191,7 +194,7 @@ async function checkFileRecord(localPath) {
 
 /** @returns {Promise<{ checked: number, updated: number, invalid: number }>} */
 async function checkAllFileRecords() {
-  const records = await File.find({}, { 'paths.local': 1 }).lean()
+  const records = await File.find({}, { paths: 1 }).lean()
   let updated = 0
   let invalid = 0
   for (const record of records) {

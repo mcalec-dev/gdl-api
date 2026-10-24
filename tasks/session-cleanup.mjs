@@ -3,10 +3,7 @@ import User from '../models/User.js'
 import sessionStore from '../utils/sessionStore.js'
 import log from '../utils/logHandler.js'
 
-const {
-  getCookieMaxAgeMs,
-  getSessionStoreKind,
-} = sessionStore
+const { getCookieMaxAgeMs, getSessionStoreKind } = sessionStore
 
 export default async function cleanupOrphanedSessions() {
   const cutoffDate = new Date(Date.now() - getCookieMaxAgeMs())

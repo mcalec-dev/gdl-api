@@ -44,7 +44,7 @@ async function isAllowedFilesystemEntry(filePath, baseDir) {
   const root = await fs.realpath(baseDir)
   const requestedRelative = relativeWithin(
     path.resolve(baseDir),
-    path.resolve(filePath),
+    path.resolve(filePath)
   )
   const actualRelative = await canonicalRelative(root, filePath)
   if (!requestedRelative || !actualRelative) {
@@ -77,7 +77,7 @@ async function isAllowedFilesystemEntry(filePath, baseDir) {
   const originalPath = filePath.slice(0, -extension.length)
   const originalRequestedRelative = relativeWithin(
     path.resolve(baseDir),
-    path.resolve(originalPath),
+    path.resolve(originalPath)
   )
   let originalActualRelative
   try {

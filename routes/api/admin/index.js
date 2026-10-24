@@ -64,7 +64,7 @@ router.get(
       log.error('Error loading admin dashboard:', error)
       return sendResponse.error(res, 500, 'Failed to load admin dashboard')
     }
-  },
+  }
 )
 
 // User actions: ban, mute, suspend, IP actions
@@ -75,7 +75,7 @@ router.post(
   (req, res) => {
     // { action: 'ban'|'mute'|'suspend', ip: optional }
     return sendResponse.error(res, 501, 'User actions not implemented yet')
-  },
+  }
 )
 
 // User management: view, edit, role change, reset password/email/username
@@ -86,7 +86,7 @@ router.get(
   (req, res) => {
     // TODO: list users
     return sendResponse.error(res, 501, 'User listing not implemented yet')
-  },
+  }
 )
 router.get(
   '/user/:id',
@@ -95,7 +95,7 @@ router.get(
   (req, res) => {
     // TODO: get user info
     return sendResponse.error(res, 501, 'Get user info not implemented yet')
-  },
+  }
 )
 
 router.put(
@@ -105,7 +105,7 @@ router.put(
   (req, res) => {
     // TODO: update user info
     return sendResponse.error(res, 501, 'Update user info not implemented yet')
-  },
+  }
 )
 
 // Role permissions management
@@ -121,7 +121,7 @@ router.get(
       'visitor',
       'banned',
     ])
-  },
+  }
 )
 
 // Tag management
@@ -132,7 +132,7 @@ router.get(
   (req, res) => {
     // TODO: list tags
     return sendResponse.error(res, 501, 'Tag listing not implemented yet')
-  },
+  }
 )
 
 router.post(
@@ -142,7 +142,7 @@ router.post(
   (req, res) => {
     // TODO: create tag
     return sendResponse.error(res, 501, 'Tag creation not implemented yet')
-  },
+  }
 )
 
 router.put(
@@ -152,7 +152,7 @@ router.put(
   (req, res) => {
     // TODO: update tag
     return sendResponse.error(res, 501, 'Tag update not implemented yet')
-  },
+  }
 )
 
 router.delete(
@@ -162,7 +162,7 @@ router.delete(
   (req, res) => {
     // TODO: delete tag
     return sendResponse.error(res, 501, 'Tag deletion not implemented yet')
-  },
+  }
 )
 
 // DMCA/takedown system
@@ -175,9 +175,9 @@ router.get(
     return sendResponse.error(
       res,
       501,
-      'DMCA/takedown listing not implemented yet',
+      'DMCA/takedown listing not implemented yet'
     )
-  },
+  }
 )
 
 router.post(
@@ -189,9 +189,9 @@ router.post(
     return sendResponse.error(
       res,
       501,
-      'Takedown request creation not implemented yet',
+      'Takedown request creation not implemented yet'
     )
-  },
+  }
 )
 
 router.put(
@@ -203,9 +203,9 @@ router.put(
     return sendResponse.error(
       res,
       501,
-      'Takedown request update not implemented yet',
+      'Takedown request update not implemented yet'
     )
-  },
+  }
 )
 
 // File duplicate checks
@@ -218,9 +218,9 @@ router.get(
     return sendResponse.error(
       res,
       501,
-      'File duplicate check not implemented yet',
+      'File duplicate check not implemented yet'
     )
-  },
+  }
 )
 
 // Filename/URI checks
@@ -231,7 +231,7 @@ router.get(
   (req, res) => {
     // TODO: check file URIs
     return sendResponse.error(res, 501, 'File URI check not implemented yet')
-  },
+  }
 )
 // Cache tools
 router.post(
@@ -241,7 +241,7 @@ router.post(
   async (req, res) => {
     await cache.purge()
     return sendResponse(res, 201).json({ message: 'Cache purged' })
-  },
+  }
 )
 
 module.exports = router

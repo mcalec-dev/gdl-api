@@ -137,9 +137,7 @@ function convertVideo(inputPath, videoCodec, audioCodec, container) {
   )
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
-      /** @type {unknown} */ (
-        spawnFfmpeg(args)
-      )
+      /** @type {unknown} */ (spawnFfmpeg(args))
     )
   ffmpegProcess.on('error', (error) => {
     log.error('FFmpeg process error:', error)
@@ -175,9 +173,7 @@ function convertAudio(inputPath, audioCodec, container) {
   log.debug(`FFmpeg audio conversion: ${audioCodec} audio -> ${container}`)
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
-      /** @type {unknown} */ (
-        spawnFfmpeg(args)
-      )
+      /** @type {unknown} */ (spawnFfmpeg(args))
     )
   ffmpegProcess.on('error', (error) => {
     log.error('FFmpeg process error:', error)

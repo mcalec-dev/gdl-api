@@ -1,10 +1,16 @@
+/**
+ * @typedef {import('express-session').Session & { uuid?: string }} SessionWithUuid
+ */
 const router = require('express').Router()
 const User = require('../../../models/User')
 const bcrypt = require('bcrypt')
 const log = require('../../../utils/logHandler')
 const validator = require('validator')
 const sendResponse = require('../../../utils/resUtils')
-const { getRequestIp, getRequestUserAgent } = require('../../../utils/requestUtils')
+const {
+  getRequestIp,
+  getRequestUserAgent,
+} = require('../../../utils/requestUtils')
 const { cacheControl } = require('../../../utils/cacheControl')
 
 router.post('/', cacheControl('noStore'), async (req, res) => {
@@ -52,14 +58,15 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
           useragent: String(getRequestUserAgent(req)),
         })
         await user.save()
-        req.session.uuid = sessionUuid
-        req.session.save((saveErr) => {
+        const session = /** @type {SessionWithUuid} */ (req.session)
+        session.uuid = sessionUuid
+        session.save((saveErr) => {
           if (saveErr) {
             log.error('Error saving session after registration login:', saveErr)
             return sendResponse(
               res,
               500,
-              'Error saving session after registration login',
+              'Error saving session after registration login'
             )
           }
           log.info('Login after registration succeeded:', user.username)
@@ -68,12 +75,12 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
       } catch (error) {
         log.error(
           'Failed to login user after registration (post-login):',
-          error,
+          error
         )
         return sendResponse.error(
           res,
           500,
-          'Error during post-login session handling',
+          'Error during post-login session handling'
         )
       }
     })

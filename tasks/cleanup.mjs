@@ -16,10 +16,7 @@ export default async function cleanupMissingFiles() {
   if (!(await pathExists(BASE_DIR))) {
     throw new Error(`BASE_DIR does not exist: ${BASE_DIR}`)
   }
-  const files = await File.find(
-    {},
-    { 'paths.local': 1, 'paths.relative': 1 },
-  ).lean()
+  const files = await File.find({}, { paths: 1 }).lean()
   let removed = 0
   for (const file of files) {
     const localPath = file.paths?.local

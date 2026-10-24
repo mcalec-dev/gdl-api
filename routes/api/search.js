@@ -40,7 +40,7 @@ router.get(
             basePath: BASE_PATH,
             protocol: req.protocol,
             hostname: req.hostname,
-          }),
+          })
       )
       log.info('Found %s entries (DB)', simplifiedResults.length)
       return sendResponse(res, 200).json({
@@ -52,7 +52,7 @@ router.get(
       log.error('Search error:', error instanceof Error ? error.stack : error)
       return sendResponse.error(res, 500, 'Database search error')
     }
-  },
+  }
 )
 
 module.exports = router

@@ -10,6 +10,14 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["utils/**/*","api/**/*","models/","server.js","config.js","tasks/**/*"],
+  "include": [
+    "utils/**/*",
+    "api/**/*",
+    "routes/**/*",
+    "models/",
+    "server.js",
+    "config.js",
+    "tasks/**/*"
+  ],
   "exclude": ["node_modules/**/*","views/**/*","public/**/*","tests/**/*"]
 }

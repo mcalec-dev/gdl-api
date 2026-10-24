@@ -3,9 +3,10 @@ const ffprobeStatic = /** @type {{ path: string }} */ (
   // @ts-ignore - no types for ffprobe-static
   require('ffprobe-static')
 )
-const config = /** @type {{ USE_SYSTEM_FFMPEG: boolean, FFMPEG_PATH?: string }} */ (
-  require('../../config')
-)
+const config =
+  /** @type {{ USE_SYSTEM_FFMPEG: boolean, FFMPEG_PATH?: string }} */ (
+    require('../../config')
+  )
 
 const ffprobe = config.USE_SYSTEM_FFMPEG
   ? config.FFMPEG_PATH

@@ -66,7 +66,8 @@ function listingETag(entries) {
  * @param {import('../../utils/video/convert').TranscodeOptions} options
  */
 function streamTranscodedMedia(req, res, filePath, options) {
-  const mimeType = getConvertMimeType(options.container) || 'application/octet-stream'
+  const mimeType =
+    getConvertMimeType(options.container) || 'application/octet-stream'
   const filename = `${path.basename(filePath, path.extname(filePath))}.${options.container}`
   res.set({
     'Content-Type': mimeType,
@@ -121,7 +122,7 @@ function streamTranscodedMedia(req, res, filePath, options) {
 }
 
 /**
- * @param {string | undefined} cacheQuery
+ * @param {unknown} cacheQuery
  * @returns {{ isValid: boolean, useCache: boolean }}
  */
 function parseCacheQuery(cacheQuery) {
@@ -158,7 +159,7 @@ router.get(
       const { sortBy, direction } = parseSortQuery(req.query)
       const limitRaw = parseInt(
         typeof req.query.limit === 'string' ? req.query.limit : '',
-        10,
+        10
       )
       /** @type {boolean} */
       const hasPagination = !isNaN(limitRaw) && limitRaw > 0
@@ -177,7 +178,7 @@ router.get(
           limit,
           sortBy,
           direction,
-          shouldFetchMetadata,
+          shouldFetchMetadata
         )
         if (cached) {
           log.debug('Returning cached pagination result for root directory')
@@ -216,13 +217,13 @@ router.get(
             normalizedDir,
             req,
             false,
-            metadataMap,
-          ),
-        ),
+            metadataMap
+          )
+        )
       )
       const filteredResults = results.filter(Boolean)
       const files = filteredResults.filter(
-        (entry) => entry && entry.type === 'file',
+        (entry) => entry && entry.type === 'file'
       )
       const sortedFiltered = sortContents(filteredResults, sortBy, direction)
       const sortedFiles = sortContents(files, sortBy, direction)
@@ -255,7 +256,7 @@ router.get(
           direction,
           shouldFetchMetadata,
           responseData,
-          sortedFiltered.length,
+          sortedFiltered.length
         )
       }
       if (checkETag(req, res, listingETag(responseData))) return
@@ -264,7 +265,7 @@ router.get(
       log.error('Error in root directory listing:', error)
       return sendResponse(res, 500)
     }
-  },
+  }
 )
 
 router.get(
@@ -301,7 +302,7 @@ router.get(
     if (!realPath) {
       log.debug(
         'Path construction resulted in unsafe path for components:',
-        pathComponents,
+        pathComponents
       )
       return sendResponse(res, 400, 'Invalid path parameters')
     }
@@ -326,7 +327,7 @@ router.get(
     try {
       const isAllowed = await isAllowedFilesystemEntry(
         realPath,
-        resolvedBaseDir,
+        resolvedBaseDir
       )
       if (!isAllowed) {
         log.warn('Filesystem access denied:', relativePath)
@@ -355,7 +356,7 @@ router.get(
       const { sortBy, direction } = parseSortQuery(req.query)
       const limitRawDir = parseInt(
         typeof req.query.limit === 'string' ? req.query.limit : '',
-        10,
+        10
       )
       const hasPagination = !isNaN(limitRawDir) && limitRawDir > 0
       const limit = hasPagination
@@ -374,12 +375,12 @@ router.get(
           limit,
           sortBy,
           direction,
-          shouldFetchMetadata,
+          shouldFetchMetadata
         )
         if (cached) {
           log.debug(
             'Returning cached pagination result for directory:',
-            relativePath,
+            relativePath
           )
           if (checkETag(req, res, listingETag(cached.items))) return
           return sendResponse(res, 200).json(cached.items)
@@ -407,9 +408,9 @@ router.get(
             resolvedBaseDir,
             req,
             true,
-            metadataMap,
-          ),
-        ),
+            metadataMap
+          )
+        )
       )
       const validContents = formattedContents.filter(Boolean)
       const sorted = sortContents(validContents, sortBy, direction)
@@ -441,7 +442,7 @@ router.get(
           direction,
           shouldFetchMetadata,
           paginated,
-          sorted.length,
+          sorted.length
         )
       }
       if (checkETag(req, res, listingETag(paginated))) return
@@ -501,12 +502,12 @@ router.get(
           const rawParam = req.query.raw === 'true' || req.query.raw === ''
           if (rawParam && (scale || kernel || shouldConvertToGif)) {
             log.debug(
-              'Raw parameter cannot be used with scale, kernel, or gif conversion',
+              'Raw parameter cannot be used with scale, kernel, or gif conversion'
             )
             return sendResponse.error(
               res,
               400,
-              'raw cannot be used with other parameters',
+              'raw cannot be used with other parameters'
             )
           }
           if (rawParam) {
@@ -567,7 +568,7 @@ router.get(
             const transformer = await resizeImage(realPath, resizeOptions)
             if (transformer === undefined) {
               log.debug(
-                'No resizing needed, applying metadata to original file',
+                'No resizing needed, applying metadata to original file'
               )
               const metadataTransformer = await applyMetadata(realPath)
               if (metadataTransformer) {
@@ -614,7 +615,7 @@ router.get(
         const transcodeOptions = getTranscodeOptions(
           convertParam,
           isVideoFile(realPath),
-          isAudioFile(realPath),
+          isAudioFile(realPath)
         )
         if (convertParam && !transcodeOptions) {
           return sendResponse(res, 400, 'Invalid convert parameter')
@@ -670,7 +671,7 @@ router.get(
         return sendResponse(res, 500)
       }
     }
-  },
+  }
 )
 
 module.exports = router

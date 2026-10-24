@@ -1,14 +1,15 @@
 name: Run Check
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+  contents: read
+
 jobs:
-  lint:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,6 +19,20 @@ jobs:
         with:
           node-version: "24"
       - name: Install Dependencies
+        id: install
         run: npm ci
-      - name: Run Check
-        run: npm run check
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
+      - name: Format Check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run format:check
+      - name: API Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck:api
+      - name: Public Typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck:public
+      - name: Build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build

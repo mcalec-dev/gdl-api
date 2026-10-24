@@ -1,3 +1,6 @@
+/**
+ * @typedef {import('express-session').Session & { uuid?: string }} SessionWithUuid
+ */
 const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const { requireRole } = require('../../../utils/authUtils')
@@ -84,8 +87,9 @@ router.get(
               log.error('OAuth session UUID was not initialized')
               return res.status(500).send('Session initialization failed')
             }
-            req.session.uuid = sessionUuid
-            return req.session.save((saveErr) => {
+            const session = /** @type {SessionWithUuid} */ (req.session)
+            session.uuid = sessionUuid
+            return session.save((saveErr) => {
               if (saveErr) {
                 log.error('Failed to persist OAuth session:', saveErr)
                 return res.status(500).send('Failed to save session')
@@ -97,9 +101,9 @@ router.get(
           log.error('Callback processing error:', error)
           return res.redirect(302, '/')
         }
-      },
+      }
     )(req, res, next)
-  },
+  }
 )
 
 router.get(
@@ -121,7 +125,7 @@ router.get(
       log.error('Failed to authenticate OAuth:', error)
       return sendResponse.error(res, 500, 'Failed to authenticate OAuth')
     }
-  },
+  }
 )
 
 router.get(
@@ -151,7 +155,7 @@ router.get(
       log.error('Failed to authenticate OAuth:', error)
       return sendResponse.error(res, 500, 'Failed to authenticate OAuth')
     }
-  },
+  }
 )
 
 router.get(
@@ -174,13 +178,13 @@ router.get(
       }
       const hasPassword = !!currentUser.password
       const otherOAuthProviders = Object.keys(currentUser.oauth || {}).filter(
-        (p) => p !== provider && currentUser.oauth?.[p]?.id,
+        (p) => p !== provider && currentUser.oauth?.[p]?.id
       )
       if (!hasPassword && otherOAuthProviders.length === 0) {
         return sendResponse.error(
           res,
           400,
-          'Cannot unlink the only authentication method',
+          'Cannot unlink the only authentication method'
         )
       }
       if (!currentUser.oauth) currentUser.oauth = {}
@@ -194,7 +198,7 @@ router.get(
       log.error('Error unlinking provider:', error)
       return sendResponse.error(res, 500, 'Failed to unlink provider')
     }
-  },
+  }
 )
 
 module.exports = router

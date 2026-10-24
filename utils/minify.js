@@ -12,8 +12,7 @@ async function minifyJS(filePath) {
     const code = await fs.readFile(filePath, 'utf8')
     const minified = await minify(code)
     if (minified.code === undefined) {
-      log.error('Terser minification failed for file:', filePath)
-      return
+      throw new Error('Terser minification returned no output for ' + filePath)
     }
     const jsDir = path.join(PUBLIC_DIR, 'js')
     const relativePath = path.relative(jsDir, filePath)
@@ -25,6 +24,7 @@ async function minifyJS(filePath) {
     await fs.writeFile(outputPath, minified.code)
   } catch (error) {
     log.error('Error minifying JS file:', filePath, error)
+    throw error
   }
 }
 
@@ -33,9 +33,14 @@ async function minifyCSS(filePath) {
   try {
     const code = await fs.readFile(filePath, 'utf8')
     const minified = new CleanCSS().minify(code)
-    if (!minified.styles) {
-      log.error('CleanCSS minification failed for file:', filePath)
-      return
+    const diagnostics = [...minified.errors, ...minified.warnings]
+    if (diagnostics.length > 0) {
+      throw new Error(
+        'CleanCSS minification reported diagnostics for ' +
+          filePath +
+          ': ' +
+          diagnostics.join('; ')
+      )
     }
     const cssDir = path.join(PUBLIC_DIR, 'css')
     const relativePath = path.relative(cssDir, filePath)
@@ -47,6 +52,7 @@ async function minifyCSS(filePath) {
     await fs.writeFile(outputPath, minified.styles)
   } catch (error) {
     log.error('Error minifying CSS file:', filePath, error)
+    throw error
   }
 }
 

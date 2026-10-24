@@ -43,7 +43,6 @@ async function uploadFile(fileBuffer, filename, options = {}) {
   try {
     const bucket = requireBucket()
     const uploadStream = bucket.openUploadStream(filename, {
-      contentType: options.contentType || 'application/octet-stream',
       metadata: {
         uploadedAt: new Date(),
         originalName: filename,

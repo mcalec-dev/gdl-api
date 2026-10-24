@@ -11,7 +11,7 @@ async function getSafeMtime(imagePath) {
     log.debug(
       'Cannot process image:',
       imagePath,
-      'file size exceeds the maximum allowed buffer size',
+      'file size exceeds the maximum allowed buffer size'
     )
     return null
   }

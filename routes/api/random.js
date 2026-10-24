@@ -34,6 +34,6 @@ router.get(
       log.error('Error in random route:', error)
       return sendResponse.error(res, 500, 'Internal server error')
     }
-  },
+  }
 )
 module.exports = router

@@ -27,7 +27,7 @@ async function loadScrollModule() {
   } catch (error) {
     console.warn(
       'Unable to load scroll module; proceeding without scroll locking.',
-      error,
+      error
     )
   }
 }
@@ -148,7 +148,7 @@ export function setupContextMenu(selector, menuItemsCallback) {
         showGenericContextMenu(
           { clientX: touch.clientX, clientY: touch.clientY },
           itemElem,
-          menuItemsCallback,
+          menuItemsCallback
         )
         return
       }
@@ -161,12 +161,12 @@ export function setupContextMenu(selector, menuItemsCallback) {
         showGenericContextMenu(
           { clientX: touchStart.clientX, clientY: touchStart.clientY },
           touchItem,
-          menuItemsCallback,
+          menuItemsCallback
         )
         touchTimer = null
       }, TOUCH_HOLD_DELAY)
     },
-    { passive: false },
+    { passive: false }
   )
   document.addEventListener(
     'touchmove',
@@ -181,7 +181,7 @@ export function setupContextMenu(selector, menuItemsCallback) {
         clearTouchHold()
       }
     },
-    { passive: true },
+    { passive: true }
   )
   document.addEventListener('touchend', clearTouchHold)
   document.addEventListener('touchcancel', clearTouchHold)
@@ -367,7 +367,7 @@ function setupContextMenuHandlers() {
   menuItemsContainer.addEventListener('click', (ev) => {
     const menuItem = closestHtmlElement(
       ev.target,
-      '.menu-item:not(.submenu-item)',
+      '.menu-item:not(.submenu-item)'
     )
     if (!menuItem) {
       const submenuItem = closestHtmlElement(ev.target, '.submenu-item')
@@ -437,7 +437,7 @@ function toggleSubmenu(menuItem, parentIndex) {
       const parentIdx = parseInt(wrapper.dataset.parentIndex || '')
       const chevron = /** @type {HTMLElement | null} */ (
         menu.querySelector(
-          `.menu-item[data-index="${parentIdx}"] [data-chevron]`,
+          `.menu-item[data-index="${parentIdx}"] [data-chevron]`
         )
       )
       if (chevron) {
@@ -532,7 +532,7 @@ export function setupFileItemContextMenu() {
           const uuid = String(itemElem.dataset.uuid || '').trim()
           if (!uuid || uuid === 'null' || uuid === 'undefined') {
             const error = new Error(
-              'This file is missing a UUID and cannot be added to a pool',
+              'This file is missing a UUID and cannot be added to a pool'
             )
             utils.statusMessage(error.message, true)
             utils.handleError(error)

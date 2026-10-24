@@ -50,36 +50,46 @@ async function invalidatePoolCache(uuid, userId) {
   ])
 }
 
-router.get('/', cacheControl('privateVeryShort'), requireRole('user'), async (req, res) => {
-  try {
-    const { limit, page, skip } = parsePagination(
-      req.query.limit,
-      req.query.page,
-      PAGINATION_LIMIT
-    )
-    const userId = String(/** @type {any} */ (req.user)?.uuid)
-    const result = await cache.wrap(
-      `pool:list:${userId}:${page}:${limit}`,
-      20,
-      async () => {
-        const [count, pools] = await Promise.all([
-          Pool.countDocuments(),
-          Pool.find()
-            .sort({ modified: -1 })
-            .skip(skip)
-            .limit(limit)
-            .select('-files')
-            .lean(),
-        ])
-        return { total: count, page, limit, results: pools.map(serializePool) }
-      },
-    )
-    return sendResponse(res, 200).json(result)
-  } catch (error) {
-    log.error('Error retrieving pools:', error)
-    return sendResponse.error(res, 500, 'Internal Server Error')
+router.get(
+  '/',
+  cacheControl('privateVeryShort'),
+  requireRole('user'),
+  async (req, res) => {
+    try {
+      const { limit, page, skip } = parsePagination(
+        req.query.limit,
+        req.query.page,
+        PAGINATION_LIMIT
+      )
+      const userId = String(/** @type {any} */ (req.user)?.uuid)
+      const result = await cache.wrap(
+        `pool:list:${userId}:${page}:${limit}`,
+        20,
+        async () => {
+          const [count, pools] = await Promise.all([
+            Pool.countDocuments(),
+            Pool.find()
+              .sort({ modified: -1 })
+              .skip(skip)
+              .limit(limit)
+              .select('-files')
+              .lean(),
+          ])
+          return {
+            total: count,
+            page,
+            limit,
+            results: pools.map(serializePool),
+          }
+        }
+      )
+      return sendResponse(res, 200).json(result)
+    } catch (error) {
+      log.error('Error retrieving pools:', error)
+      return sendResponse.error(res, 500, 'Internal Server Error')
+    }
   }
-})
+)
 
 router.post(
   '/',
@@ -114,21 +124,21 @@ router.post(
         {
           upsert: true,
           returnDocument: 'after',
-        },
+        }
       ).lean()
       if (!createdPool) {
         return sendResponse.error(res, 500, 'Pool could not be created')
       }
       log.debug('Pool created:', createdPool.uuid)
       await cache.delPattern(
-        `pool:list:${String(/** @type {any} */ (req.user)?.uuid)}:`,
+        `pool:list:${String(/** @type {any} */ (req.user)?.uuid)}:`
       )
       return sendResponse(res, 201).json(serializePool(createdPool))
     } catch (error) {
       log.error('Error creating pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.get(
@@ -142,7 +152,7 @@ router.get(
     }
     try {
       const pool = await cache.wrap(`pool:${uuid}:false`, 30, () =>
-        Pool.findOne({ uuid: { $eq: uuid } }).lean(),
+        Pool.findOne({ uuid: { $eq: uuid } }).lean()
       )
       if (!pool) {
         return sendResponse.error(res, 404, 'Pool not found')
@@ -153,7 +163,7 @@ router.get(
       log.error('Error retrieving pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.put(
@@ -175,7 +185,7 @@ router.put(
         return sendResponse.error(
           res,
           400,
-          'Pool name must be a non-empty string',
+          'Pool name must be a non-empty string'
         )
       }
       updateDoc.name = name.trim()
@@ -199,21 +209,21 @@ router.put(
       const updatedPool = await Pool.findOneAndUpdate(
         { uuid: { $eq: uuid } },
         updateDoc,
-        { returnDocument: 'after' },
+        { returnDocument: 'after' }
       ).lean()
       if (!updatedPool) {
         return sendResponse(res, 404, 'Pool not found')
       }
       await invalidatePoolCache(
         uuid,
-        String(/** @type {any} */ (req.user)?.uuid),
+        String(/** @type {any} */ (req.user)?.uuid)
       )
       return sendResponse(res, 200).json(serializePool(updatedPool))
     } catch (error) {
       log.error('Error updating pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.delete(
@@ -232,14 +242,14 @@ router.delete(
       }
       await invalidatePoolCache(
         uuid,
-        String(/** @type {any} */ (req.user)?.uuid),
+        String(/** @type {any} */ (req.user)?.uuid)
       )
       return sendResponse(res, 204, 'Pool deleted successfully')
     } catch (error) {
       log.error('Error deleting pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.get(
@@ -254,7 +264,7 @@ router.get(
     try {
       const pool = await Pool.findOne(
         { uuid: { $eq: uuid } },
-        { files: 1 },
+        { files: 1 }
       ).lean()
       if (!pool) {
         return sendResponse.error(res, 404, 'Pool not found')
@@ -263,18 +273,18 @@ router.get(
         return sendResponse.error(
           res,
           404,
-          'No files found for the specified pool',
+          'No files found for the specified pool'
         )
       }
       const files = await cache.wrap(`pool:${uuid}:files`, 30, () =>
-        findFilesByUuids(pool.files),
+        findFilesByUuids(pool.files)
       )
       return sendResponse(res, 200).json(files)
     } catch (error) {
       log.error('Error retrieving files for pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.post(
@@ -314,21 +324,21 @@ router.post(
           updatePipeline: true,
           returnDocument: 'after',
           projection: { files: 1 },
-        },
+        }
       ).lean()
       if (!updatedPool) {
         return sendResponse(res, 404, 'Pool not found')
       }
       await invalidatePoolCache(
         uuid,
-        String(/** @type {any} */ (req.user)?.uuid),
+        String(/** @type {any} */ (req.user)?.uuid)
       )
       return sendResponse(res, 200).json(serializePool(updatedPool))
     } catch (error) {
       log.error('Error adding files to pool:', error)
       return sendResponse.error(res, 500, 'Internal Server Error')
     }
-  },
+  }
 )
 
 router.delete(
@@ -348,7 +358,7 @@ router.delete(
       const normalizedFileUuids = normalizeFileUuidsInput(files)
       const resolvedFileUuids = await resolveFileUuidsFromInput(files)
       const fileUuidsToRemove = new Set(
-        resolvedFileUuids.length > 0 ? resolvedFileUuids : normalizedFileUuids,
+        resolvedFileUuids.length > 0 ? resolvedFileUuids : normalizedFileUuids
       )
       if (fileUuidsToRemove.size === 0) {
         return sendResponse.error(res, 404, 'No valid files were found')
@@ -362,21 +372,21 @@ router.delete(
         {
           returnDocument: 'after',
           projection: { files: 1 },
-        },
+        }
       ).lean()
       if (!updatedPool) {
         return sendResponse.error(res, 404, 'Pool not found')
       }
       await invalidatePoolCache(
         uuid,
-        String(/** @type {any} */ (req.user)?.uuid),
+        String(/** @type {any} */ (req.user)?.uuid)
       )
       return sendResponse(res, 200).json(serializePool(updatedPool))
     } catch (error) {
       log.error('Error removing files from pool:', error)
       return sendResponse.error(res, 500, 'Error removing files from pool')
     }
-  },
+  }
 )
 
 module.exports = router

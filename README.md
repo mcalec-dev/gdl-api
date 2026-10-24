@@ -26,6 +26,33 @@ root/              # defined with `BASE_DIR`
 
 an example dotenv file is in `.env.example`
 
+## Development checks
+
+Requires Node.js 24 or newer. NODE_ENV accepts development, production, and testing.
+
+```sh
+npm ci
+npm run check
+npm run build
+```
+
+`npm run check` runs lint, formatting, and API and browser typechecks. The browser typecheck currently reports existing strict-type errors.
+
+## Scheduled maintenance
+
+The default schedules limit repeated full-tree and per-file checks. Times use the server's local timezone.
+
+| Task | Default schedule |
+| --- | --- |
+| sync | At startup and daily at 00:00 |
+| stats | Daily at 02:00 |
+| cleanup | Daily at 03:00 |
+| session-cleanup | Daily at 04:00 |
+| check-files | Daily at 05:00 |
+| sidecar-metadata | Daily at 06:00 |
+
+The stats, cleanup, file-check, and sidecar tasks walk or inspect stored files, so they do not run at startup. Edit cron.json to tune freshness and I/O for slow or network-mounted storage. The startup sync remains enabled to populate the initial inventory; set its startup field to false if startup disk activity is a higher priority than immediate inventory freshness.
+
 ## Docker
 
 The production image uses Node.js 24 (LTS) and listens on port `3030`. MongoDB is required;

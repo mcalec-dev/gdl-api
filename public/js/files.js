@@ -26,7 +26,6 @@ let SORT_STATES = {
 
 const fileList = document.getElementById('file-list')
 
-
 /**
  * @param {unknown} value
  * @returns {string}
@@ -41,12 +40,8 @@ function h(value) {
  */
 function safeMediaUrl(value) {
   try {
-    const url = new URL(
-      String(value),
-      window.location.origin
-    )
-    const prefix =
-      `${window.BASE_PATH || ''}/api/files/`
+    const url = new URL(String(value), window.location.origin)
+    const prefix = `${window.BASE_PATH || ''}/api/files/`
     if (
       url.origin !== window.location.origin ||
       !['http:', 'https:'].includes(url.protocol) ||

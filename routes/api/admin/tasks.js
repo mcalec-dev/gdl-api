@@ -17,7 +17,7 @@ router.get(
       log.error('Error fetching tasks:', error)
       return sendResponse.error(res, 500, 'Failed to fetch tasks')
     }
-  },
+  }
 )
 
 router.post(
@@ -32,7 +32,7 @@ router.post(
       log.error('Error creating task:', error)
       return sendResponse.error(res, 500, 'Failed to create task')
     }
-  },
+  }
 )
 
 router.get(
@@ -52,7 +52,7 @@ router.get(
       log.error(`Error fetching task with ID ${id}:`, error)
       return sendResponse.error(res, 500, 'Failed to fetch task')
     }
-  },
+  }
 )
 
 router.post(
@@ -68,7 +68,7 @@ router.post(
       log.error(`Error updating task with ID ${id}:`, error)
       return sendResponse.error(res, 500, 'Failed to update task')
     }
-  },
+  }
 )
 
 module.exports = router

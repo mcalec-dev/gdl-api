@@ -8,7 +8,7 @@ const { cacheControl } = require('../../../utils/cacheControl')
 router.get('/', cacheControl('publicShort'), async (req, res) => {
   try {
     const announcements = await cache.wrap('announcements:public', 120, () =>
-      Announcement.find().sort({ created: -1 }).lean(),
+      Announcement.find().sort({ created: -1 }).lean()
     )
     return sendResponse(res, 200).json(announcements)
   } catch (error) {

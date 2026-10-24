@@ -38,7 +38,7 @@ router.get(
       log.error('Failed to send dashboard for user:', error)
       return sendResponse(res, 500)
     }
-  },
+  }
 )
 
 module.exports = router

@@ -5,7 +5,7 @@ import log from '../utils/logHandler.js'
 const { readSidecarFile } = sidecar
 
 export default async function updateSidecarMetadata() {
-  const files = await File.find({}, { 'paths.local': 1 }).lean()
+  const files = await File.find({}, { paths: 1 }).lean()
   let updated = 0
   for (const file of files) {
     const localPath = file.paths?.local

@@ -51,7 +51,7 @@ async function initSwagger() {
         description: NODE_ENV,
       },
     ]
-    swaggerSpec.info.version = process.env.npm_package_version
+    swaggerSpec.info.version = require('./package.json').version
     app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
   } catch (error) {
     log.error('Error loading Swagger spec:', error)
@@ -242,7 +242,7 @@ async function initApp() {
   app.use(
     express.json({
       type: 'application/json',
-    }),
+    })
   )
   app.use(
     `${BASE_PATH}`,

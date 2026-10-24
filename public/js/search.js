@@ -64,7 +64,7 @@ function setupObserver() {
     {
       rootMargin: '50px 0px',
       threshold: 0.1,
-    },
+    }
   )
 }
 
@@ -288,7 +288,7 @@ async function init() {
 
   if (initialType) {
     const typeButton = document.querySelector(
-      `input[name="searchType"][value="${initialType}"]`,
+      `input[name="searchType"][value="${initialType}"]`
     )
     if (typeButton) typeButton.checked = true
   }

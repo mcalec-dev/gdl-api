@@ -65,7 +65,7 @@ router.get(
   requireRole('user'),
   async (req, res) => {
     await handleDownload(req, res)
-  },
+  }
 )
 
 router.post(
@@ -74,7 +74,7 @@ router.post(
   requireRole('user'),
   async (req, res) => {
     await handleDownload(req, res)
-  },
+  }
 )
 
 module.exports = router

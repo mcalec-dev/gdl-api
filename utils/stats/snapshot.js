@@ -267,7 +267,7 @@ async function persistStatsSnapshot() {
   await Stats.findOneAndUpdate(
     {},
     { $set: snapshot },
-    { upsert: true, returnDocument: 'after' },
+    { upsert: true, returnDocument: 'after' }
   )
   log.info('Stats snapshot persisted')
 }

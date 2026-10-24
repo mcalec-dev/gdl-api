@@ -1,3 +1,6 @@
+/**
+ * @typedef {import('express-session').Session & { uuid?: string }} SessionWithUuid
+ */
 const router = require('express').Router()
 const log = require('../../../utils/logHandler')
 const User = require('../../../models/User')
@@ -10,13 +13,14 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
     return sendResponse.error(res, 401, 'Not logged in')
   }
   const user = /** @type {any} */ (req.user)
-  const sessionUuid = /** @type {any} */ (req.session)?.uuid
+  const session = /** @type {SessionWithUuid} */ (req.session)
+  const sessionUuid = session.uuid
   log.debug('Logging out user:', user.username)
   try {
     if (sessionUuid) {
       const result = await User.updateOne(
         { _id: user._id },
-        { $pull: { sessions: { uuid: sessionUuid } } },
+        { $pull: { sessions: { uuid: sessionUuid } } }
       )
       if (result.modifiedCount > 0) {
         log.debug('Removed current session from user:', user.username)
@@ -39,7 +43,7 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
       res.clearCookie('connect.sid')
       return sendResponse(res, 204)
     }
-    req.session.destroy((destroyError) => {
+    session.destroy((destroyError) => {
       if (destroyError) {
         log.error('Failed to destroy session:', destroyError)
         return sendResponse.error(res, 500, 'Failed to destroy session')

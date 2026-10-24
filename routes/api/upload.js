@@ -43,7 +43,7 @@ router.post(
       log.error('Upload error:', error)
       return sendResponse.error(res, 500, 'File upload failed')
     }
-  },
+  }
 )
 
 module.exports = router

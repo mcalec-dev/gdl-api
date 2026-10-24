@@ -3,6 +3,15 @@ const File = require('../../models/File')
 const Directory = require('../../models/Directory')
 const config = require('../../config')
 
+/** @returns {number} */
+function getMaxSearchResults() {
+  const value = config.MAX_SEARCH_RESULTS
+  if (typeof value !== 'number') {
+    throw new TypeError('MAX_SEARCH_RESULTS must be a number')
+  }
+  return value
+}
+
 /** @param {any} query @param {string} type */
 async function findLimited(query, type) {
   if (!query) return []
@@ -11,10 +20,10 @@ async function findLimited(query, type) {
     return []
   }
   if (type === 'file') {
-    return File.find(query).limit(config.MAX_SEARCH_RESULTS).lean()
+    return File.find(query).limit(getMaxSearchResults()).lean()
   }
   if (type === 'directory') {
-    return Directory.find(query).limit(config.MAX_SEARCH_RESULTS).lean()
+    return Directory.find(query).limit(getMaxSearchResults()).lean()
   }
   log.warn('Unknown type for findLimited: %s', type)
   return []

@@ -6,6 +6,10 @@ const { fetchResults } = require('./repository.js')
 
 /** @param {{ q: string, type: string, basePath: string, protocol: string, hostname: string }} params */
 async function searchDatabase({ q, type, basePath, protocol, hostname }) {
+  const maxSearchResults = config.MAX_SEARCH_RESULTS
+  if (typeof maxSearchResults !== 'number') {
+    throw new TypeError('MAX_SEARCH_RESULTS must be a number')
+  }
   const queryStr = q.toLowerCase()
   const queries = buildQueries(q, type)
   const dbResults = await fetchResults(
@@ -41,8 +45,8 @@ async function searchDatabase({ q, type, basePath, protocol, hostname }) {
     })
   }
   simplifiedResults.sort((a, b) => b.relevancy - a.relevancy)
-  if (simplifiedResults.length > config.MAX_SEARCH_RESULTS) {
-    simplifiedResults.length = config.MAX_SEARCH_RESULTS
+  if (simplifiedResults.length > maxSearchResults) {
+    simplifiedResults.length = maxSearchResults
   }
   return simplifiedResults
 }

@@ -1,5 +1,8 @@
 const { spawn } = require('child_process')
-const ffmpegStatic = require('ffmpeg-static')
+const ffmpegStatic = require(
+  // @ts-ignore - no types for ffprobe-static
+  'ffmpeg-static'
+)
 const config = require('../../config')
 
 const ffmpeg = config.USE_SYSTEM_FFMPEG

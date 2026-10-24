@@ -21,7 +21,7 @@ router.get(
       log.error('Error fetching announcements:', error)
       return sendResponse(res, 500)
     }
-  },
+  }
 )
 
 router.post(
@@ -53,7 +53,7 @@ router.post(
       log.error('Error creating announcement:', error)
       return sendResponse.error(res, 500, 'Error creating announcement')
     }
-  },
+  }
 )
 
 router.put(
@@ -82,7 +82,7 @@ router.put(
           author: String(user?.username),
           modified: Date.now(),
         },
-        { returnDocument: 'after' },
+        { returnDocument: 'after' }
       )
       if (!updatedAnnouncement) {
         return sendResponse.error(res, 404, 'Announcement not found')
@@ -94,7 +94,7 @@ router.put(
       log.error('Error updating announcement:', error)
       return sendResponse.error(res, 500, 'Error updating announcement')
     }
-  },
+  }
 )
 
 router.delete(
@@ -126,7 +126,7 @@ router.delete(
       log.error('Error deleting announcement:', error)
       return sendResponse.error(res, 500, 'Error deleting announcement')
     }
-  },
+  }
 )
 
 module.exports = router

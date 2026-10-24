@@ -39,7 +39,7 @@ router.get(
           await User.findOneAndUpdate(
             { uuid: currentUser.uuid },
             { color: value },
-            { new: true },
+            { new: true }
           )
           return value
         })
@@ -48,7 +48,7 @@ router.get(
           throw error
         })
       if (color === null) return sendResponse.error(res, 404, 'User not found')
-        log.debug('Ensured color is saved for user:', currentUser.username)
+      log.debug('Ensured color is saved for user:', currentUser.username)
       return sendResponse(res, 200).json({
         color,
       })
@@ -56,7 +56,7 @@ router.get(
       log.error('Failed to get user color:', error)
       return sendResponse.error(res, 500, 'Failed to retrieve color settings')
     }
-  },
+  }
 )
 
 router.put(
@@ -76,7 +76,7 @@ router.put(
         return sendResponse.error(
           res,
           400,
-          'Lightness must be a number between 0 and 100',
+          'Lightness must be a number between 0 and 100'
         )
       }
       if (enabled !== undefined && typeof enabled !== 'boolean') {
@@ -86,7 +86,7 @@ router.put(
         return sendResponse.error(
           res,
           400,
-          'At least one of lightness or enabled must be provided',
+          'At least one of lightness or enabled must be provided'
         )
       }
       log.debug('Updating color for user:', currentUser.username, {
@@ -111,7 +111,7 @@ router.put(
       log.error('Failed to update user color:', error)
       return sendResponse.error(res, 500, 'Failed to update color settings')
     }
-  },
+  }
 )
 
 router.post(
@@ -141,7 +141,7 @@ router.post(
       log.error('Failed to reset user color:', error)
       return sendResponse.error(res, 500, 'Failed to reset color settings')
     }
-  },
+  }
 )
 
 module.exports = router

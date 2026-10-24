@@ -34,9 +34,8 @@ async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
     }
     switch (format.toLowerCase()) {
       case 'jpeg':
-      case 'jpg':
-        {
-          const quality = q ?? 80
+      case 'jpg': {
+        const quality = q ?? 80
         transformer = transformer.jpeg({
           // integer 1-100 (default 80)
           quality,
@@ -44,7 +43,7 @@ async function convertImage(imagePath, format, { q, w, h, x, k } = {}) {
           chromaSubsampling: quality <= 75 ? '4:4:4' : '4:2:0',
         })
         break
-        }
+      }
       case 'png':
         transformer = transformer.png({
           // integer 0-9 (default 6)
