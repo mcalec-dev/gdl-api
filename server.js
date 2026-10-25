@@ -189,7 +189,7 @@ async function initApp() {
       },
     })
   )
-  if (['development', 'testing'].includes(NODE_ENV)) {
+  if (NODE_ENV === 'development' || NODE_ENV === 'testing') {
     // @ts-ignore - no type declarations
     require('morgan-body')(app, {
       noColors: false,

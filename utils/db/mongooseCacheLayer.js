@@ -27,8 +27,8 @@ function initDbCacheLayer() {
     log.info('Initializing DB cache layer with Redis disabled')
   } else {
     log.info('Initializing DB cache layer', {
-      redisUrl: settings.redisUrl,
-      cacheTtlSeconds: settings.cacheTtlSeconds,
+      enabled: settings.redisUrl ? true : false,
+      ttl: settings.cacheTtlSeconds,
     })
   }
   const originalExec = mongoose.Query.prototype.exec

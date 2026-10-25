@@ -16,13 +16,9 @@ async function ensureRedisClient(redisUrl) {
       redisClient = createClient({ url: redisUrl })
       redisClient.on('error', (/** @type {any} */ error) => {
         log.warn('Redis client error, falling back to MongoDB:', error?.message)
-        if (!redisClient?.isOpen) {
-          redisClient = null
-          connectPromise = null
-        }
       })
     }
-    if (redisClient.isOpen) {
+    if (redisClient.isReady) {
       return redisClient
     }
     if (!connectPromise) {
@@ -30,7 +26,7 @@ async function ensureRedisClient(redisUrl) {
     }
     await connectPromise
     connectPromise = null
-    return redisClient.isOpen ? redisClient : null
+    return redisClient?.isReady ? redisClient : null
   } catch (/** @type {any} */ error) {
     log.warn(
       'Redis unavailable in ensureRedisClient, using MongoDB fallback:',
