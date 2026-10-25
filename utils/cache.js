@@ -1,6 +1,12 @@
 const { ensureRedisClient } = require('./db/redisClient')
 const { REDIS_URL } = /** @type {any} */ (require('../config'))
 const log = require('./logHandler')
+const CACHE_PREFIX = 'gdl-api:cache:'
+
+/** @param {string} key @returns {string} */
+function cacheKey(key) {
+  return `${CACHE_PREFIX}${key}`
+}
 
 /**
  * @template T
@@ -13,7 +19,7 @@ async function wrap(key, ttlSeconds, fn) {
   const client = await ensureRedisClient(REDIS_URL)
   if (client) {
     try {
-      const cached = await client.get(key)
+      const cached = await client.get(cacheKey(key))
       if (cached !== null) return JSON.parse(cached)
     } catch (error) {
       log.warn(`[cache] read failed for ${key}:`, error)
@@ -22,7 +28,7 @@ async function wrap(key, ttlSeconds, fn) {
   const value = await fn()
   if (client) {
     try {
-      await client.setEx(key, ttlSeconds, JSON.stringify(value))
+      await client.setEx(cacheKey(key), ttlSeconds, JSON.stringify(value))
     } catch (error) {
       log.warn(`[cache] write failed for ${key}:`, error)
     }
@@ -35,7 +41,7 @@ async function del(key) {
   const client = await ensureRedisClient(REDIS_URL)
   if (!client) return
   try {
-    await client.del(key)
+    await client.del(cacheKey(key))
   } catch (error) {
     log.warn(`[cache] delete failed for ${key}:`, error)
   }
@@ -47,7 +53,9 @@ async function delPattern(prefix) {
   if (!client) return
   try {
     const keys = []
-    for await (const key of client.scanIterator({ MATCH: `${prefix}*` })) {
+    for await (const key of client.scanIterator({
+      MATCH: `${cacheKey(prefix)}*`,
+    })) {
       if (Array.isArray(key)) keys.push(...key)
       else if (key) keys.push(key)
     }
@@ -62,7 +70,7 @@ async function purge() {
   const client = await ensureRedisClient(REDIS_URL)
   if (!client) return
   try {
-    await client.flushDb()
+    await delPattern('')
   } catch (error) {
     log.warn('[cache] purge failed:', error)
   }

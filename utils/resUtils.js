@@ -47,6 +47,7 @@ function sendResponse(res, status, message = null) {
   }
   if (status === 204) {
     res.status(204).end()
+    return { json: () => undefined }
   }
   if (message !== null) {
     res.status(status).json({ message, status })

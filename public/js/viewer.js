@@ -63,16 +63,26 @@ async function loadIcons() {
 function getMediaUrl(item) {
   if (item.previewSrc) {
     try {
-      return new URL(item.previewSrc, document.location.origin).toString()
+      const previewUrl = new URL(item.previewSrc, document.location.origin)
+      if (previewUrl.origin === document.location.origin) {
+        previewUrl.pathname = utils.getAppUrl(previewUrl.pathname)
+      }
+      return previewUrl.toString()
     } catch (error) {
       if (item.previewSrc.startsWith('http')) {
         utils.handleError(error)
         return item.previewSrc
       }
-      return `${document.location.origin}${item.previewSrc.startsWith('/') ? '' : '/'}${item.previewSrc}`
+      return `${document.location.origin}${utils.getAppUrl(
+        item.previewSrc.startsWith('/')
+          ? item.previewSrc
+          : `/${item.previewSrc}`
+      )}`
     }
   }
-  return `${document.location.origin}/api/files/${item.encodedPath}`
+  return `${document.location.origin}${utils.getAppUrl(
+    `/api/files/${item.encodedPath}`
+  )}`
 }
 
 function preloadMedia(item) {
@@ -306,7 +316,9 @@ async function setupViewerEvents() {
       return
     }
     const a = document.createElement('a')
-    a.href = `${document.location.origin}/api/download/?uuid=${item.uuid}`
+    a.href = `${document.location.origin}${utils.getAppUrl(
+      `/api/download/?uuid=${encodeURIComponent(item.uuid)}`
+    )}`
     a.download = ''
     document.body.appendChild(a)
     a.click()
@@ -479,14 +491,20 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
             previewSrc =
               preview?.dataset?.src ||
               preview?.src ||
-              `${document.location.origin}/api/files/${encodedPath}`
+              `${document.location.origin}${utils.getAppUrl(
+                `/api/files/${encodedPath}`
+              )}`
           } else if (fileType === 'text') {
-            previewSrc = `${document.location.origin}/api/files/${encodedPath}`
+            previewSrc = `${document.location.origin}${utils.getAppUrl(
+              `/api/files/${encodedPath}`
+            )}`
           } else {
             previewSrc =
               preview?.dataset?.src?.split('?')[0] ||
               preview?.src ||
-              `${document.location.origin}/api/files/${encodedPath}`
+              `${document.location.origin}${utils.getAppUrl(
+                `/api/files/${encodedPath}`
+              )}`
           }
         }
         return {

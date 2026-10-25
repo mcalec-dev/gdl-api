@@ -1,7 +1,8 @@
 'use strict'
-import * as utils from '/js/min/index.min.js'
 
 async function init() {
+  const utilsUrl = new URL('js/min/index.min.js', document.baseURI).href
+  const utils = await import(utilsUrl)
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
   let name
@@ -63,10 +64,10 @@ async function init() {
       if (btn) {
         if (isLoggedIn) {
           btn.textContent = 'Dashboard'
-          btn.href = '/dashboard'
+          btn.href = utils.getAppUrl('/dashboard/')
         } else {
           btn.textContent = 'Login / Register'
-          btn.href = '/login'
+          btn.href = utils.getAppUrl('/login/')
         }
       }
     })

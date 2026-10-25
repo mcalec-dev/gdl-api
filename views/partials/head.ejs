@@ -39,10 +39,23 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     window.BASE_PATH = "<%= basePath || '' %>";
+    window.appUrl = (path) => {
+      let basePath = window.BASE_PATH || ''
+      while (basePath.endsWith('/')) basePath = basePath.slice(0, -1)
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`
+      if (
+        !basePath ||
+        normalizedPath === basePath ||
+        normalizedPath.startsWith(`${basePath}/`)
+      ) {
+        return normalizedPath
+      }
+      return `${basePath}${normalizedPath}`
+    }
     const nativeFetch = window.fetch.bind(window)
     window.fetch = (input, init) => {
-      if (window.BASE_PATH && typeof input === 'string' && input.startsWith('/') && !input.startsWith(window.BASE_PATH + '/')) {
-        input = window.BASE_PATH + input
+      if (typeof input === 'string' && input.startsWith('/')) {
+        input = window.appUrl(input)
       }
       return nativeFetch(input, init)
     }

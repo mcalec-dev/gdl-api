@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const content = document.getElementById('dashboard-content')
   const loadingDiv = document.getElementById('loading')
   const errorDiv = document.getElementById('error')
-  fetch(`/api/user/dashboard`, { credentials: 'include' })
+  fetch(utils.getAppUrl('/api/user/dashboard'), { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
         return
@@ -143,43 +143,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         .getElementById('link-github')
         .addEventListener('click', async () => {
           if (githubLinked) {
-            await fetch(
-              document.location.origin +
-                (window.BASE_PATH || '') +
-                '/api/auth/provider/unlink/github',
-              {
-                method: 'GET',
-                credentials: 'include',
-              }
-            )
+            await fetch(utils.getAppUrl('/api/auth/provider/unlink/github'), {
+              method: 'GET',
+              credentials: 'include',
+            })
             window.location.reload()
           } else {
-            window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/github`
+            window.location.href = utils.getAppUrl(
+              '/api/auth/provider/link/github'
+            )
           }
         })
       document
         .getElementById('link-discord')
         .addEventListener('click', async () => {
           if (discordLinked) {
-            await fetch(
-              document.location.origin +
-                (window.BASE_PATH || '') +
-                '/api/auth/provider/unlink/discord',
-              {
-                method: 'GET',
-                credentials: 'include',
-              }
-            )
+            await fetch(utils.getAppUrl('/api/auth/provider/unlink/discord'), {
+              method: 'GET',
+              credentials: 'include',
+            })
             window.location.reload()
           } else {
-            window.location.href = `${window.BASE_PATH || ''}/api/auth/provider/link/discord`
+            window.location.href = utils.getAppUrl(
+              '/api/auth/provider/link/discord'
+            )
           }
         })
       const logoutBtn = document.getElementById('logout')
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
           try {
-            await fetch(document.location.origin + '/api/auth/logout', {
+            await fetch(utils.getAppUrl('/api/auth/logout'), {
               method: 'POST',
               credentials: 'include',
             })
@@ -187,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             utils.handleError(error)
             console.error('Failed to log out:', error)
           }
-          window.location.href = `${window.BASE_PATH || ''}/`
+          window.location.href = utils.getAppUrl('/')
         })
       }
     })
@@ -202,15 +196,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       return
     }
     try {
-      const res = await fetch(
-        document.location.origin +
-          (window.BASE_PATH || '') +
-          `/api/user/session/${uuid}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        }
-      )
+      const res = await fetch(utils.getAppUrl(`/api/user/session/${uuid}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.message || 'Failed to delete session')

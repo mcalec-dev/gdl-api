@@ -4,7 +4,7 @@ module.exports = mongoose.model(
   new mongoose.Schema(
     {
       username: { type: String, required: true, unique: true, index: true },
-      email: { type: String, unique: true, index: true },
+      email: { type: String, required: false, unique: true, index: true },
       password: { type: String, required: false, index: true },
       roles: { type: Array, required: true, index: true },
       created: { type: Date, required: true, index: true },

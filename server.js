@@ -5,6 +5,7 @@ const { processFiles } = require('./utils/minify')
 const { setReqVars } = require('./utils/requestUtils')
 const { initDbCacheLayer } = require('./utils/db/mongooseCacheLayer.js')
 const app = express()
+const packageMetadata = require('./package.json')
 const {
   initSessionStore,
   shutdownSessionStore,
@@ -45,13 +46,21 @@ async function initSwagger() {
     const swaggerSpec = /** @type {import('swagger-ui-express').JsonObject} */ (
       yaml.load(swaggerFile)
     )
+    const host = String(await HOST)
+    const basePathSegments = String(BASE_PATH || '')
+      .split('/')
+      .filter(Boolean)
+    const basePath = basePathSegments.length
+      ? `/${basePathSegments.join('/')}`
+      : ''
+    const protocol = NODE_ENV === 'production' ? 'https' : 'http'
     swaggerSpec.servers = [
       {
-        url: `https://${await HOST}${BASE_PATH}`,
+        url: `${protocol}://${host}${basePath}/api`,
         description: NODE_ENV,
       },
     ]
-    swaggerSpec.info.version = require('./package.json').version
+    swaggerSpec.info.version = packageMetadata.version
     app.use(`${BASE_PATH}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
   } catch (error) {
     log.error('Error loading Swagger spec:', error)
@@ -83,9 +92,11 @@ async function initDB() {
 async function webVars() {
   return {
     title: NAME,
-    description: `${process.env.npm_package_description}` || 'description',
-    author: process.env.npm_package_author || 'author',
-    keywords: process.env.npm_package_keywords || 'keywords',
+    description: packageMetadata.description || 'description',
+    author: packageMetadata.author || 'author',
+    keywords: Array.isArray(packageMetadata.keywords)
+      ? packageMetadata.keywords.join(', ')
+      : packageMetadata.keywords || 'keywords',
     url: await HOST,
     image: '/svg/nodejs.svg',
     basePath: BASE_PATH,
@@ -341,8 +352,26 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1)
 })
 
-process.on('SIGTERM', async () => {
+let isShuttingDown = false
+async function shutdown() {
+  if (isShuttingDown) return
+  isShuttingDown = true
   stopCron()
+  try {
+    if (server.listening) {
+      /** @type {Promise<void>} */
+      const serverClosed = new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      })
+      await serverClosed
+    }
+    log.info('HTTP server shut down')
+  } catch (error) {
+    log.error('Failed to shut down HTTP server:', error)
+  }
   try {
     await shutdownSessionStore()
     log.info('Session store shut down')
@@ -355,10 +384,10 @@ process.on('SIGTERM', async () => {
   } catch (error) {
     log.error('Failed to shut down MongoDB connection:', error)
   }
-  server.close(() => {
-    log.info('Process terminated')
-  })
-})
+  log.info('Process terminated')
+}
+
+process.on('SIGTERM', () => void shutdown())
 
 async function verifyConfig() {
   try {
@@ -399,18 +428,21 @@ async function main() {
     await initApp()
     await initSwagger()
     await initRoutes()
-    app.listen(PORT, BIND, (error) => {
-      if (error) {
-        throw error
-      }
+    server.once('error', (error) => {
+      log.error('Failed to start server:', error)
+      process.exit(1)
+    })
+    server.listen(PORT, BIND, () => {
       log.info(`Server is listening on port ${PORT}`)
       log.info(`Server is running in ${NODE_ENV} mode`)
-      banner()
-      void processFiles().catch((fileError) => {
-        log.error('Failed to process files:', fileError)
+      void banner().catch((error) => {
+        log.error('Failed to display banner:', error)
       })
-      void startCron().catch((cronError) => {
-        log.error('Failed to start cron tasks:', cronError)
+      void processFiles().catch((error) => {
+        log.error('Failed to process files:', error)
+      })
+      void startCron().catch((error) => {
+        log.error('Failed to start cron tasks:', error)
       })
     })
   } catch (error) {

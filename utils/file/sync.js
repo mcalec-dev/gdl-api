@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs').promises
 const log = require('../logHandler')
-const { DISALLOWED_DIRS, DISALLOWED_FILES, BASE_DIR, BASE_PATH } =
+const { DISALLOWED_DIRS, DISALLOWED_FILES, BASE_DIR, BASE_PATH, MAX_DEPTH } =
   /** @type {any} */ (require('../../config'))
 const { buildPaths, deriveCollectionAuthor } = require('../pathUtils')
 const { getImageMeta } = require('../image/metadata.js')
@@ -22,8 +22,9 @@ const {
 /**
  * @param {string} dirPath
  * @param {string} [relativePath]
+ * @param {number} [depth]
  */
-async function scanAndSyncDirectory(dirPath, relativePath = '') {
+async function scanAndSyncDirectory(dirPath, relativePath = '', depth = 0) {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
     const dirStats = { created: 0, updated: 0 }
@@ -44,6 +45,9 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
             isDisallowedExtension(entry.name)))
       ) {
         skipStats.excluded++
+        continue
+      }
+      if (entry.isDirectory() && depth >= MAX_DEPTH) {
         continue
       }
       let mtime = new Date()
@@ -74,7 +78,8 @@ async function scanAndSyncDirectory(dirPath, relativePath = '') {
         else dirStats.updated++
         const nestedStats = await scanAndSyncDirectory(
           entryPath,
-          entryRelativePath
+          entryRelativePath,
+          depth + 1
         )
         dirStats.created += nestedStats.created
         dirStats.updated += nestedStats.updated

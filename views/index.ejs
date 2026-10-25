@@ -8,7 +8,7 @@
       <h1 id="title" class="mb-6 text-center text-3xl font-light capitalize text-white sm:mb-8"><%= currentPage %></h1>
       <p class="mb-6 text-center text-base text-gray-300 sm:mb-8">
         I suggest you to check the
-        <a href="/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">Swagger documentation</a>
+        <a href="<%= basePath || '' %>/docs/" rel="noopener" target="_blank" class="text-blue-500 hover:underline">Swagger documentation</a>
         <br />
         or see the
         <a href="//github.com/mcalec-dev/gdl-api" rel="noopener" target="_blank" class="text-blue-500 hover:underline">GitHub repository</a>
@@ -20,9 +20,9 @@
         <span class="text-gray-400">hello[at]mcalec[dot]dev</span>
       </p>
       <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-        <a href="/docs/" class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Documentation</a>
+        <a href="<%= basePath || '' %>/docs/" class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Documentation</a>
         <a href="//github.com/mcalec-dev/gdl-api" rel="noopener" target="_blank" class="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600">GitHub</a>
-        <a href="/licenses.txt" rel="noopener" target="_blank" class="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600">Licenses</a>
+        <a href="<%= basePath || '' %>/licenses.txt" rel="noopener" target="_blank" class="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600">Licenses</a>
       </div>
     </div>
     <%- include('partials/bg') %>

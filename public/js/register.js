@@ -43,7 +43,7 @@ async function init() {
         utils.handleError(data.error)
         showError(data.error)
       } else {
-        window.location.href = '/dashboard'
+        window.location.href = new URL('dashboard/', document.baseURI).pathname
       }
     } catch (error) {
       utils.handleError(error)

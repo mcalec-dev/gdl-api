@@ -1,6 +1,30 @@
 // @ts-ignore
 import * as helpers from './helpers/format.min.js'
 
+/**
+ * @typedef {Window & {
+ *   BASE_PATH?: string,
+ *   appUrl?: (path: string) => string,
+ * }} AppWindow
+ */
+
+/** @param {string} path @returns {string} */
+export function getAppUrl(path) {
+  const appWindow = /** @type {AppWindow} */ (window)
+  if (appWindow.appUrl) return appWindow.appUrl(path)
+  let basePath = appWindow.BASE_PATH || ''
+  while (basePath.endsWith('/')) basePath = basePath.slice(0, -1)
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  if (
+    !basePath ||
+    normalizedPath === basePath ||
+    normalizedPath.startsWith(`${basePath}/`)
+  ) {
+    return normalizedPath
+  }
+  return `${basePath}${normalizedPath}`
+}
+
 export const formatSize = () => helpers.formatSize()
 export const formatMilliseconds = () => helpers.formatMs()
 

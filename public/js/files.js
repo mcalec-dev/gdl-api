@@ -289,7 +289,7 @@ async function loadDirectory(path = '', callback, forceRefresh = false) {
       url.searchParams.set('limit', PAGINATION.limit)
       queryString = url.search
     }
-    const apiBase = `${document.location.origin}/api/files`
+    const apiBase = `${document.location.origin}${utils.getAppUrl('/api/files')}`
     const pathSegment = path ? `/${path.replace(/^\/+/, '')}` : ''
     const mergedUrl = new URL(`${apiBase}${pathSegment}`)
     if (queryString) {

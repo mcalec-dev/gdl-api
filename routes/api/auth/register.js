@@ -19,11 +19,17 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
     log.debug('Username or password not provided')
     return sendResponse.error(res, 400, 'Username and password are required')
   }
-  if (email && !validator.isEmail(email)) {
+  const registeredEmail = email || undefined
+  if (registeredEmail && !validator.isEmail(registeredEmail)) {
     log.debug('Invalid email format:', email)
     return sendResponse.error(res, 400, 'Invalid email format')
   }
-  const existingUser = await User.findOne({ $or: [{ username }, { email }] })
+  const existingUser = await User.findOne({
+    $or: [
+      { username },
+      ...(registeredEmail ? [{ email: registeredEmail }] : []),
+    ],
+  })
   if (existingUser) {
     log.debug('Username or email already exists:', existingUser)
     return sendResponse.error(res, 409, 'Username or email already exists')
@@ -32,7 +38,7 @@ router.post('/', cacheControl('noStore'), async (req, res) => {
   const uuid = require('uuid').v4()
   const user = await User.create({
     username,
-    email,
+    email: registeredEmail,
     password: hash,
     uuid,
     created: new Date(),

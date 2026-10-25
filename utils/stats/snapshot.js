@@ -6,6 +6,10 @@ const Stats = require('../../models/Stats.js')
 const config = /** @type {any} */ (require('../../config.js'))
 const log = require('../logHandler.js')
 const BASE_DIR = typeof config.BASE_DIR === 'string' ? config.BASE_DIR : ''
+const MAX_DEPTH = Number.isInteger(config.MAX_DEPTH)
+  ? Math.max(0, config.MAX_DEPTH)
+  : 0
+const packageMetadata = require('../../package.json')
 
 /** @typedef {{ count: number, size: number }} FileTypeEntry */
 
@@ -130,8 +134,12 @@ function addFileStats(stats, fileStats, ext) {
   addFileType(stats, ext, fileSize)
 }
 
-/** @param {string} dirPath @param {AggregationStats} [stats] */
-async function aggregateStats(dirPath, stats) {
+/**
+ * @param {string} dirPath
+ * @param {AggregationStats} [stats]
+ * @param {number} [depth]
+ */
+async function aggregateStats(dirPath, stats, depth = 0) {
   if (!stats) {
     stats = createEmptyStats()
   }
@@ -143,8 +151,8 @@ async function aggregateStats(dirPath, stats) {
       const fullPath = path.join(dirPath, entry.name)
       const entryRelativePath = path.relative(BASE_DIR, fullPath)
       if (entry.isDirectory()) {
-        if (!(await isExcluded(entryRelativePath))) {
-          const subStats = await aggregateStats(fullPath)
+        if (depth < MAX_DEPTH && !(await isExcluded(entryRelativePath))) {
+          const subStats = await aggregateStats(fullPath, undefined, depth + 1)
           mergeStats(stats, subStats)
         }
       } else if (entry.isFile() && hasAllowedExtension(entry.name)) {
@@ -179,7 +187,7 @@ function sortFileTypes(fileTypes) {
 async function getApiStats() {
   await Promise.resolve()
   return {
-    version: process.env.npm_package_version,
+    version: packageMetadata.version,
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     timestamp: new Date().toISOString(),
@@ -211,9 +219,13 @@ async function generateStatsSnapshot() {
     collections.map(async (collection) => {
       const collectionPath = path.join(BASE_DIR, collection)
       const dirStats = await fs.stat(collectionPath)
-      if (dirStats.isDirectory() && !(await isExcluded(collection))) {
+      if (
+        MAX_DEPTH >= 1 &&
+        dirStats.isDirectory() &&
+        !(await isExcluded(collection))
+      ) {
         stats.collections.totalDirectories++
-        const summary = await aggregateStats(collectionPath)
+        const summary = await aggregateStats(collectionPath, undefined, 1)
         stats.collections.details[collection] = {
           files: summary.files,
           size: summary.size,
