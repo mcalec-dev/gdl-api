@@ -2,13 +2,7 @@
 import * as utils from '../min/index.min.js'
 import { MIN_IMAGE_SCALE } from '../min/settings.min.js'
 
-/** @typedef {'all' | 'file' | 'directory' | 'uuid' | 'hash'} SearchType */
-/** @typedef {'file' | 'directory'} SearchResultType */
-/** @typedef {{ name: string, type: SearchResultType, collection: string, author: string, path: string, url: string, uuid: string | undefined, relevancy: number }} SearchResult */
-/** @typedef {{ results: SearchResult[], count: number, query: string }} SearchResponse */
-
 const API_URL = '/api/search'
-
 const searchInput = document.getElementById('searchInput')
 const searchButton = document.getElementById('searchButton')
 const loading = document.getElementById('loading')
@@ -76,21 +70,18 @@ async function performSearch(query) {
     noResults.textContent = 'Please enter at least 3 characters'
     return
   }
-
   loading.style.display = 'block'
   results.style.display = 'none'
   searchInfo.style.display = 'none'
   noResults.style.display = 'none'
   results.innerHTML = ''
-
   try {
     const newUrl = new URL(window.location)
     newUrl.searchParams.set('q', query)
     const searchType = getSearchType()
     newUrl.searchParams.set('type', searchType)
     window.history.pushState({}, '', newUrl)
-
-    const searchUrl = new URL(API_URL, window.location.origin)
+    const searchUrl = new URL(utils.getAppUrl(API_URL), window.location.origin)
     searchUrl.searchParams.set('q', query)
     searchUrl.searchParams.set('type', searchType)
     let response
@@ -104,7 +95,6 @@ async function performSearch(query) {
       noResults.textContent = err.message
       return
     }
-
     if (!response.ok) {
       const text = await response.text().catch(() => '')
       utils.handleError(new Error(`Search failed: ${response.status}`))
@@ -236,12 +226,9 @@ async function performSearch(query) {
               </div>
             `
         }
-
         fragment.appendChild(card)
       })
-
       results.appendChild(fragment)
-
       document.querySelectorAll('img.loading').forEach((img) => {
         observer.observe(img)
       })
@@ -262,37 +249,31 @@ async function performSearch(query) {
 async function init() {
   await loadIcons()
   setupObserver()
-
   searchButton.addEventListener('click', () => {
     const query = searchInput.value.trim()
     if (query) performSearch(query)
   })
-
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       const query = searchInput.value.trim()
       if (query) performSearch(query)
     }
   })
-
   searchTypeButtons.forEach((button) => {
     button.addEventListener('change', () => {
       const query = searchInput.value.trim()
       if (query) performSearch(query)
     })
   })
-
   const urlParams = new URLSearchParams(window.location.search)
   const initialQuery = urlParams.get('q')
   const initialType = urlParams.get('type')
-
   if (initialType) {
     const typeButton = document.querySelector(
       `input[name="searchType"][value="${initialType}"]`
     )
     if (typeButton) typeButton.checked = true
   }
-
   if (initialQuery) {
     searchInput.value = initialQuery
     performSearch(initialQuery)

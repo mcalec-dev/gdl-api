@@ -1,7 +1,9 @@
 'use strict'
 import * as utils from './min/index.min.js'
+
 document.addEventListener('DOMContentLoaded', () => {
   const loading = document.getElementById('loading')
+  const errorDiv = document.getElementById('error')
   const announcementForm = document.getElementById('announcement-form')
   const announcementList = document.getElementById('announcement-list')
   async function parseApiResponse(res) {
@@ -82,11 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `
       })
-      .catch((error) => {
-        utils.handleError(error)
+      .catch((err) => {
+        utils.handleError(err)
         loading.style.display = 'none'
-        error.style.display = ''
-        error.textContent = error.message
+        errorDiv.style.display = 'block'
+        errorDiv.textContent = err.message
       })
   }
   announcementForm.addEventListener('submit', async (e) => {
@@ -109,11 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await announcementForm.reset()
         await window.fetchAnnouncements()
       })
-      .catch((error) => {
-        utils.handleError(error)
+      .catch((err) => {
+        utils.handleError(err)
         loading.style.display = 'none'
-        error.style.display = ''
-        error.textContent = error.message
+        errorDiv.style.display = 'block'
+        errorDiv.textContent = err.message
       })
   })
   function editAnnouncement(uuid, announcement) {
@@ -167,11 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadAnnouncements()
         await window.fetchAnnouncements()
       })
-      .catch((error) => {
-        utils.handleError(error)
+      .catch((err) => {
+        utils.handleError(err)
         loading.style.display = 'none'
-        error.style.display = ''
-        error.textContent = error.message
+        errorDiv.style.display = 'block'
+        errorDiv.textContent = err.message
       })
   }
   function cancelEdit(uuid, originalTitle, originalMessage, originalSeverity) {
@@ -207,11 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadAnnouncements()
         await window.fetchAnnouncements()
       })
-      .catch((error) => {
-        utils.handleError(error)
+      .catch((err) => {
+        utils.handleError(err)
         loading.style.display = 'none'
-        error.style.display = ''
-        error.textContent = error.message
+        errorDiv.style.display = 'block'
+        errorDiv.textContent = err.message
       })
   }
   window.editAnnouncement = editAnnouncement
@@ -230,11 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stat-flags').textContent = data.stats.flags
       }
     })
-    .catch((error) => {
-      utils.handleError(error)
+    .catch((err) => {
+      utils.handleError(err)
       loading.style.display = 'none'
-      error.style.display = ''
-      error.textContent = error.message
+      errorDiv.style.display = 'block'
+      errorDiv.textContent = err.message
     })
   loadAnnouncements()
 })

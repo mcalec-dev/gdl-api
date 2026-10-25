@@ -191,23 +191,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       errorDiv.textContent = error
     })
   async function deleteSession(uuid) {
-    if (!uuid) {
-      utils.handleError('No session UUID provided')
-      return
-    }
+    if (!uuid) return
     try {
-      const res = await fetch(utils.getAppUrl(`/api/user/session/${uuid}`), {
-        method: 'DELETE',
-        credentials: 'include',
-      })
+      const res = await fetch(
+        utils.getAppUrl(`/api/user/session/${encodeURIComponent(uuid)}`),
+        {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        }
+      )
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.message || 'Failed to delete session')
+        const data = await res.json().catch(() => null)
+        if (res.status === 404) {
+          throw new Error(
+            'This session no longer exists. Refresh the dashboard to update the list.'
+          )
+        }
+        throw new Error(
+          data?.message || `Failed to delete session (HTTP ${res.status})`
+        )
       }
       window.location.reload()
     } catch (error) {
       utils.handleError(error)
-      console.error('Failed to delete session:', error)
+      if (errorDiv) {
+        errorDiv.textContent =
+          error instanceof Error ? error.message : String(error)
+        errorDiv.style.display = 'block'
+        errorDiv.hidden = false
+      }
     }
   }
   window.deleteSession = deleteSession

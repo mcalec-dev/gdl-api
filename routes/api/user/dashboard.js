@@ -19,7 +19,21 @@ router.get(
     try {
       const requestUser = /** @type {AuthenticatedUser} */ (req.user)
       log.debug('Getting dashboard for:', requestUser.username || 'user')
-      const userEntry = await User.findOne({ uuid: requestUser.uuid })
+      const userEntry = await User.collection.findOne(
+        { uuid: requestUser.uuid },
+        {
+          projection: {
+            username: 1,
+            email: 1,
+            roles: 1,
+            uuid: 1,
+            created: 1,
+            oauth: 1,
+            sessions: 1,
+            color: 1,
+          },
+        }
+      )
       if (!userEntry) {
         log.debug('User not found for dashboard:', requestUser.uuid)
         return sendResponse(res, 404)

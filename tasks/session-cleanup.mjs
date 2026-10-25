@@ -3,10 +3,10 @@ import User from '../models/User.js'
 import sessionStore from '../utils/sessionStore.js'
 import log from '../utils/logHandler.js'
 
-const { getCookieMaxAgeMs, getSessionStoreKind } = sessionStore
+const { getSessionStoreKind } = sessionStore
 
 export default async function cleanupOrphanedSessions() {
-  const cutoffDate = new Date(Date.now() - getCookieMaxAgeMs())
+  const cutoffDate = new Date()
   let removedSessions = 0
   if (getSessionStoreKind() === 'mongo') {
     const db = mongoose.connection.db

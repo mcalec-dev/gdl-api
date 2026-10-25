@@ -143,10 +143,7 @@ async function loadRandomMedia() {
     loading.hidden = false
     loading.classList.remove('error')
     mediaContainer.querySelectorAll('img, video').forEach((el) => el.remove())
-    const response = await fetch(API_URL).catch((error) => {
-      utils.handleError(error)
-      handleMediaError(error)
-    })
+    const response = await fetch(utils.getAppUrl(API_URL))
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
     const data = await response.json()
     if (history.length === 0) {

@@ -16,26 +16,23 @@ async function init() {
     showLoading(true)
     hideError()
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(utils.getAppUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
           username,
           password,
         }),
-      }).catch((error) => {
-        utils.handleError(error)
-        showError(error)
       })
-      const data = await response.json()
-      if (!response.ok) {
-        utils.handleError(data.error)
-        showError(data.error)
-      } else {
-        window.location.href = new URL('dashboard/', document.baseURI).pathname
+      if (response.ok) {
+        window.location.href = utils.getAppUrl('/dashboard/')
+        return
       }
+      const data = await response.json().catch(() => null)
+      showError(data?.message || `Login failed (HTTP ${response.status})`)
     } catch (error) {
       utils.handleError(error)
       showError(error)
@@ -53,7 +50,7 @@ async function init() {
   }
   function showLoading(show) {
     if (loadingDiv) {
-      loadingDiv.hidden = show ? true : false
+      loadingDiv.hidden = !show
     }
   }
   loginForm.addEventListener('submit', async (e) => {

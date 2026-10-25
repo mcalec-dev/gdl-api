@@ -8,9 +8,7 @@ async function init() {
   async function handleRegister(e) {
     e.preventDefault()
     const username = document.getElementById('username').value
-    const email = document.getElementById('email')
-      ? document.getElementById('email').value
-      : ''
+    const email = document.getElementById('email').value
     const password = document.getElementById('password').value
     const confirm = document.getElementById('confirm').value
     if (!username || !password || !confirm) {
@@ -24,27 +22,26 @@ async function init() {
     showLoading(true)
     hideError()
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(utils.getAppUrl('/api/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
           username,
           email,
           password,
         }),
-      }).catch((error) => {
-        utils.handleError(error)
-        showError(error)
       })
-      const data = await response.json()
-      if (!response.ok) {
-        utils.handleError(data.error)
-        showError(data.error)
-      } else {
-        window.location.href = new URL('dashboard/', document.baseURI).pathname
+      if (response.ok) {
+        window.location.href = utils.getAppUrl('/dashboard/')
+        return
       }
+      const data = await response.json().catch(() => null)
+      showError(
+        data?.message || `Registration failed (HTTP ${response.status})`
+      )
     } catch (error) {
       utils.handleError(error)
       showError(error)
@@ -53,7 +50,8 @@ async function init() {
     }
   }
   function showError(error) {
-    errorDiv.textContent = error.message
+    errorDiv.textContent =
+      typeof error === 'string' ? error : error?.message || 'An error occurred'
     errorDiv.hidden = false
   }
   function hideError() {
@@ -61,7 +59,7 @@ async function init() {
   }
   function showLoading(show) {
     if (loadingDiv) {
-      loadingDiv.hidden = show ? true : false
+      loadingDiv.hidden = !show
     }
   }
   registerForm.addEventListener('submit', async (e) => {
