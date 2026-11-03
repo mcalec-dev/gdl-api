@@ -1,242 +1,387 @@
-'use strict'
-import * as utils from './min/index.min.js'
+import * as utils from './index.js'
+
+/** @typedef {'info' | 'warning' | 'error'} AnnouncementSeverity */
+/** @typedef {{uuid: string, title: string, message: string, severity: AnnouncementSeverity, author?: string, created?: string | number, modified?: string | number}} Announcement */
+
+/**
+ * Validates an announcement severity received from an API or form control.
+ *
+ * @param {unknown} value Candidate severity.
+ * @returns {AnnouncementSeverity} Valid severity with an info fallback.
+ */
+function normalizeSeverity(value) {
+  return ['info', 'warning', 'error'].includes(String(value))
+    ? /** @type {AnnouncementSeverity} */ (value)
+    : 'info'
+}
+
+/**
+ * Displays an admin-page error without leaking an unknown object as text.
+ *
+ * @param {unknown} error Error-like value.
+ * @returns {void}
+ */
+function showError(error) {
+  const errorElement = document.getElementById('error')
+  if (!errorElement) return
+  errorElement.textContent = utils.getErrorMessage(error, 'Admin action failed')
+  errorElement.hidden = false
+  errorElement.style.display = 'block'
+}
+
+/**
+ * Clears the visible admin-page error.
+ *
+ * @returns {void}
+ */
+function clearError() {
+  const errorElement = document.getElementById('error')
+  if (!errorElement) return
+  errorElement.textContent = ''
+  errorElement.hidden = true
+  errorElement.style.display = 'none'
+}
+
+/**
+ * Changes the visible loading state.
+ *
+ * @param {boolean} loading Whether work is in progress.
+ * @returns {void}
+ */
+function setLoading(loading) {
+  const loadingElement = document.getElementById('loading')
+  if (loadingElement) loadingElement.hidden = !loading
+}
+
+/**
+ * Extracts announcements from the admin endpoint response.
+ *
+ * @param {unknown} payload API response.
+ * @returns {Announcement[]} Valid announcement records.
+ */
+function getAnnouncements(payload) {
+  if (!payload || typeof payload !== 'object' || !('announcements' in payload))
+    return []
+  const candidates = payload.announcements
+  if (!Array.isArray(candidates)) return []
+  return candidates.flatMap((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return []
+    const uuid = utils.normalizeIdentifier(candidate.uuid)
+    if (!uuid) return []
+    return [
+      {
+        uuid,
+        title: utils.toDisplayText(candidate.title),
+        message: utils.toDisplayText(candidate.message),
+        severity: normalizeSeverity(candidate.severity),
+        author: utils.toDisplayText(candidate.author),
+        created:
+          typeof candidate.created === 'string' ||
+          typeof candidate.created === 'number'
+            ? candidate.created
+            : undefined,
+        modified:
+          typeof candidate.modified === 'string' ||
+          typeof candidate.modified === 'number'
+            ? candidate.modified
+            : undefined,
+      },
+    ]
+  })
+}
+
+/**
+ * Performs a write operation for one announcement.
+ *
+ * @param {string} url Admin announcement endpoint.
+ * @param {'POST' | 'PUT' | 'DELETE'} method HTTP method.
+ * @param {Record<string, unknown> | undefined} [body] Optional JSON payload.
+ * @returns {Promise<unknown>} Parsed API response.
+ */
+function requestAnnouncement(url, method, body) {
+  return utils.requestJson(utils.getAppUrl(url), {
+    method,
+    credentials: 'same-origin',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
+/**
+ * Creates a labelled announcement property row.
+ *
+ * @param {string} label Display label.
+ * @param {unknown} value Display value.
+ * @returns {HTMLDivElement} Property row.
+ */
+function propertyRow(label, value) {
+  const row = document.createElement('div')
+  row.className = 'flex flex-wrap gap-1 mb-1 items-center'
+  const name = document.createElement('span')
+  name.className = 'font-semibold text-gray-300 text-center'
+  name.textContent = `${label}:`
+  const content = document.createElement('span')
+  content.textContent = utils.toDisplayText(value, '—')
+  row.append(name, content)
+  return row
+}
+
+/**
+ * Renders one announcement in display mode.
+ *
+ * @param {Announcement} announcement Announcement to render.
+ * @returns {HTMLLIElement} Announcement list item.
+ */
+function createAnnouncementItem(announcement) {
+  const item = document.createElement('li')
+  item.className =
+    'rounded-lg border border-gray-700 p-4 shadow-md text-xs text-gray-200'
+  item.dataset.uuid = announcement.uuid
+  item.append(
+    propertyRow('Title', announcement.title),
+    propertyRow('Message', announcement.message),
+    propertyRow('Severity', announcement.severity),
+    propertyRow('Created By', announcement.author),
+    propertyRow('Created At', utils.formatDate(announcement.created)),
+    propertyRow('Modified At', utils.formatDate(announcement.modified)),
+    propertyRow('UUID', announcement.uuid)
+  )
+  const actions = document.createElement('div')
+  actions.className = 'flex gap-2 mt-2'
+  const edit = document.createElement('button')
+  edit.type = 'button'
+  edit.className =
+    'px-2 py-1 bg-blue-700 text-white rounded items-center text-center'
+  edit.textContent = 'Edit'
+  edit.addEventListener('click', () => renderEditor(item, announcement))
+  const remove = document.createElement('button')
+  remove.type = 'button'
+  remove.className =
+    'px-2 py-1 bg-red-600 text-white rounded items-center text-center'
+  remove.textContent = 'Delete'
+  remove.addEventListener('click', () => {
+    void deleteAnnouncement(announcement.uuid)
+  })
+  actions.append(edit, remove)
+  item.appendChild(actions)
+  return item
+}
+
+/**
+ * Replaces one announcement card with its inline editor.
+ *
+ * @param {HTMLLIElement} item Existing announcement element.
+ * @param {Announcement} announcement Source announcement.
+ * @returns {void}
+ */
+function renderEditor(item, announcement) {
+  item.replaceChildren()
+  const title = document.createElement('input')
+  title.type = 'text'
+  title.value = announcement.title
+  title.className =
+    'flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded'
+  const message = document.createElement('textarea')
+  message.value = announcement.message
+  message.rows = 2
+  message.className =
+    'flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded'
+  const severity = document.createElement('select')
+  severity.className =
+    'flex px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded'
+  for (const optionValue of /** @type {AnnouncementSeverity[]} */ ([
+    'info',
+    'warning',
+    'error',
+  ])) {
+    const option = document.createElement('option')
+    option.value = optionValue
+    option.textContent = optionValue[0].toUpperCase() + optionValue.slice(1)
+    option.selected = optionValue === announcement.severity
+    severity.appendChild(option)
+  }
+  const actions = document.createElement('div')
+  actions.className = 'flex gap-2 mt-2'
+  const save = document.createElement('button')
+  save.type = 'button'
+  save.className =
+    'px-2 py-1 bg-green-600 text-white rounded items-center text-center'
+  save.textContent = 'Save'
+  save.addEventListener('click', () => {
+    void saveAnnouncement(
+      announcement.uuid,
+      title.value,
+      message.value,
+      normalizeSeverity(severity.value)
+    )
+  })
+  const cancel = document.createElement('button')
+  cancel.type = 'button'
+  cancel.className =
+    'px-2 py-1 bg-gray-600 text-white rounded items-center text-center'
+  cancel.textContent = 'Cancel'
+  cancel.addEventListener('click', () => {
+    item.replaceWith(createAnnouncementItem(announcement))
+  })
+  actions.append(save, cancel)
+  item.append(title, message, severity, actions)
+}
+
+/**
+ * Fetches and renders all current announcements.
+ *
+ * @returns {Promise<void>} Resolves after list rendering.
+ */
+async function loadAnnouncements() {
+  const list = document.getElementById('announcement-list')
+  if (!(list instanceof HTMLElement)) return
+  try {
+    const payload = await utils.requestJson(
+      utils.getAppUrl('/api/admin/announcements'),
+      { credentials: 'same-origin' }
+    )
+    list.replaceChildren(
+      ...getAnnouncements(payload).map(createAnnouncementItem)
+    )
+  } catch (error) {
+    showError(error)
+  }
+}
+
+/**
+ * Saves an edited announcement.
+ *
+ * @param {string} uuid Announcement UUID.
+ * @param {string} title New title.
+ * @param {string} message New message.
+ * @param {AnnouncementSeverity} severity New severity.
+ * @returns {Promise<void>} Resolves after refreshing the list.
+ */
+async function saveAnnouncement(uuid, title, message, severity) {
+  try {
+    await requestAnnouncement(
+      `/api/admin/announcements/${encodeURIComponent(uuid)}`,
+      'PUT',
+      { title, message, severity }
+    )
+    await loadAnnouncements()
+    await refreshNavbarAnnouncements()
+  } catch (error) {
+    showError(error)
+  }
+}
+
+/**
+ * Deletes an announcement.
+ *
+ * @param {string} uuid Announcement UUID.
+ * @returns {Promise<void>} Resolves after refreshing the list.
+ */
+async function deleteAnnouncement(uuid) {
+  try {
+    await requestAnnouncement(
+      `/api/admin/announcements/${encodeURIComponent(uuid)}`,
+      'DELETE'
+    )
+    await loadAnnouncements()
+    await refreshNavbarAnnouncements()
+  } catch (error) {
+    showError(error)
+  }
+}
+
+/**
+ * Refreshes the navbar announcement when that optional module is present.
+ *
+ * @returns {Promise<void>} Resolves after the optional refresh.
+ */
+async function refreshNavbarAnnouncements() {
+  const callback =
+    /** @type {Window & {fetchAnnouncements?: () => Promise<void>}} */ (window)
+      .fetchAnnouncements
+  if (callback) await callback()
+}
+
+/**
+ * Renders overview statistics returned by the admin endpoint.
+ *
+ * @param {unknown} payload Admin API response.
+ * @returns {void}
+ */
+function renderOverview(payload) {
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    !('stats' in payload) ||
+    !payload.stats ||
+    typeof payload.stats !== 'object'
+  )
+    return
+  const stats = /** @type {Record<string, unknown>} */ (payload.stats)
+  /** @param {string} id @param {unknown} value @returns {void} */
+  const set = (id, value) => {
+    const target = document.getElementById(id)
+    if (target) target.textContent = utils.toDisplayText(value)
+  }
+  set('stat-uptime', utils.formatMilliseconds(stats.uptime))
+  set('stat-loggedin', stats.loggedInUsers)
+  set(
+    'stat-toptags',
+    Array.isArray(stats.topTags) ? stats.topTags.join(', ') : ''
+  )
+  set('stat-storage', utils.formatSize(stats.storage))
+  set('stat-flags', stats.flags)
+}
+
+/**
+ * Initializes admin controls and loads initial data.
+ *
+ * @returns {Promise<void>} Resolves after initial requests finish.
+ */
+async function initAdmin() {
+  const form = document.getElementById('announcement-form')
+  const title = document.getElementById('announcement-title-input')
+  const message = document.getElementById('announcement-message-input')
+  const severity = document.getElementById('announcement-severity-input')
+  if (
+    form instanceof HTMLFormElement &&
+    title instanceof HTMLInputElement &&
+    message instanceof HTMLTextAreaElement &&
+    severity instanceof HTMLSelectElement
+  ) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault()
+      void (async () => {
+        clearError()
+        try {
+          await requestAnnouncement('/api/admin/announcements', 'POST', {
+            title: title.value.trim(),
+            message: message.value.trim(),
+            severity: normalizeSeverity(severity.value),
+          })
+          form.reset()
+          await loadAnnouncements()
+          await refreshNavbarAnnouncements()
+        } catch (error) {
+          showError(error)
+        }
+      })()
+    })
+  }
+  setLoading(true)
+  try {
+    const payload = await utils.requestJson(utils.getAppUrl('/api/admin'), {
+      credentials: 'same-origin',
+    })
+    renderOverview(payload)
+    await loadAnnouncements()
+  } catch (error) {
+    showError(error)
+  } finally {
+    setLoading(false)
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-  const loading = document.getElementById('loading')
-  const errorDiv = document.getElementById('error')
-  const announcementForm = document.getElementById('announcement-form')
-  const announcementList = document.getElementById('announcement-list')
-  async function parseApiResponse(res) {
-    if (!res.ok) {
-      let message = res.statusText
-      const contentType = res.headers.get('content-type') || ''
-      if (contentType.includes('application/json')) {
-        const body = await res.json().catch(() => null)
-        message = body?.message || body || message
-      } else {
-        const text = await res.text().catch(() => '')
-        message = text || message
-      }
-      throw new Error(message)
-    }
-    if (res.status === 204) {
-      return null
-    }
-    return res.json().catch(() => null)
-  }
-  async function loadAnnouncements() {
-    fetch('/api/admin/announcements')
-      .then(parseApiResponse)
-      .then((data) => {
-        const announcements = Array.isArray(data?.announcements)
-          ? data.announcements
-          : []
-        if (announcements.length === 0) {
-          announcementList.innerHTML = ''
-          return
-        }
-        announcementList.innerHTML = `
-          <div class="mt-4 w-full md:max-w-full sm:max-w-full">
-            <div class="flex flex-col gap-4 mt-2 center">
-              ${(() => {
-                let html = ''
-                announcements.forEach((announcement) => {
-                  html += `
-                    <div id="announcement-${announcement.uuid}" class="rounded-lg border border-gray-700 p-4 shadow-md text-xs text-gray-200">
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300 text-center">Title:</span>
-                        <span id="announcement-title">${utils.escapeHtml(announcement.title)}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300 text-center">Message:</span>
-                        <span id="announcement-message">${utils.escapeHtml(announcement.message)}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300 text-center">Severity:</span>
-                        <span id="announcement-severity">${announcement.severity}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300">Created By:</span>
-                        <span class="select-all">${utils.escapeHtml(announcement.author)}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300">Created At:</span>
-                        <span>${new Date(announcement.created).toLocaleString()}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300">Modified At:</span>
-                        <span>${new Date(announcement.modified).toLocaleString()}</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1 mb-1 items-center">
-                        <span class="font-semibold text-gray-300">UUID:</span>
-                        <span><code class="bg-[#1f1f1f] text-gray-400 px-1 py-1 rounded select-all">${announcement.uuid}</code></span>
-                      </div>
-                      <div class="flex gap-2 mt-2">
-                        <button id="edit-btn" class="px-2 py-1 bg-blue-700 text-white rounded items-center text-center" onclick="editAnnouncement('${announcement.uuid}', ${JSON.stringify(announcement).replace(/"/g, '&quot;')})">Edit</button>
-                        <button id="delete-btn" class="px-2 py-1 bg-red-600 text-white rounded items-center text-center" onclick="deleteAnnouncement('${announcement.uuid}')">Delete</button>
-                      </div>
-                    </div>
-                  `
-                })
-                return html
-              })()}
-            </div>
-          </div>
-        `
-      })
-      .catch((err) => {
-        utils.handleError(err)
-        loading.style.display = 'none'
-        errorDiv.style.display = 'block'
-        errorDiv.textContent = err.message
-      })
-  }
-  announcementForm.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const title = document.getElementById('announcement-title-input').value
-    const message = document.getElementById('announcement-message-input').value
-    const severity = document.getElementById(
-      'announcement-severity-input'
-    ).value
-    fetch('/api/admin/announcements', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, message, severity }),
-    })
-      .then(parseApiResponse)
-      .then(async () => {
-        loadAnnouncements()
-        await announcementForm.reset()
-        await window.fetchAnnouncements()
-      })
-      .catch((err) => {
-        utils.handleError(err)
-        loading.style.display = 'none'
-        errorDiv.style.display = 'block'
-        errorDiv.textContent = err.message
-      })
-  })
-  function editAnnouncement(uuid, announcement) {
-    const announcementDiv = document.getElementById(`announcement-${uuid}`)
-    const { title, message, severity } = announcement
-    const titleEl = announcementDiv.querySelector('#announcement-title')
-    const messageEl = announcementDiv.querySelector('#announcement-message')
-    const severityEl = announcementDiv.querySelector('#announcement-severity')
-    const deleteBtn = announcementDiv.querySelector('#delete-btn')
-    const editBtn = announcementDiv.querySelector('#edit-btn')
-    const escapedTitle = utils.escapeHtml(title)
-    const escapedMessage = utils.escapeHtml(message)
-    titleEl.innerHTML = `<input type="text" id="edit-title-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" value="${escapedTitle}"></input>`
-    messageEl.innerHTML = `<textarea id="edit-message-input-${uuid}" class="flex w-full px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded" rows="2" value="${escapedMessage}">${escapedMessage}</textarea>`
-    severityEl.innerHTML = `
-      <select id="edit-severity-input-${uuid}" class="flex px-2 py-1 text-xs bg-[#1f1f1f] text-white border border-white/20 rounded">
-        <option value="info" ${severity === 'info' ? 'selected' : ''}>Info</option>
-        <option value="warning" ${severity === 'warning' ? 'selected' : ''}>Warning</option>
-        <option value="error" ${severity === 'error' ? 'selected' : ''}>Error</option>
-      </select>
-    `
-    deleteBtn.textContent = 'Cancel'
-    deleteBtn.classList =
-      'px-2 py-1 bg-gray-600 text-white rounded items-center text-center'
-    deleteBtn.onclick = () => cancelEdit(uuid, title, message, severity)
-    editBtn.textContent = 'Save'
-    editBtn.classList =
-      'px-2 py-1 bg-green-600 text-white rounded items-center text-center'
-    editBtn.onclick = () => saveAnnouncement(uuid)
-  }
-  async function saveAnnouncement(uuid) {
-    const announcementDiv = document.getElementById(`announcement-${uuid}`)
-    const title = announcementDiv.querySelector(
-      `#edit-title-input-${uuid}`
-    ).value
-    const message = announcementDiv.querySelector(
-      `#edit-message-input-${uuid}`
-    ).value
-    const severity = announcementDiv.querySelector(
-      `#edit-severity-input-${uuid}`
-    ).value
-    fetch(`/api/admin/announcements/${uuid}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, message, severity }),
-    })
-      .then(parseApiResponse)
-      .then(async () => {
-        loadAnnouncements()
-        await window.fetchAnnouncements()
-      })
-      .catch((err) => {
-        utils.handleError(err)
-        loading.style.display = 'none'
-        errorDiv.style.display = 'block'
-        errorDiv.textContent = err.message
-      })
-  }
-  function cancelEdit(uuid, originalTitle, originalMessage, originalSeverity) {
-    const announcementDiv = document.getElementById(`announcement-${uuid}`)
-    announcementDiv.querySelector('#announcement-title').textContent =
-      originalTitle
-    announcementDiv.querySelector('#announcement-message').textContent =
-      originalMessage
-    announcementDiv.querySelector('#announcement-severity').textContent =
-      originalSeverity
-    const deleteBtn = announcementDiv.querySelector('#delete-btn')
-    const editBtn = announcementDiv.querySelector('#edit-btn')
-    deleteBtn.textContent = 'Delete'
-    deleteBtn.classList =
-      'px-2 py-1 bg-red-600 text-white rounded items-center text-center'
-    deleteBtn.onclick = () => deleteAnnouncement(uuid)
-    editBtn.textContent = 'Edit'
-    editBtn.classList =
-      'px-2 py-1 bg-blue-700 text-white rounded items-center text-center'
-    editBtn.onclick = () =>
-      editAnnouncement(uuid, {
-        title: originalTitle,
-        message: originalMessage,
-        severity: originalSeverity,
-      })
-  }
-  async function deleteAnnouncement(id) {
-    fetch(`/api/admin/announcements/${id}`, {
-      method: 'DELETE',
-    })
-      .then(parseApiResponse)
-      .then(async () => {
-        loadAnnouncements()
-        await window.fetchAnnouncements()
-      })
-      .catch((err) => {
-        utils.handleError(err)
-        loading.style.display = 'none'
-        errorDiv.style.display = 'block'
-        errorDiv.textContent = err.message
-      })
-  }
-  window.editAnnouncement = editAnnouncement
-  window.deleteAnnouncement = deleteAnnouncement
-  fetch('/api/admin')
-    .then((res) => res.json())
-    .then((data) => {
-      loading.style.display = 'none'
-      if (data.stats) {
-        document.getElementById('stat-uptime').textContent =
-          utils.formatMilliseconds(data.stats.uptime)
-        document.getElementById('stat-loggedin').textContent =
-          data.stats.loggedInUsers
-        document.getElementById('stat-toptags').textContent =
-          data.stats.topTags.join(', ')
-        document.getElementById('stat-flags').textContent = data.stats.flags
-      }
-    })
-    .catch((err) => {
-      utils.handleError(err)
-      loading.style.display = 'none'
-      errorDiv.style.display = 'block'
-      errorDiv.textContent = err.message
-    })
-  loadAnnouncements()
+  void initAdmin()
 })

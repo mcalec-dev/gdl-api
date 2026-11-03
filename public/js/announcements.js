@@ -1,42 +1,68 @@
-'use strict'
-import * as utils from '../min/index.min.js'
+import * as utils from './index.js'
+
+/**
+ * Renders escaped announcement text, then expands only known local icon
+ * aliases. This preserves line breaks without exposing announcement content
+ * to HTML injection.
+ *
+ * @param {unknown} value Announcement title or message.
+ * @returns {Promise<string>} Safe HTML containing optional trusted icon markup.
+ */
+async function renderAnnouncementText(value) {
+  const escaped = utils.escapeHtml(utils.toDisplayText(value))
+  return (await utils.parseEmojis(escaped)).replace(/\n/g, '<br />')
+}
+
+/**
+ * Loads and displays the newest user announcement when the navbar partial is
+ * present on the page.
+ *
+ * @returns {Promise<void>} Resolves after the announcement has been rendered.
+ */
 async function fetchAnnouncements() {
-  fetch('/api/user/announcements/')
-    .then((res) => res.json())
-    .then((announcements) => {
-      renderAnnouncement(announcements[0])
-    })
-  async function renderAnnouncement(announcement) {
-    const container = document.getElementById('announcements-container')
-    if (!announcement) {
+  const container = document.getElementById('announcements-container')
+  const titleElement = document.getElementById('announcement-title')
+  const messageElement = document.getElementById('announcement-message')
+  if (!container || !titleElement || !messageElement) return
+
+  try {
+    const payload = await utils.requestJson(
+      utils.getAppUrl('/api/user/announcements/'),
+      { credentials: 'same-origin' }
+    )
+    const announcements = Array.isArray(payload) ? payload : []
+    const announcement = announcements[0]
+    if (!announcement || typeof announcement !== 'object') {
       container.hidden = true
       return
     }
-    if (announcement.severity) {
-      if (announcement.severity === 'info')
-        container.classList.add('bg-blue-600')
-      if (announcement.severity === 'success')
-        container.classList.add('bg-green-600')
-      if (announcement.severity === 'warning')
-        container.classList.add('bg-yellow-600')
-      if (announcement.severity === 'error')
-        container.classList.add('bg-red-600')
-    }
+
+    const data = /** @type {Record<string, unknown>} */ (announcement)
+    container.classList.remove(
+      'bg-blue-600',
+      'bg-green-600',
+      'bg-yellow-600',
+      'bg-red-600'
+    )
+    const severityClass = {
+      info: 'bg-blue-600',
+      success: 'bg-green-600',
+      warning: 'bg-yellow-600',
+      error: 'bg-red-600',
+    }[utils.toDisplayText(data.severity)]
+    if (severityClass) container.classList.add(severityClass)
+
+    titleElement.innerHTML = await renderAnnouncementText(data.title)
+    messageElement.innerHTML = await renderAnnouncementText(data.message)
     container.hidden = false
-    const titleEscaped = utils.escapeHtml(announcement.title)
-    const title = (await utils.parseEmojis(titleEscaped))
-      .trim()
-      .replace(/\n/g, '<br />')
-    document.getElementById('announcement-title').innerHTML = title
-    const messageEscaped = utils.escapeHtml(announcement.message)
-    const message = (await utils.parseEmojis(messageEscaped))
-      .trim()
-      .replace(/\n/g, '<br />')
-      .replace(/\s{2,}/g, ' ')
-    document.getElementById('announcement-message').innerHTML = message
+  } catch (error) {
+    container.hidden = true
+    utils.handleError(error, 'Unable to load announcements')
   }
 }
-window.fetchAnnouncements = fetchAnnouncements
+;/** @type {Window & {fetchAnnouncements?: () => Promise<void>}} */ (
+  window
+).fetchAnnouncements = fetchAnnouncements
 document.addEventListener(
   'DOMContentLoaded',
   async () => await fetchAnnouncements()

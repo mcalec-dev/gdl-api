@@ -1,16 +1,45 @@
-'use strict'
-import * as utils from '../min/index.min.js'
+import * as utils from './index.js'
+import {
+  hideFormError,
+  setFormLoading,
+  showFormError,
+  submitJsonForm,
+} from './helpers/forms.js'
 
+/**
+ * Binds the registration form to the shared JSON form and feedback helpers.
+ *
+ * @returns {Promise<void>} Resolves after form listeners are registered.
+ */
 async function init() {
   const registerForm = document.getElementById('registerForm')
   const errorDiv = document.getElementById('error')
   const loadingDiv = document.getElementById('loading')
+  const usernameInput = document.getElementById('username')
+  const emailInput = document.getElementById('email')
+  const passwordInput = document.getElementById('password')
+  const confirmInput = document.getElementById('confirm')
+  if (
+    !(registerForm instanceof HTMLFormElement) ||
+    !(usernameInput instanceof HTMLInputElement) ||
+    !(emailInput instanceof HTMLInputElement) ||
+    !(passwordInput instanceof HTMLInputElement) ||
+    !(confirmInput instanceof HTMLInputElement)
+  ) {
+    return
+  }
+  const usernameField = /** @type {HTMLInputElement} */ (usernameInput)
+  const emailField = /** @type {HTMLInputElement} */ (emailInput)
+  const passwordField = /** @type {HTMLInputElement} */ (passwordInput)
+  const confirmField = /** @type {HTMLInputElement} */ (confirmInput)
+
+  /** @param {SubmitEvent} e @returns {Promise<void>} */
   async function handleRegister(e) {
     e.preventDefault()
-    const username = document.getElementById('username').value
-    const email = document.getElementById('email').value
-    const password = document.getElementById('password').value
-    const confirm = document.getElementById('confirm').value
+    const username = usernameField.value.trim()
+    const email = emailField.value.trim()
+    const password = passwordField.value
+    const confirm = confirmField.value
     if (!username || !password || !confirm) {
       showError('All required fields must be filled')
       return
@@ -22,48 +51,37 @@ async function init() {
     showLoading(true)
     hideError()
     try {
-      const response = await fetch(utils.getAppUrl('/api/auth/register'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
+      await submitJsonForm(utils.getAppUrl('/api/auth/register'), {
+        username,
+        email,
+        password,
       })
-      if (response.ok) {
-        window.location.href = utils.getAppUrl('/dashboard/')
-        return
-      }
-      const data = await response.json().catch(() => null)
-      showError(
-        data?.message || `Registration failed (HTTP ${response.status})`
-      )
+      window.location.href = utils.getAppUrl('/dashboard/')
     } catch (error) {
-      utils.handleError(error)
+      utils.handleError(error, 'Registration failed')
       showError(error)
     } finally {
       showLoading(false)
     }
   }
+  /** @param {unknown} error @returns {void} */
   function showError(error) {
-    errorDiv.textContent =
-      typeof error === 'string' ? error : error?.message || 'An error occurred'
-    errorDiv.hidden = false
+    showFormError(errorDiv, error, 'Registration failed')
   }
+  /**
+   * Hides the inline registration error.
+   *
+   * @returns {void}
+   */
   function hideError() {
-    errorDiv.hidden = true
+    hideFormError(errorDiv)
   }
+  /** @param {boolean} show @returns {void} */
   function showLoading(show) {
-    if (loadingDiv) {
-      loadingDiv.hidden = !show
-    }
+    setFormLoading(loadingDiv, show)
   }
   registerForm.addEventListener('submit', async (e) => {
-    await handleRegister(e)
+    await handleRegister(/** @type {SubmitEvent} */ (e))
   })
 }
 

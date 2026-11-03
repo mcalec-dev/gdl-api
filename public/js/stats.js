@@ -1,367 +1,380 @@
-'use strict'
-import * as utils from '../min/index.min.js'
-document.addEventListener('DOMContentLoaded', function () {
-  const API_URL = '/api/stats'
-  let fileTypesData = {}
-  let collectionDetailsData = {}
-  let fileTypesSortConfig = { column: 'count', direction: 'desc' }
-  let collectionSortConfig = { column: 'files', direction: 'desc' }
-  async function updateStats() {
-    const loading = document.getElementById('loading')
-    const errorEl = document.getElementById('error')
-    const content = document.getElementById('stats-content')
-    try {
-      const response = await fetch(API_URL)
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`)
-      const data = await response.json()
-      setText('total-directories', data.collections.totalDirectories)
-      setText('total-files', data.collections.totalFiles)
-      setText('total-size', utils.formatSize(data.collections.totalSize))
-      setText(
-        'average-file-size',
-        utils.formatSize(data.collections.averageFileSize)
-      )
-      setText(
-        'largest-file-size',
-        utils.formatSize(data.collections.largestFileSize)
-      )
-      setText(
-        'smallest-file-size',
-        utils.formatSize(data.collections.smallestFileSize)
-      )
-      setText('total-collections', data.collections.total)
-      fileTypesData = data.collections.fileTypes
-      collectionDetailsData = data.collections.details
+import * as utils from './index.js'
+
+/** @typedef {{count?: number, size?: number}} FileTypeStats */
+/** @typedef {{files?: number, size?: number, lastModified?: string | number, largestFileSize?: number, smallestFileSize?: number}} CollectionStats */
+/** @typedef {{heapUsed?: number, heapTotal?: number, rss?: number, external?: number, arrayBuffers?: number, formatted?: {heapUsed?: number, rss?: number}}} MemoryStats */
+/** @typedef {{collections: {totalDirectories?: number, totalFiles?: number, totalSize?: number, averageFileSize?: number, largestFileSize?: number, smallestFileSize?: number, total?: number, fileTypes?: Record<string, FileTypeStats>, details?: Record<string, CollectionStats>}, api: {memory?: MemoryStats, timestamp?: string | number, version?: string, node?: string, uptime?: number}}} StatsResponse */
+/** @typedef {'type' | 'count' | 'size'} FileTypeColumn */
+/** @typedef {'name' | 'files' | 'size' | 'lastModified' | 'largest' | 'smallest'} CollectionColumn */
+/** @typedef {'asc' | 'desc'} SortDirection */
+
+const API_URL = '/api/stats'
+/** @type {Record<string, FileTypeStats>} */
+let fileTypesData = {}
+/** @type {Record<string, CollectionStats>} */
+let collectionDetailsData = {}
+/** @type {{column: FileTypeColumn, direction: SortDirection}} */
+let fileTypesSortConfig = { column: 'count', direction: 'desc' }
+/** @type {{column: CollectionColumn, direction: SortDirection}} */
+let collectionSortConfig = { column: 'files', direction: 'desc' }
+
+/**
+ * Returns an object-like API value.
+ *
+ * @param {unknown} value Candidate value.
+ * @returns {value is Record<string, unknown>} Whether value is a plain record.
+ */
+function isRecord(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+/**
+ * Converts a value to a finite number with a safe fallback.
+ *
+ * @param {unknown} value Candidate value.
+ * @param {number} [fallback=0] Fallback number.
+ * @returns {number} Finite number.
+ */
+function toNumber(value, fallback = 0) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+/**
+ * Sets text on an optional page element without rendering absent values.
+ *
+ * @param {string} id Element identifier.
+ * @param {unknown} value Display value.
+ * @returns {void}
+ */
+function setText(id, value) {
+  const element = document.getElementById(id)
+  if (!element) return
+  element.textContent = utils.toDisplayText(value)
+}
+
+/**
+ * Writes the visible loading, error, and content states for the statistics page.
+ *
+ * @param {boolean} loading Whether loading is active.
+ * @param {string} [errorMessage=''] Error message to display.
+ * @returns {void}
+ */
+function setPageState(loading, errorMessage = '') {
+  const loadingElement = document.getElementById('loading')
+  const errorElement = document.getElementById('error')
+  const contentElement = document.getElementById('stats-content')
+  if (loadingElement) loadingElement.hidden = !loading
+  if (errorElement) {
+    errorElement.textContent = errorMessage
+    errorElement.hidden = !errorMessage
+  }
+  if (contentElement) contentElement.hidden = loading || Boolean(errorMessage)
+}
+
+/**
+ * Formats an uptime value expressed in seconds.
+ *
+ * @param {unknown} seconds Uptime value.
+ * @returns {string} Human-readable uptime.
+ */
+function formatUptime(seconds) {
+  const total = Math.max(0, Math.floor(toNumber(seconds)))
+  const days = Math.floor(total / 86400)
+  const hours = Math.floor((total % 86400) / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const parts = []
+  if (days) parts.push(`${days}d`)
+  if (hours) parts.push(`${hours}h`)
+  if (minutes) parts.push(`${minutes}m`)
+  return parts.join(' ') || '< 1m'
+}
+
+/**
+ * Renders file type totals using safe text and controlled markup.
+ *
+ * @returns {void}
+ */
+function renderFileTypes() {
+  const container = document.getElementById('file-types')
+  if (!container) return
+  container.replaceChildren()
+
+  const entries = Object.entries(fileTypesData)
+  if (!entries.length) return
+  const { column, direction } = fileTypesSortConfig
+  entries.sort(([nameA, infoA], [nameB, infoB]) => {
+    const valueA =
+      column === 'type'
+        ? nameA.toLowerCase()
+        : toNumber(infoA[column === 'count' ? 'count' : 'size'])
+    const valueB =
+      column === 'type'
+        ? nameB.toLowerCase()
+        : toNumber(infoB[column === 'count' ? 'count' : 'size'])
+    const order =
+      typeof valueA === 'string' && typeof valueB === 'string'
+        ? valueA.localeCompare(valueB)
+        : Number(valueA) - Number(valueB)
+    return direction === 'asc' ? order : -order
+  })
+  const totalSize = entries.reduce(
+    (total, [, info]) => total + toNumber(info.size),
+    0
+  )
+
+  for (const [type, info] of entries) {
+    const percentage = totalSize ? (toNumber(info.size) / totalSize) * 100 : 0
+    const row = document.createElement('tr')
+    row.className =
+      'hover:bg-[#232329] transition file-type border-b border-[#232329]'
+    row.innerHTML = `
+      <td class="px-2 py-2 font-mono text-white border border-[#232329]">${utils.escapeHtml(type)}</td>
+      <td class="px-2 py-2 font-mono border border-[#232329]">${toNumber(info.count).toLocaleString()}</td>
+      <td class="px-2 py-2 border border-[#232329]">
+        <div class="flex flex-col gap-1"><div class="flex justify-between text-xs"><span class="font-mono">${utils.formatSize(toNumber(info.size))}</span><span class="text-gray-400">${percentage.toFixed(1)}%</span></div><div class="w-full bg-[#232329] rounded-full h-2 overflow-hidden"><div class="bg-blue-500 h-full rounded-full" style="width:${percentage}%"></div></div></div>
+      </td>`
+    container.appendChild(row)
+  }
+}
+
+/**
+ * Renders collection-level totals.
+ *
+ * @returns {void}
+ */
+function renderCollectionDetails() {
+  const container = document.getElementById('collection-details')
+  if (!container) return
+  container.replaceChildren()
+  const entries = Object.entries(collectionDetailsData)
+  if (!entries.length) return
+  const { column, direction } = collectionSortConfig
+  entries.sort(([nameA, infoA], [nameB, infoB]) => {
+    /** @param {string} name @param {CollectionStats} info @returns {string | number} */
+    const lookup = (name, info) => {
+      if (column === 'name') return name.toLowerCase()
+      if (column === 'files') return toNumber(info.files)
+      if (column === 'size') return toNumber(info.size)
+      if (column === 'lastModified')
+        return new Date(info.lastModified || 0).getTime()
+      if (column === 'largest') return toNumber(info.largestFileSize)
+      return toNumber(info.smallestFileSize, Number.MAX_SAFE_INTEGER)
+    }
+    const valueA = lookup(nameA, infoA)
+    const valueB = lookup(nameB, infoB)
+    const order =
+      typeof valueA === 'string'
+        ? valueA.localeCompare(String(valueB))
+        : valueA - Number(valueB)
+    return direction === 'asc' ? order : -order
+  })
+  const totalSize = entries.reduce(
+    (total, [, info]) => total + toNumber(info.size),
+    0
+  )
+  for (const [name, info] of entries) {
+    const percentage = totalSize ? (toNumber(info.size) / totalSize) * 100 : 0
+    const row = document.createElement('tr')
+    row.className =
+      'hover:bg-[#232329] transition collection-item border-b border-[#404040]'
+    row.innerHTML = `
+      <td class="px-2 py-2 font-mono text-white border border-[#404040]">${utils.escapeHtml(name)}</td>
+      <td class="px-2 py-2 font-mono border border-[#404040]">${toNumber(info.files).toLocaleString()}</td>
+      <td class="px-2 py-2 border border-[#404040]"><div class="flex flex-col gap-1"><div class="flex justify-between text-xs"><span class="font-mono">${utils.formatSize(toNumber(info.size))}</span><span class="text-gray-400">${percentage.toFixed(1)}%</span></div><div class="w-full bg-[#232329] rounded-full h-2 overflow-hidden"><div class="bg-green-500 h-full rounded-full" style="width:${percentage}%"></div></div></div></td>
+      <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${utils.escapeHtml(utils.formatDate(info.lastModified || ''))}</td>
+      <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${utils.formatSize(toNumber(info.largestFileSize))}</td>
+      <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${utils.formatSize(toNumber(info.smallestFileSize))}</td>`
+    container.appendChild(row)
+  }
+}
+
+/**
+ * Renders process memory statistics.
+ *
+ * @param {MemoryStats | undefined} memory API memory payload.
+ * @returns {void}
+ */
+function updateMemoryStats(memory) {
+  const container = document.getElementById('memory-stats')
+  if (!container) return
+  container.replaceChildren()
+  if (!memory) return
+  const heapUsed = toNumber(memory.heapUsed ?? memory.formatted?.heapUsed)
+  const heapTotal = toNumber(memory.heapTotal)
+  const items = [
+    [
+      'Heap Used',
+      utils.formatSize(heapUsed),
+      heapTotal ? `${((heapUsed / heapTotal) * 100).toFixed(1)}%` : '',
+    ],
+    [
+      'RSS',
+      utils.formatSize(toNumber(memory.rss ?? memory.formatted?.rss)),
+      '',
+    ],
+    ['External', utils.formatSize(toNumber(memory.external)), ''],
+    ['Array Buffers', utils.formatSize(toNumber(memory.arrayBuffers)), ''],
+  ]
+  for (const [label, value, percentage] of items) {
+    const item = document.createElement('div')
+    item.className =
+      'flex justify-between px-2 py-1 rounded hover:bg-[#232329] transition memory-item'
+    item.textContent = `${label}: ${value}${percentage ? ` (${percentage})` : ''}`
+    container.appendChild(item)
+  }
+}
+
+/**
+ * Renders API process metadata.
+ *
+ * @param {StatsResponse} data Parsed statistics response.
+ * @returns {void}
+ */
+function updateSystemStats(data) {
+  const container = document.getElementById('directory-list')
+  if (!container) return
+  container.replaceChildren()
+  for (const [label, value] of [
+    ['API Version', utils.toDisplayText(data.api.version, 'Unknown')],
+    ['Node Version', utils.toDisplayText(data.api.node, 'Unknown')],
+    ['Uptime', formatUptime(data.api.uptime)],
+  ]) {
+    const item = document.createElement('div')
+    item.className =
+      'flex justify-between px-2 py-1 rounded hover:bg-[#232329] transition directory-item'
+    item.textContent = `${label}: ${value}`
+    container.appendChild(item)
+  }
+}
+
+/**
+ * Binds table heading sorting controls.
+ *
+ * @returns {void}
+ */
+function bindSorting() {
+  for (const header of document.querySelectorAll(
+    '#file-types-table th.sortable'
+  )) {
+    if (!(header instanceof HTMLElement)) continue
+    header.addEventListener('click', () => {
+      const column = header.dataset.column
+      if (!['type', 'count', 'size'].includes(String(column))) return
+      fileTypesSortConfig = {
+        column: /** @type {FileTypeColumn} */ (column),
+        direction:
+          fileTypesSortConfig.column === column &&
+          fileTypesSortConfig.direction === 'desc'
+            ? 'asc'
+            : 'desc',
+      }
       renderFileTypes()
-      renderCollectionDetails()
-      updateMemoryStats(data.api.memory)
-      updateSystemStats(data)
-      setText(
-        'refresh-time',
-        `Last updated: ${new Date(data.api.timestamp).toLocaleString()}`
+    })
+  }
+  for (const header of document.querySelectorAll(
+    '#collection-table th.sortable'
+  )) {
+    if (!(header instanceof HTMLElement)) continue
+    header.addEventListener('click', () => {
+      const column = header.dataset.column
+      if (
+        ![
+          'name',
+          'files',
+          'size',
+          'lastModified',
+          'largest',
+          'smallest',
+        ].includes(String(column))
       )
-      loading.style.display = 'none'
-      errorEl.style.display = 'none'
-      content.style.display = 'block'
-    } catch (error) {
-      utils.handleError(error)
-      loading.style.display = 'none'
-      errorEl.style.display = 'block'
-      errorEl.textContent = error.message
-    }
-  }
-  function setText(id, value) {
-    const el = document.getElementById(id)
-    if (el)
-      el.textContent =
-        value !== undefined && value !== null
-          ? value.toLocaleString
-            ? value.toLocaleString()
-            : value
-          : ''
-  }
-  function renderFileTypes() {
-    const container = document.getElementById('file-types')
-    if (!container) return
-    if (!fileTypesData || Object.keys(fileTypesData).length === 0) {
-      container.innerHTML = ''
-      return
-    }
-    let sortedEntries = Object.entries(fileTypesData)
-    const { column, direction } = fileTypesSortConfig
-    sortedEntries.sort(([keyA, a], [keyB, b]) => {
-      let aVal, bVal
-      if (column === 'type') {
-        aVal = keyA.toLowerCase()
-        bVal = keyB.toLowerCase()
-      } else if (column === 'count') {
-        aVal = a.count ?? 0
-        bVal = b.count ?? 0
-      } else if (column === 'size') {
-        aVal = a.size ?? 0
-        bVal = b.size ?? 0
+        return
+      collectionSortConfig = {
+        column: /** @type {CollectionColumn} */ (column),
+        direction:
+          collectionSortConfig.column === column &&
+          collectionSortConfig.direction === 'desc'
+            ? 'asc'
+            : 'desc',
       }
-      if (typeof aVal === 'string') {
-        return direction === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal)
-      }
-      return direction === 'asc' ? aVal - bVal : bVal - aVal
-    })
-    container.innerHTML = ''
-    const totalSize = Object.values(fileTypesData).reduce(
-      (sum, info) => sum + (info.size ?? 0),
-      0
-    )
-    sortedEntries.forEach(([type, info]) => {
-      const tr = document.createElement('tr')
-      tr.classList =
-        'hover:bg-[#232329] transition file-type border-b border-[#232329]'
-      const percentage =
-        totalSize > 0 ? (((info.size ?? 0) / totalSize) * 100).toFixed(1) : 0
-      tr.innerHTML = `
-        <td class="px-2 py-2 font-mono text-white border border-[#232329]">${type}</td>
-        <td class="px-2 py-2 font-mono border border-[#232329]">${(info.count ?? 0).toLocaleString()}</td>
-        <td class="px-2 py-2 border border-[#232329]">
-          <div class="flex flex-col gap-1">
-            <div class="flex justify-between text-xs">
-              <span class="font-mono">${utils.formatSize(info.size ?? 0)}</span>
-              <span class="text-gray-400">${percentage}%</span>
-            </div>
-            <div class="w-full bg-[#232329] rounded-full h-2 overflow-hidden">
-              <div class="bg-blue-500 h-full rounded-full" style="width: ${percentage}%"></div>
-            </div>
-          </div>
-        </td>
-      `
-      container.appendChild(tr)
+      renderCollectionDetails()
     })
   }
-  function setFileTypesSort(column) {
-    if (fileTypesSortConfig.column === column) {
-      fileTypesSortConfig.direction =
-        fileTypesSortConfig.direction === 'asc' ? 'desc' : 'asc'
-    } else {
-      fileTypesSortConfig.column = column
-      fileTypesSortConfig.direction = 'desc'
-    }
-    renderFileTypes()
-    updateFileTypesHeaders()
-  }
-  function updateFileTypesHeaders() {
-    const headers = document.querySelectorAll('#file-types-table th.sortable')
-    headers.forEach((header) => {
-      const col = header.dataset.column
-      header.classList.remove('text-blue-400')
-      header.querySelector('.sort-indicator')?.remove()
-      if (col === fileTypesSortConfig.column) {
-        header.classList.add('text-blue-400')
-        const indicator = document.createElement('span')
-        indicator.className = 'sort-indicator ml-1'
-        indicator.textContent =
-          fileTypesSortConfig.direction === 'asc' ? '▲' : '▼'
-        header.appendChild(indicator)
-      }
+}
+
+/**
+ * Fetches and displays current statistics.
+ *
+ * @returns {Promise<void>} Resolves after the page state updates.
+ */
+async function updateStats() {
+  setPageState(true)
+  try {
+    const payload = await utils.requestJson(utils.getAppUrl(API_URL), {
+      credentials: 'same-origin',
     })
-  }
-  function renderCollectionDetails() {
-    const container = document.getElementById('collection-details')
-    if (!container) return
     if (
-      !collectionDetailsData ||
-      Object.keys(collectionDetailsData).length === 0
+      !isRecord(payload) ||
+      !isRecord(payload.collections) ||
+      !isRecord(payload.api)
     ) {
-      container.innerHTML = ''
-      return
+      throw new Error('Invalid statistics response')
     }
-    let sortedEntries = Object.entries(collectionDetailsData)
-    const { column, direction } = collectionSortConfig
-    sortedEntries.sort(([nameA, a], [nameB, b]) => {
-      let aVal, bVal
-      if (column === 'name') {
-        aVal = nameA.toLowerCase()
-        bVal = nameB.toLowerCase()
-      } else if (column === 'files') {
-        aVal = a.files ?? 0
-        bVal = b.files ?? 0
-      } else if (column === 'size') {
-        aVal = a.size ?? 0
-        bVal = b.size ?? 0
-      } else if (column === 'lastModified') {
-        aVal = new Date(a.lastModified ?? 0).getTime()
-        bVal = new Date(b.lastModified ?? 0).getTime()
-      } else if (column === 'largest') {
-        aVal = a.largestFileSize ?? 0
-        bVal = b.largestFileSize ?? 0
-      } else if (column === 'smallest') {
-        aVal = a.smallestFileSize ?? Number.MAX_VALUE
-        bVal = b.smallestFileSize ?? Number.MAX_VALUE
-      }
-      if (typeof aVal === 'string') {
-        return direction === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal)
-      }
-      return direction === 'asc' ? aVal - bVal : bVal - aVal
-    })
-    container.innerHTML = ''
-    const totalSize = Object.values(collectionDetailsData).reduce(
-      (sum, info) => sum + (info.size ?? 0),
-      0
+    const data = /** @type {StatsResponse} */ (payload)
+    fileTypesData = isRecord(data.collections.fileTypes)
+      ? /** @type {Record<string, FileTypeStats>} */ (
+          data.collections.fileTypes
+        )
+      : {}
+    collectionDetailsData = isRecord(data.collections.details)
+      ? /** @type {Record<string, CollectionStats>} */ (
+          data.collections.details
+        )
+      : {}
+    setText('total-directories', data.collections.totalDirectories)
+    setText('total-files', data.collections.totalFiles)
+    setText('total-size', utils.formatSize(data.collections.totalSize))
+    setText(
+      'average-file-size',
+      utils.formatSize(data.collections.averageFileSize)
     )
-    sortedEntries.forEach(([name, info]) => {
-      const tr = document.createElement('tr')
-      tr.classList =
-        'hover:bg-[#232329] transition collection-item border-b border-[#404040]'
-      const percentage =
-        totalSize > 0 ? (((info.size ?? 0) / totalSize) * 100).toFixed(1) : 0
-      tr.innerHTML = `
-        <td class="px-2 py-2 font-mono text-white border border-[#404040]">${name}</td>
-        <td class="px-2 py-2 font-mono border border-[#404040]">${(info.files ?? 0).toLocaleString()}</td>
-        <td class="px-2 py-2 border border-[#404040]">
-          <div class="flex flex-col gap-1">
-            <div class="flex justify-between text-xs">
-              <span class="font-mono">${utils.formatSize(info.size ?? 0)}</span>
-              <span class="text-gray-400">${percentage}%</span>
-            </div>
-            <div class="w-full bg-[#232329] rounded-full h-2 overflow-hidden">
-              <div class="bg-green-500 h-full rounded-full" style="width: ${percentage}%"></div>
-            </div>
-          </div>
-        </td>
-        <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.lastModified ? new Date(info.lastModified).toLocaleString() : ''}</td>
-        <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.largestFileSize !== undefined ? utils.formatSize(info.largestFileSize) : ''}</td>
-        <td class="px-2 py-2 text-xs text-gray-400 border border-[#404040]">${info.smallestFileSize !== undefined && info.smallestFileSize !== null ? utils.formatSize(info.smallestFileSize) : ''}</td>
-      `
-      container.appendChild(tr)
-    })
-  }
-  function setCollectionSort(column) {
-    if (collectionSortConfig.column === column) {
-      collectionSortConfig.direction =
-        collectionSortConfig.direction === 'asc' ? 'desc' : 'asc'
-    } else {
-      collectionSortConfig.column = column
-      collectionSortConfig.direction = 'desc'
-    }
+    setText(
+      'largest-file-size',
+      utils.formatSize(data.collections.largestFileSize)
+    )
+    setText(
+      'smallest-file-size',
+      utils.formatSize(data.collections.smallestFileSize)
+    )
+    setText('total-collections', data.collections.total)
+    setText(
+      'refresh-time',
+      data.api.timestamp
+        ? `Last updated: ${utils.formatDate(data.api.timestamp)}`
+        : ''
+    )
+    renderFileTypes()
     renderCollectionDetails()
-    updateCollectionHeaders()
-  }
-  function updateCollectionHeaders() {
-    const headers = document.querySelectorAll('#collection-table th.sortable')
-    headers.forEach((header) => {
-      const col = header.dataset.column
-      header.classList.remove('text-green-400')
-      header.querySelector('.sort-indicator')?.remove()
-      if (col === collectionSortConfig.column) {
-        header.classList.add('text-green-400')
-        const indicator = document.createElement('span')
-        indicator.className = 'sort-indicator ml-1'
-        indicator.textContent =
-          collectionSortConfig.direction === 'asc' ? '▲' : '▼'
-        header.appendChild(indicator)
-      }
-    })
-  }
-  function updateMemoryStats(memory) {
-    const container = document.getElementById('memory-stats')
-    if (!container) return
-    container.innerHTML = ''
-    if (!memory) return
-    const heapUsed = memory.heapUsed ?? memory.formatted?.heapUsed ?? 0
-    const heapTotal = memory.heapTotal ?? 0
-    const heapPercentage =
-      heapTotal > 0 ? ((heapUsed / heapTotal) * 100).toFixed(1) : 0
-    const memoryItems = [
-      {
-        label: 'Heap Used',
-        value: utils.formatSize(heapUsed),
-        percentage: heapPercentage,
-        total: utils.formatSize(heapTotal),
-      },
-      {
-        label: 'RSS',
-        value: utils.formatSize(memory.rss ?? memory.formatted?.rss ?? 0),
-      },
-      {
-        label: 'External',
-        value: utils.formatSize(memory.external ?? 0),
-      },
-      {
-        label: 'Array Buffers',
-        value: utils.formatSize(memory.arrayBuffers ?? 0),
-      },
-    ]
-    memoryItems.forEach((item) => {
-      const el = document.createElement('div')
-      el.classList =
-        'flex flex-col gap-2 px-2 py-2 rounded hover:bg-[#232329] transition memory-item'
-      let innerHTML = `<div class="flex justify-between"><span>${item.label}</span><span>${item.value}</span>`
-      if (item.total) {
-        innerHTML += ` / ${item.total}</div>`
-      } else {
-        innerHTML += `</div>`
-      }
-      if (item.percentage !== undefined) {
-        innerHTML += `
-          <div class="w-full bg-[#232329] rounded-full h-2 overflow-hidden">
-            <div class="bg-purple-500 h-full rounded-full" style="width: ${item.percentage}%"></div>
-          </div>
-          <div class="text-xs text-gray-400 text-center">${item.percentage}%</div>
-        `
-      }
-      el.innerHTML = innerHTML
-      container.appendChild(el)
-    })
-  }
-  function updateSystemStats(data) {
-    const container = document.getElementById('directory-list')
-    if (!container) return
-    container.innerHTML = `
-      <div class="flex justify-between px-2 py-1 rounded hover:bg-[#232329] transition directory-item">
-        <span>API Version</span>
-        <span class="font-mono">${data.api.version || 'Unknown'}</span>
-      </div>
-      <div class="flex justify-between px-2 py-1 rounded hover:bg-[#232329] transition directory-item">
-        <span>Node Version</span>
-        <span class="font-mono">${data.api.node}</span>
-      </div>
-      <div class="flex justify-between px-2 py-1 rounded hover:bg-[#232329] transition directory-item">
-        <span>Uptime</span>
-        <span class="font-mono">${formatUptime(data.api.uptime)}</span>
-      </div>
-    `
-  }
-  function formatUptime(seconds) {
-    const days = Math.floor(seconds / 86400)
-    const hours = Math.floor((seconds % 86400) / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const parts = []
-    if (days > 0) parts.push(`${days}d`)
-    if (hours > 0) parts.push(`${hours}h`)
-    if (minutes > 0) parts.push(`${minutes}m`)
-    return parts.join(' ') || '< 1m'
-  }
-  updateStats()
-  setupHeaderHandlers()
-  setInterval(() => {
-    updateStats()
-    setupHeaderHandlers()
-  }, 300000)
-  function setupHeaderHandlers() {
-    const fileTypeHeaders = document.querySelectorAll(
-      '#file-types-table th.sortable'
+    updateMemoryStats(data.api.memory)
+    updateSystemStats(data)
+    setPageState(false)
+  } catch (error) {
+    utils.handleError(error, 'Unable to load statistics')
+    setPageState(
+      false,
+      utils.getErrorMessage(error, 'Unable to load statistics')
     )
-    fileTypeHeaders.forEach((header) => {
-      header.style.cursor = 'pointer'
-      const newHeader = header.cloneNode(true)
-      header.parentNode.replaceChild(newHeader, header)
-    })
-    document
-      .querySelectorAll('#file-types-table th.sortable')
-      .forEach((header) => {
-        header.style.cursor = 'pointer'
-        header.addEventListener('click', () => {
-          setFileTypesSort(header.dataset.column)
-        })
-      })
-    const collectionHeaders = document.querySelectorAll(
-      '#collection-table th.sortable'
-    )
-    collectionHeaders.forEach((header) => {
-      const newHeader = header.cloneNode(true)
-      header.parentNode.replaceChild(newHeader, header)
-    })
-    document
-      .querySelectorAll('#collection-table th.sortable')
-      .forEach((header) => {
-        header.style.cursor = 'pointer'
-        header.addEventListener('click', () => {
-          setCollectionSort(header.dataset.column)
-        })
-      })
-    updateFileTypesHeaders()
-    updateCollectionHeaders()
   }
-})
+}
+
+/**
+ * Initializes the statistics page and its periodic refresh.
+ *
+ * @returns {void}
+ */
+function initStats() {
+  bindSorting()
+  void updateStats()
+  window.setInterval(() => void updateStats(), 300000)
+}
+
+document.addEventListener('DOMContentLoaded', initStats)

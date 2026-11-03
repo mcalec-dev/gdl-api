@@ -1,8 +1,12 @@
-'use strict'
+import * as utils from './index.js'
 
+/**
+ * Initializes the shared navbar without allowing a missing page heading or
+ * unavailable site-name response to stop menu and authentication behavior.
+ *
+ * @returns {Promise<void>} Resolves after title and session state load.
+ */
 async function init() {
-  const utilsUrl = new URL('js/min/index.min.js', document.baseURI).href
-  const utils = await import(utilsUrl)
   const navbarTitle = document.getElementById('navbar-title')
   const heading = document.getElementById('title')
   let name
@@ -11,57 +15,53 @@ async function init() {
   } catch (error) {
     utils.handleError(error)
     console.error('Failed to fetch name:', error)
-    name = 'title'
+    name = 'gdl-api'
   }
-  if (!name) {
-    document.title = 'title - undefined'
-    navbarTitle.textContent = 'title - undefined'
-    return console.warn('Site name is undefined or empty')
-  }
-  if (!heading) {
-    document.title = name
-    navbarTitle.textContent = name
-    return console.warn('Heading element is undefined or empty')
-  }
-  if (name) {
-    document.title = `${name} - ${heading.textContent}`
-    navbarTitle.textContent = `${name} - ${heading.textContent}`
-  }
+  const siteName = utils.toDisplayText(name, 'gdl-api')
+  const headingText = utils.toDisplayText(heading?.textContent)
+  const pageTitle = headingText ? `${siteName} - ${headingText}` : siteName
+  document.title = pageTitle
+  if (navbarTitle) navbarTitle.textContent = pageTitle
   const mobileMenuButton = document.getElementById('mobile-menu-button')
   const mobileMenu = document.getElementById('mobile-navbar-menu')
-  mobileMenuButton.addEventListener('click', function (e) {
-    e.stopPropagation()
-    mobileMenu.hidden = !mobileMenu.hidden
-  })
-  mobileMenu.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', function () {
-      mobileMenu.hidden = true
+  if (
+    mobileMenuButton instanceof HTMLButtonElement &&
+    mobileMenu instanceof HTMLElement
+  ) {
+    mobileMenuButton.addEventListener('click', function (e) {
+      e.stopPropagation()
+      mobileMenu.hidden = !mobileMenu.hidden
+      mobileMenuButton.setAttribute('aria-expanded', String(!mobileMenu.hidden))
     })
-  })
-  document.addEventListener('click', function (event) {
-    const isClickInsideNav =
-      mobileMenu.contains(event.target) ||
-      mobileMenuButton.contains(event.target)
-    if (!isClickInsideNav && !mobileMenu.hidden) {
-      mobileMenu.hidden = true
-    }
-  })
+    mobileMenu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', function () {
+        mobileMenu.hidden = true
+        mobileMenuButton.setAttribute('aria-expanded', 'false')
+      })
+    })
+    document.addEventListener('click', function (event) {
+      const target = event.target
+      const isClickInsideNav =
+        target instanceof Node &&
+        (mobileMenu.contains(target) || mobileMenuButton.contains(target))
+      if (!isClickInsideNav && !mobileMenu.hidden) {
+        mobileMenu.hidden = true
+        mobileMenuButton.setAttribute('aria-expanded', 'false')
+      }
+    })
+  }
   const loginRegisterButtons = document.querySelectorAll(
     '#login-register, #mobile-login-register'
   )
-  let checkAuthStatus = null
+  let isLoggedIn = false
   try {
-    const req = await fetch('/api/auth/check')
-    checkAuthStatus = await req.json()
+    isLoggedIn = await utils.isAuthenticated()
   } catch (error) {
-    utils.handleError(error)
-    console.error('Failed to fetch auth status:', error)
-    checkAuthStatus = null
+    utils.handleError(error, 'Failed to fetch auth status')
   }
-  const isLoggedIn = checkAuthStatus && checkAuthStatus.authenticated === true
   if (loginRegisterButtons && loginRegisterButtons.length > 0) {
     loginRegisterButtons.forEach((btn) => {
-      if (btn) {
+      if (btn instanceof HTMLAnchorElement) {
         if (isLoggedIn) {
           btn.textContent = 'Dashboard'
           btn.href = utils.getAppUrl('/dashboard/')

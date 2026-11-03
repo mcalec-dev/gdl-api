@@ -1,5 +1,5 @@
-// @ts-ignore
-import * as utils from '../min/index.min.js'
+import * as utils from './index.js'
+import { lockScroll, unlockScroll } from './helpers/scroll.js'
 
 /** @typedef {{clientX: number, clientY: number}} ContextMenuPoint */
 /** @typedef {{label?: string, icon?: string, divider?: boolean, submenu?: ContextMenuItem[], handler?: () => void | Promise<void>}} ContextMenuItem */
@@ -7,35 +7,6 @@ import * as utils from '../min/index.min.js'
 /** @typedef {{header?: ContextMenuHeader, items: ContextMenuItem[]}} ContextMenuData */
 /** @typedef {{nav?: {next?: string, link?: string, download?: string, copy?: string}, [key: string]: string | {next?: string, link?: string, download?: string, copy?: string} | undefined}} ContextIcons */
 /** @typedef {HTMLDivElement & {_currentMenuData?: ContextMenuData, _originalPosition?: {left: number, top: number}}} ContextMenuElement */
-/** @typedef {{lock: () => void, unlock: () => void}} ScrollModule */
-
-/** @type {ScrollModule} */
-let scroll = {
-  lock: () => {},
-  unlock: () => {},
-}
-let _scrollLoaded = false
-
-async function loadScrollModule() {
-  if (_scrollLoaded) return
-  _scrollLoaded = true
-  try {
-    const module =
-      // @ts-ignore
-      await import('https://utils.mcalec.dev/scroll.js/scroll.min.js')
-    scroll = module?.default ?? module
-  } catch (error) {
-    console.warn(
-      'Unable to load scroll module; proceeding without scroll locking.',
-      error
-    )
-  }
-}
-
-function ensureScrollModule() {
-  void loadScrollModule()
-}
-
 /** @type {ContextMenuElement | null} */
 let contextMenu = null
 /** @type {((event: PointerEvent) => void) | null} */
@@ -65,6 +36,11 @@ export function setContextBasePaths(frontend, api) {
   apiBasePath = api
 }
 
+/**
+ * Creates the shared context-menu container when a page has not supplied one.
+ *
+ * @returns {void}
+ */
 export function createContextMenu() {
   if (contextMenu) return
   contextMenu = /** @type {ContextMenuElement | null} */ (
@@ -78,8 +54,13 @@ export function createContextMenu() {
   contextMenu.hidden = true
 }
 
+/**
+ * Hides the active context menu and removes its temporary outside listener.
+ *
+ * @returns {void}
+ */
 function hideContextMenu() {
-  scroll.unlock()
+  unlockScroll()
   if (!contextMenu) return
   contextMenu.style.display = 'none'
   contextMenu.hidden = true
@@ -126,6 +107,11 @@ export function setupContextMenu(selector, menuItemsCallback) {
   let touchStart = null
   /** @type {HTMLElement | null} */
   let touchItem = null
+  /**
+   * Clears pending long-press state for this context-menu binding.
+   *
+   * @returns {void}
+   */
   const clearTouchHold = () => {
     if (touchTimer) {
       clearTimeout(touchTimer)
@@ -193,8 +179,7 @@ export function setupContextMenu(selector, menuItemsCallback) {
  * @param {Function} menuItemsCallback
  */
 function showGenericContextMenu(e, itemElem, menuItemsCallback) {
-  ensureScrollModule()
-  scroll.lock()
+  lockScroll()
   if (!contextMenu) createContextMenu()
   if (!contextMenu) return
   const menu = contextMenu
@@ -241,7 +226,7 @@ function renderContextMenu(menuData, container) {
     container.innerHTML = `
       <div class="border-b border-white/20 px-2 py-2 mb-1 flex items-center gap-2 align-middle">
         <span class="w-5 h-5">${icon || ''}</span>
-        <span class="truncate">${label}</span>
+        <span class="truncate">${utils.escapeHtml(label || '')}</span>
       </div>
     `
   }
@@ -264,7 +249,7 @@ function renderContextMenu(menuData, container) {
     leftContent.className = 'flex items-center gap-2'
     leftContent.innerHTML = `
       <span class="w-3.5 h-3.5 stroke-white stroke-2">${icon}</span>
-      <span>${label}</span>
+      <span>${utils.escapeHtml(label || '')}</span>
     `
     item.appendChild(leftContent)
     if (submenu) {
@@ -296,7 +281,7 @@ function renderContextMenu(menuData, container) {
         subItem.dataset.subIndex = subIndex.toString()
         subItem.innerHTML = `
           <span class="w-3.5 h-3.5 stroke-white stroke-2">${icon}</span>
-          <span>${label}</span>
+          <span>${utils.escapeHtml(label || '')}</span>
         `
         submenuWrapper.appendChild(subItem)
       })
@@ -484,7 +469,7 @@ export function setupFileItemContextMenu() {
         icon: icons?.nav?.link || '',
         handler: () => {
           try {
-            window.open(dirUrl, '_blank')
+            window.open(dirUrl, '_blank', 'noopener')
           } catch (error) {
             utils.handleError(error)
           }
@@ -498,7 +483,7 @@ export function setupFileItemContextMenu() {
         handler: () => {
           if (!fileUrl) return
           try {
-            window.open(fileUrl, '_blank')
+            window.open(fileUrl, '_blank', 'noopener')
           } catch (error) {
             utils.handleError(error)
           }
@@ -555,12 +540,10 @@ export function setupFileItemContextMenu() {
           {
             label: 'URL',
             icon: icons?.nav?.copy || '',
-            handler: () => {
+            handler: async () => {
               if (!fileUrl) return
-              try {
-                navigator.clipboard.writeText(fileUrl)
-              } catch (error) {
-                utils.handleError(error)
+              if (!(await utils.copyText(fileUrl))) {
+                utils.statusMessage('Unable to copy URL', true)
               }
             },
           },
@@ -571,10 +554,8 @@ export function setupFileItemContextMenu() {
                   icon: icons?.nav?.copy || '',
                   handler: async () => {
                     if (!fileUrl) return
-                    try {
-                      await utils.copyImage(fileUrl)
-                    } catch (error) {
-                      utils.handleError(error)
+                    if (!(await utils.copyImage(fileUrl))) {
+                      utils.statusMessage('Unable to copy image', true)
                     }
                   },
                 },
@@ -583,26 +564,22 @@ export function setupFileItemContextMenu() {
           {
             label: 'Hash',
             icon: icons?.nav?.copy || '',
-            handler: () => {
+            handler: async () => {
               const hash = itemElem.dataset.hash
               if (!hash) return
-              try {
-                navigator.clipboard.writeText(hash)
-              } catch (error) {
-                utils.handleError(error)
+              if (!(await utils.copyText(hash))) {
+                utils.statusMessage('Unable to copy hash', true)
               }
             },
           },
           {
             label: 'UUID',
             icon: icons?.nav?.copy || '',
-            handler: () => {
+            handler: async () => {
               const uuid = itemElem.dataset.uuid
               if (!uuid) return
-              try {
-                navigator.clipboard.writeText(uuid)
-              } catch (error) {
-                utils.handleError(error)
+              if (!(await utils.copyText(uuid))) {
+                utils.statusMessage('Unable to copy UUID', true)
               }
             },
           },

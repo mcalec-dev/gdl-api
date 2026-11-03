@@ -1,34 +1,12 @@
-let scroll = {
-  lock: () => {},
-  unlock: () => {},
-}
-let _scrollLoaded = false
-
-async function loadScrollModule() {
-  if (_scrollLoaded) return
-  _scrollLoaded = true
-
-  try {
-    const module =
-      // @ts-ignore
-      await import('https://utils.mcalec.dev/scroll.js/scroll.min.js')
-    scroll = module?.default ?? module
-  } catch (error) {
-    console.warn(
-      'Unable to load scroll module; proceeding without scroll locking.',
-      error
-    )
-  }
-}
-
-function ensureScrollModule() {
-  void loadScrollModule()
-}
+import { lockScroll, unlockScroll } from './helpers/scroll.js'
 
 /**
- * @param {string} id
- * @param {string} title
- * @param {string} content
+ * Creates a basic modal from plain text. Dynamic content is assigned with
+ * `textContent` so API values cannot become executable markup.
+ *
+ * @param {string} id Modal element identifier.
+ * @param {string} title Visible modal title.
+ * @param {string} content Visible modal body.
  * @returns {void}
  */
 export function createModal(id, title, content) {
@@ -39,39 +17,50 @@ export function createModal(id, title, content) {
   const modal = document.createElement('div')
   modal.id = id
   modal.classList.add('modal')
-  modal.innerHTML = `
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('${id}')">&times;</span>
-      <h2>${title}</h2>
-      <p>${content}</p>
-    </div>
-  `
+  const modalContent = document.createElement('div')
+  modalContent.className = 'modal-content'
+  const closeButton = document.createElement('button')
+  closeButton.className = 'close'
+  closeButton.type = 'button'
+  closeButton.setAttribute('aria-label', 'Close dialog')
+  closeButton.textContent = '×'
+  closeButton.addEventListener('click', () => closeModal(id))
+  const heading = document.createElement('h2')
+  heading.textContent = title
+  const body = document.createElement('p')
+  body.textContent = content
+  modalContent.append(closeButton, heading, body)
+  modal.appendChild(modalContent)
   document.body.appendChild(modal)
 }
 
 /**
- * @param {string} id
+ * Closes an existing modal and restores background scrolling.
+ *
+ * @param {string} id Modal element identifier.
+ * @returns {void}
  */
 export function closeModal(id) {
   const modal = document.getElementById(id)
   if (modal) {
     modal.style.display = 'none'
-    ensureScrollModule()
-    scroll.unlock()
+    unlockScroll()
   } else {
     console.error(`Modal with ID "${id}" not found.`)
   }
 }
 
 /**
- * @param {string} id
+ * Opens an existing modal and prevents background scrolling.
+ *
+ * @param {string} id Modal element identifier.
+ * @returns {void}
  */
 export function openModal(id) {
   const modal = document.getElementById(id)
   if (modal) {
     modal.style.display = 'block'
-    ensureScrollModule()
-    scroll.lock()
+    lockScroll()
   } else {
     console.error(`Modal with ID "${id}" not found.`)
   }

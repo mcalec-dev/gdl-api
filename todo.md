@@ -24,3 +24,6 @@
 
 - bug with files cron task deleting all records for a cleanup, counting them as "stale" when they are not, needs to be fixed
 - allow videos to be converted into gif format via `?gif=true` query param on `/files` endpoint
+
+- add a `?page=1&limit=100` query param to `/files` endpoint for paginated results (opposite for if client wants to get all results at once)
+- proper `?transcode=true` query param for `/files` endpoint to transcode videos into a more compatible format (ex. mp4) for streaming

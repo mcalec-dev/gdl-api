@@ -95,7 +95,7 @@
         </span>
         <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="transcode-video-toggle" />
       </div>
-      <span class="text-white/80 text-sm mb-1">codec</span>
+      <span class="text-white/80 text-sm mb-1">preferred output format</span>
       <select id="transcode-video-codec-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
         <option value="h264">h264</option>
         <option value="h265">h265</option>
@@ -114,7 +114,7 @@
         </span>
         <input class="bg-black/80 rounded border border-white/20 p-0 select-none pointer-events-auto items-center justify-center" type="checkbox" id="transcode-audio-toggle" />
       </div>
-      <span class="text-white/80 text-sm mb-1">codec</span>
+      <span class="text-white/80 text-sm mb-1">preferred output format</span>
       <select id="transcode-audio-codec-select" class="bg-black/80 rounded border border-white/20 p-1 text-white pointer-events-auto">
         <option value="aac">aac</option>
         <option value="mp3">mp3</option>
@@ -134,4 +134,4 @@
     </button>
   </div>
 </div>
-<script type="module" src="<%= basePath || '' %>/js/min/settings.min.js"></script>
+<script type="module" src="<%= basePath || '' %>/js/min/settings.js"></script>

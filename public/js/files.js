@@ -1,1042 +1,663 @@
-import * as utils from './index.min.js'
-import { initViewer, setupFileClickHandlers } from './viewer.min.js'
+import * as utils from './index.js'
+import { initViewer, setupFileClickHandlers } from './viewer.js'
 import {
-  setupFileItemContextMenu,
-  setContextIcons,
+  createContextMenu,
   setContextBasePaths,
-} from './contextmenu.min.js'
-import { MIN_IMAGE_SCALE, PAGINATION, IMAGE_KERNEL } from './settings.min.js'
+  setContextIcons,
+  setupFileItemContextMenu,
+} from './contextmenu.js'
+import { IMAGE_KERNEL, MIN_IMAGE_SCALE, PAGINATION } from './settings.js'
+import { getMediaKind, getMediaKindFromMime } from './helpers/media.js'
+import { readJsonCookie, writeJsonCookie } from './helpers/storage.js'
 
-let frontendBasePath =
-  document.location.origin + (window.BASE_PATH || '') + '/files'
-let apiBasePath =
-  document.location.origin + (window.BASE_PATH || '') + '/api/files'
+/** @typedef {'name' | 'modified' | 'type' | 'size' | 'created'} SortField */
+/** @typedef {'asc' | 'desc' | 'none'} SortDirection */
+/** @typedef {'directory' | 'image' | 'video' | 'audio' | 'text' | 'other'} FileKind */
+/** @typedef {{name: string, type: 'file' | 'directory', size: number | null, modified: string | number | null, created: string | number | null, mime: string | null, url: string | null, uuid: string | null, hash: string | null}} FileEntry */
+/** @typedef {{path: string, contents: FileEntry[]}} DirectoryData */
+/** @typedef {{directory: string, image: string, video: string, audio: string, text: string, other: string, back: string, sort: Record<SortDirection, string>, nav: Record<string, string>}} FileIcons */
+/** @typedef {{sort: SortField, direction: SortDirection}} SortState */
+
+const FILE_LIST_SELECTOR = '#file-list'
+const SORT_FIELDS = /** @type {SortField[]} */ ([
+  'name',
+  'modified',
+  'type',
+  'size',
+  'created',
+])
+const toolbarButtonClass =
+  'flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-white backdrop-blur-md transition'
+
+/** @type {DirectoryData | null} */
 let currentDirectoryData = null
+/** @type {AbortController | null} */
 let currentFetchController = null
-let currentSort = 'name'
-let currentSortDir = 'none'
-let isInitialized = false
-let SORT_STATES = {
-  name: 'none',
-  modified: 'none',
-  type: 'none',
-  size: 'none',
-  created: 'none',
+/** @type {SortState} */
+let currentSort = { sort: 'name', direction: 'none' }
+/** @type {FileIcons} */
+let icons = {
+  directory: '',
+  image: '',
+  video: '',
+  audio: '',
+  text: '',
+  other: '',
+  back: '',
+  sort: { asc: '', desc: '', none: '' },
+  nav: { next: '', prev: '', link: '', copy: '', download: '', refresh: '' },
+}
+let initialized = false
+
+/** Returns the listing container when it exists on the current page. @returns {HTMLElement | null} Listing container. */
+function getFileList() {
+  const fileList = document.querySelector(FILE_LIST_SELECTOR)
+  return fileList instanceof HTMLElement ? fileList : null
 }
 
-const fileList = document.getElementById('file-list')
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-function h(value) {
-  return utils.escapeHtml(String(value ?? ''))
+/** @param {unknown} value Candidate value. @returns {string | null} Normalized string. */
+function optionalString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-/**
- * @param {unknown} value
- * @returns {string | null}
- */
-function safeMediaUrl(value) {
+/** @param {FileEntry} entry Listing entry. @returns {FileKind} Renderable file kind. */
+function getEntryKind(entry) {
+  if (entry.type === 'directory') return 'directory'
+  const fromMime = getMediaKindFromMime(entry.mime)
+  return fromMime === 'other' ? getMediaKind(entry.name) : fromMime
+}
+
+/** @param {string} path Relative directory path. @returns {string} URI-safe path without surrounding slashes. */
+function encodePath(path) {
+  return path.split('/').filter(Boolean).map(encodeURIComponent).join('/')
+}
+
+/** @param {string} value Candidate path. @returns {string} Relative normalized path. */
+function normalizePath(value) {
+  return value
+    .split('/')
+    .filter((part) => part && part !== '.' && part !== '..')
+    .join('/')
+}
+
+/** @param {string} path Relative directory path. @returns {string} Application-relative directory URL. */
+function getDirectoryUrl(path) {
+  const suffix = encodePath(path)
+  return utils.getAppUrl(`/files${suffix ? `/${suffix}` : ''}`)
+}
+
+/** @param {string} path Relative entry path. @returns {string} Absolute API media URL. */
+function getFileUrl(path) {
+  return `${window.location.origin}${utils.getAppUrl(`/api/files/${encodePath(path)}`)}`
+}
+
+/** @param {unknown} value Candidate value. @param {string} key Property name. @returns {unknown} Property value or undefined. */
+function getRecordValue(value, key) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? /** @type {Record<string, unknown>} */ (value)[key]
+    : undefined
+}
+
+/** @param {unknown} value API item. @returns {FileEntry | null} Normalized entry, or null when invalid. */
+function normalizeEntry(value) {
+  const name = optionalString(getRecordValue(value, 'name'))
+  const type = getRecordValue(value, 'type')
+  if (!name || (type !== 'file' && type !== 'directory')) return null
+  const size = getRecordValue(value, 'size')
+  const modified = getRecordValue(value, 'modified')
+  const created = getRecordValue(value, 'created')
+  return {
+    name,
+    type,
+    size: typeof size === 'number' && Number.isFinite(size) ? size : null,
+    modified:
+      typeof modified === 'string' || typeof modified === 'number'
+        ? modified
+        : null,
+    created:
+      typeof created === 'string' || typeof created === 'number'
+        ? created
+        : null,
+    mime: optionalString(getRecordValue(value, 'mime')),
+    url: optionalString(getRecordValue(value, 'url')),
+    uuid: optionalString(getRecordValue(value, 'uuid')),
+    hash: optionalString(getRecordValue(value, 'hash')),
+  }
+}
+
+/** @param {unknown} payload API response body. @returns {FileEntry[]} Safe listing entries. */
+function normalizeListing(payload) {
+  const contents = getRecordValue(payload, 'contents')
+  const files = getRecordValue(payload, 'files')
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(contents)
+      ? contents
+      : Array.isArray(files)
+        ? files
+        : []
+  return items.map(normalizeEntry).filter((entry) => entry !== null)
+}
+
+/** @param {string} tag Element tag name. @param {string} text Text content. @param {string} [className=''] CSS classes. @returns {HTMLElement} Created element. */
+function createTextElement(tag, text, className = '') {
+  const element = document.createElement(tag)
+  element.textContent = text
+  if (className) element.className = className
+  return element
+}
+
+/** @param {HTMLElement} element Icon wrapper. @param {string} icon Trusted application icon SVG. @returns {void} */
+function appendIcon(element, icon) {
+  if (icon) element.insertAdjacentHTML('beforeend', icon)
+}
+
+/** @param {FileEntry} entry Listing entry. @param {string} itemPath Relative entry path. @param {FileKind} kind Entry kind. @returns {string | null} Preview URL, or null. */
+function getPreviewUrl(entry, itemPath, kind) {
+  if (!['image', 'video', 'audio'].includes(kind)) return null
+  let source = entry.url || getFileUrl(itemPath)
   try {
-    const url = new URL(String(value), window.location.origin)
-    const prefix = `${window.BASE_PATH || ''}/api/files/`
-    if (
-      url.origin !== window.location.origin ||
-      !['http:', 'https:'].includes(url.protocol) ||
-      !url.pathname.startsWith(prefix)
-    ) {
-      return null
-    }
-    return url.href
+    const candidate = new URL(source, window.location.origin)
+    if (candidate.origin !== window.location.origin) return null
+    source = candidate.toString()
   } catch {
     return null
   }
+  if (kind !== 'image') return source
+  const parameters = /** @type {Record<string, string | number>} */ ({})
+  if (typeof MIN_IMAGE_SCALE === 'number') parameters.scale = MIN_IMAGE_SCALE
+  if (typeof IMAGE_KERNEL === 'string') parameters.kernel = IMAGE_KERNEL
+  return utils.constructURL(source, parameters) || source
 }
 
-let icons = {}
-async function loadIcons() {
-  try {
-    const icon = await utils.getIcons()
-    icons = {
-      directory: icon?.folder || '',
-      image: icon?.file?.image || '',
-      video: icon?.file?.video || '',
-      audio: icon?.file?.audio || '',
-      text: icon?.file?.text || '',
-      other: icon?.file?.default || '',
-      back: icon?.nav?.back || '',
-      sort: {
-        asc: icon?.arrow?.asc || '',
-        desc: icon?.arrow?.desc || '',
-        default: icon?.arrow?.default || '',
-      },
-      nav: {
-        exit: icon?.nav?.exit || '',
-        next: icon?.nav?.next || '',
-        prev: icon?.nav?.prev || '',
-        link: icon?.nav?.link || '',
-        copy: icon?.nav?.copy || '',
-        download: icon?.nav?.download || '',
-        refresh: icon?.arrow?.refresh || '',
-      },
-    }
-  } catch (error) {
-    console.error('Error loading icons:', error)
-    icons = {}
-  }
-}
-
-function setCookie(name, value, days = 365) {
-  const expires = new Date()
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`
-}
-
-function getCookie(name) {
-  const nameEQ = name + '='
-  const ca = document.cookie.split(';')
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i]
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
-  }
-  return null
-}
-
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function getFileType(mime) {
-  if (!mime || mime === 'n/a' || typeof mime !== 'string') return 'other'
-  switch (true) {
-    case mime === 'application/mp4':
-      return 'video'
-    case mime.includes('audio'):
-      return 'audio'
-    case mime.includes('image'):
-      return 'image'
-    case mime.includes('text'):
-      return 'text'
-    case mime.includes('video'):
-      return 'video'
-    case mime.includes('application'):
-      return 'other'
-    default:
-      return 'other'
-  }
-}
-
-function saveSortState() {
-  const sortState = JSON.stringify({
-    sort: currentSort,
-    dir: currentSortDir,
-    states: SORT_STATES,
-  })
-  setCookie('fileSortState', sortState)
-}
-
-function loadSortState() {
-  const saved = getCookie('fileSortState')
-  if (saved) {
-    try {
-      const state = JSON.parse(saved)
-      currentSort = state.sort || 'name'
-      currentSortDir = state.dir || 'none'
-      SORT_STATES = state.states || {
-        name: 'none',
-        modified: 'none',
-        type: 'none',
-        size: 'none',
-        created: 'none',
-      }
-    } catch (error) {
-      console.error('Failed to parse sort state cookie:', error)
-    }
-  }
-}
-
-function getSortIcon(state) {
-  switch (state) {
-    case 'asc':
-      return icons?.sort?.asc || ''
-    case 'desc':
-      return icons?.sort?.desc || ''
-    default:
-      return icons?.sort?.default || ''
-  }
-}
-
-function renderSortToolbar() {
-  const sortToolbar = document.getElementById('sort-toolbar')
-  sortToolbar.classList.remove('invisible')
-  const sortButtonStyle =
-    'flex cursor-pointer items-center text-center justify-between min-w-full md:min-w-[8vw] px-3 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
-  const sortStateStyle = 'w-4 h-4 align-middle font-white'
-  const actionButtonStyle =
-    'flex cursor-pointer items-center justify-center px-3 py-2 h-full bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white transition'
-  const isRootDirectory =
-    !currentDirectoryData || currentDirectoryData.path === ''
-  const goBackButton = isRootDirectory
-    ? ''
-    : `
-    <button id="goBack" class="${sortButtonStyle}">
-      <span>Back</span>
-      <span class="${sortStateStyle}">${icons?.back || ''}</span>
-    </button>
-  `
-  const searchInputStyle =
-    'flex-shrink-0 px-3 py-2 min-w-[200px] bg-black/20 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 transition focus:outline-none focus:border-white/40'
-  const sortToolbarHtml = `
-    <div class="flex w-full items-center justify-between gap-3">
-      <div class="flex min-w-0 flex-1 flex-wrap gap-3">
-        ${goBackButton}
-        <button id="sortByName" class="${sortButtonStyle}" data-sort="name">
-          <span>Name</span>
-          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.name)}</span>
-        </button>
-        <button id="sortByModified" class="${sortButtonStyle}" data-sort="modified">
-          <span>Modified</span>
-          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.modified)}</span>
-        </button>
-        <button id="sortByType" class="${sortButtonStyle}" data-sort="type">
-          <span>Type</span>
-          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.type)}</span>
-        </button>
-        <button id="sortBySize" class="${sortButtonStyle}" data-sort="size">
-          <span>Size</span>
-          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.size)}</span>
-        </button>
-        <button id="sortByCreated" class="${sortButtonStyle}" data-sort="created">
-          <span>Created</span>
-          <span class="${sortStateStyle}">${getSortIcon(SORT_STATES.created)}</span>
-        </button>
-      </div>
-      <input type="text" id="searchDirectory" class="${searchInputStyle}" placeholder="Search..." title="Search files in current directory" aria-label="Search directory">
-      <button id="refreshDirectory" class="${actionButtonStyle} flex-shrink-0" title="Refresh directory" aria-label="Refresh directory">
-        <span class="${sortStateStyle}">${icons?.nav?.refresh || ''}</span>
-      </button>
-    </div>
-  `
-  sortToolbar.innerHTML = sortToolbarHtml
-}
-
-function sortContents(contents, sortBy, direction) {
-  if (direction === 'none') {
-    return [...contents].sort((a, b) => {
-      if (a.type !== b.type) {
-        return a.type === 'directory' ? -1 : 1
-      }
-      return a.name.localeCompare(b.name, undefined, {
-        numeric: true,
-      })
-    })
-  }
-  return [...contents].sort((a, b) => {
-    if (a.type !== b.type) {
-      return a.type === 'directory' ? -1 : 1
-    }
-    let comparison = 0
-    switch (sortBy) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name, undefined, {
-          numeric: true,
-        })
-        break
-      case 'modified':
-        comparison = new Date(a.modified || 0) - new Date(b.modified || 0)
-        break
-      case 'type': {
-        const extA = a.name.split('.').pop() || ''
-        const extB = b.name.split('.').pop() || ''
-        comparison = extA.localeCompare(extB)
-        break
-      }
-      case 'size':
-        comparison = (a.size || 0) - (b.size || 0)
-        break
-      case 'created':
-        comparison = new Date(a.created || 0) - new Date(b.created || 0)
-        break
-      default:
-        comparison = a.name.localeCompare(b.name, undefined, {
-          numeric: true,
-        })
-    }
-    return direction === 'asc' ? comparison : -comparison
-  })
-}
-
-async function loadDirectory(path = '', callback, forceRefresh = false) {
-  try {
-    if (currentFetchController) {
-      currentFetchController.abort()
-    }
-    currentFetchController = new AbortController()
-    const { signal } = currentFetchController
-    path = path ? decodeURIComponent(path) : ''
-    fileList.innerHTML = ''
-    const loadingIndicator = document.createElement('div')
-    loadingIndicator.className =
-      'loading fixed left-1/2 top-1/2 min-w-[180px] max-w-[320px] p-4 bg-black/80 select-none rounded-xl text-white border border-white/20 text-center transform -translate-x-1/2 -translate-y-1/2 z-50 cursor-not-allowed'
-    loadingIndicator.innerHTML = '<span>Loading...</span>'
-    fileList.appendChild(loadingIndicator)
-    let queryString = window.location.search
-    if (PAGINATION.enabled && PAGINATION.limit) {
-      const url = new URL(window.location.href)
-      url.searchParams.set('limit', PAGINATION.limit)
-      queryString = url.search
-    }
-    const apiBase = `${document.location.origin}${utils.getAppUrl('/api/files')}`
-    const pathSegment = path ? `/${path.replace(/^\/+/, '')}` : ''
-    const mergedUrl = new URL(`${apiBase}${pathSegment}`)
-    if (queryString) {
-      new URLSearchParams(queryString).forEach((value, key) => {
-        mergedUrl.searchParams.set(key, value)
-      })
-    }
-    if (forceRefresh) {
-      mergedUrl.searchParams.set('_t', String(Date.now()))
-    }
-    const apiUrl = mergedUrl.toString()
-    let needsFetch =
-      !currentDirectoryData ||
-      currentDirectoryData.path !== path ||
-      forceRefresh
-    if (needsFetch) {
-      try {
-        const response = await fetch(apiUrl, { signal })
-        if (!response.ok) {
-          fileList.innerHTML = `
-            <div class="error">
-              Error loading directory contents<br>
-              <small>${response.statusText}</small>
-            </div>
-          `
-          if (fileList.contains(loadingIndicator))
-            fileList.removeChild(loadingIndicator)
-          return
-        }
-        const data = await response.json()
-        let contents = []
-        if (Array.isArray(data)) {
-          contents = data
-        } else if (Array.isArray(data.contents)) {
-          contents = data.contents
-        } else if (Array.isArray(data.files)) {
-          contents = data.files
-        } else if (data.data && Array.isArray(data.data)) {
-          contents = data.data
-        }
-        currentDirectoryData = { path, contents }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          utils.handleError(error)
-          console.error('Fetch error:', error)
-          fileList.innerHTML = `
-            <div class="error">
-              Error loading directory contents<br>
-              <small>${error.message}</small>
-            </div>
-          `
-        }
-        if (fileList.contains(loadingIndicator))
-          fileList.removeChild(loadingIndicator)
-        return
-      }
-    }
-    if (fileList.contains(loadingIndicator))
-      fileList.removeChild(loadingIndicator)
-    renderDirectory(currentDirectoryData.contents, path)
-    if (callback) {
-      callback()
-    }
-  } catch (error) {
-    if (error.name !== 'AbortError') {
-      utils.handleError(error)
-      console.error('Load directory error:', error)
-      fileList.innerHTML = `
-        <div class="error">
-          Error loading directory contents<br>
-          <small>${error.message}</small>
-        </div>
-      `
-    }
-  }
-}
-
-window.addEventListener('popstate', (event) => {
-  const state = event.state || {}
-  if (state.sortBy) {
-    currentSort = state.sortBy
-    currentSortDir = state.sortDir
-  }
-  const location = window.location.pathname
-  const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
-  const currentPath =
-    location === frontendBasePath || location === `${frontendBasePath}/`
-      ? ''
-      : location
-          .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
-          .replace(/\/+/g, '/')
-          .replace(/^\/|\/$/g, '')
-  loadDirectory(currentPath, null, true)
-})
-
-function setupLazyLoading() {
-  if (window.lazyLoadObserver) {
-    window.lazyLoadObserver.disconnect()
-  }
-  window.lazyLoadObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const element = entry.target
-        const hasSource = Boolean(element.getAttribute('src'))
-        if (entry.isIntersecting) {
-          if (
-            element.classList.contains('loading') &&
-            element.dataset.src &&
-            !hasSource
-          ) {
-            const loadImage = () => {
-              const tempImage = new window.Image()
-              const fileItem = element.closest('.file-item')
-              const iconPlaceholder = fileItem?.querySelector(
-                '.file-icon-placeholder'
-              )
-              tempImage.onload = () => {
-                element.addEventListener(
-                  'load',
-                  () => {
-                    element.classList.remove('loading')
-                    element.classList.add('loaded')
-                    if (iconPlaceholder && iconPlaceholder.parentNode) {
-                      iconPlaceholder.parentNode.removeChild(iconPlaceholder)
-                    }
-                  },
-                  { once: true }
-                )
-                element.addEventListener(
-                  'error',
-                  () => {
-                    element.classList.remove('loading')
-                    element.classList.add('error')
-                    element.style.display = 'none'
-                  },
-                  { once: true }
-                )
-                element.src = element.dataset.src
-              }
-              tempImage.onerror = () => {
-                element.classList.remove('loading')
-                element.classList.add('error')
-                element.style.display = 'none'
-              }
-              tempImage.src = element.dataset.src
-            }
-            if (
-              element.tagName.toLowerCase() === 'video' ||
-              element.tagName.toLowerCase() === 'audio'
-            ) {
-              const fileItem = element.closest('.file-item')
-              const iconPlaceholder = fileItem?.querySelector(
-                '.file-icon-placeholder'
-              )
-              element.preload = 'metadata'
-              element.src = element.dataset.src
-              element.muted = element.tagName.toLowerCase() === 'video'
-              element.addEventListener(
-                'loadeddata',
-                () => {
-                  element.classList.remove('loading')
-                  element.classList.add('loaded')
-                  if (iconPlaceholder && iconPlaceholder.parentNode) {
-                    iconPlaceholder.parentNode.removeChild(iconPlaceholder)
-                  }
-                },
-                { once: true }
-              )
-              element.addEventListener(
-                'error',
-                () => {
-                  element.classList.remove('loading')
-                  element.classList.add('error')
-                  element.style.display = 'none'
-                },
-                { once: true }
-              )
-              element.addEventListener(
-                'error',
-                () => {
-                  element.style.display = 'none'
-                },
-                { once: true }
-              )
-            } else {
-              loadImage()
-            }
-          }
-        } else {
-          if (!element.classList.contains('zoomed')) {
-            const iconPlaceholder = element
-              .closest('.file-item')
-              ?.querySelector('.file-icon-placeholder, .absolute.inset-0')
-            if (iconPlaceholder) {
-              iconPlaceholder.style.display = ''
-            }
-            if (
-              element.tagName.toLowerCase() === 'video' ||
-              element.tagName.toLowerCase() === 'audio'
-            ) {
-              element.pause()
-              element.currentTime = 0
-              element.removeAttribute('src')
-              element.preload = 'none'
-              element.load()
-            } else if (!element.classList.contains('loaded')) {
-              element.removeAttribute('src')
-            }
-            element.classList.add('loading')
-          }
-        }
-      })
-    },
-    {
-      rootMargin: '100px 0px',
-      threshold: 0.1,
-    }
+/** @param {FileEntry} entry Listing entry. @param {string} directory Current directory. @param {boolean} directoryOnly Whether the page has no files. @returns {HTMLDivElement} File-list card. */
+function createFileCard(entry, directory, directoryOnly) {
+  const itemPath = normalizePath(
+    directory ? `${directory}/${entry.name}` : entry.name
   )
-  document.querySelectorAll('.file-preview').forEach((element) => {
-    window.lazyLoadObserver.observe(element)
-  })
-}
+  const kind = getEntryKind(entry)
+  const card = document.createElement('div')
+  card.className = directoryOnly
+    ? 'file-item group flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-white/20 bg-black/80 p-4 text-white select-none'
+    : 'file-item group relative flex h-full w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-black/80 text-white select-none'
+  card.dataset.fileType = kind
+  card.dataset.type = kind
+  card.dataset.path = itemPath
+  card.dataset.size = String(entry.size || 0)
+  card.dataset.modified = entry.modified === null ? '' : String(entry.modified)
+  if (entry.uuid) card.dataset.uuid = entry.uuid
+  if (entry.hash) card.dataset.hash = entry.hash
+  const icon = document.createElement('span')
+  icon.className =
+    'file-icon pointer-events-none flex h-8 w-8 flex-shrink-0 items-center justify-center'
+  appendIcon(icon, icons[kind] || icons.other)
 
-function handleDirectoryClick(event) {
-  const target = event.target.closest('.file-item.directory')
-  if (!target) return
-  event.preventDefault()
-  const itemPath = target.dataset.path
-  if (!itemPath) return
-  let newPath = `${frontendBasePath}/${itemPath}`
-    .replace(new RegExp(`^${document.location.origin}`), '')
-    .replace(/\/+/g, '/')
-    .replace(/\/\//g, '/')
-  if (!newPath.endsWith('/')) newPath += '/'
-  const cleanPath = itemPath.replace(new RegExp(`^${frontendBasePath}/?`), '')
-  const url = new URL(window.location.href)
-  url.searchParams.set('page', '1')
-  if (PAGINATION.enabled && PAGINATION.limit) {
-    url.searchParams.set('limit', PAGINATION.limit)
-  }
-  const params = url.search
-  history.pushState({ path: cleanPath }, '', newPath + params)
-  loadDirectory(cleanPath, null, true)
-}
-function setupSortButtons() {
-  const sortButtons = [
-    document.getElementById('sortByName'),
-    document.getElementById('sortByModified'),
-    document.getElementById('sortByType'),
-    document.getElementById('sortBySize'),
-    document.getElementById('sortByCreated'),
-  ]
-  sortButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const sortBy = button.dataset.sort
-      Object.keys(SORT_STATES).forEach((key) => {
-        if (key !== sortBy) SORT_STATES[key] = 'none'
-      })
-      if (SORT_STATES[sortBy] === 'none') {
-        SORT_STATES[sortBy] = 'desc'
-      } else if (SORT_STATES[sortBy] === 'desc') {
-        SORT_STATES[sortBy] = 'asc'
-      } else {
-        SORT_STATES[sortBy] = 'none'
-      }
-      currentSort = sortBy
-      currentSortDir = SORT_STATES[sortBy]
-      saveSortState()
-      const url = new URL(window.location.href)
-      ;['name', 'size', 'type', 'modified', 'created'].forEach((param) =>
-        url.searchParams.delete(param)
+  if (kind === 'directory') {
+    const details = document.createElement('div')
+    details.className = 'min-w-0 flex-1'
+    details.append(
+      createTextElement(
+        'div',
+        entry.name,
+        'overflow-hidden text-ellipsis text-nowrap'
+      ),
+      createTextElement(
+        'div',
+        utils.formatDate(entry.modified) || '',
+        'text-sm text-gray-300'
+      ),
+      createTextElement(
+        'div',
+        utils.formatSize(entry.size) || '',
+        'text-sm text-gray-300'
       )
-      if (SORT_STATES[sortBy] !== 'none') {
-        url.searchParams.set(sortBy, SORT_STATES[sortBy])
-      }
-      window.history.replaceState({}, '', url.pathname + url.search)
-      const useServerSort = getCookie('server-sort') !== 'false'
-      if (useServerSort) {
-        if (
-          currentDirectoryData &&
-          typeof currentDirectoryData.path === 'string'
-        ) {
-          loadDirectory(currentDirectoryData.path, null, true)
-        } else {
-          loadDirectory('', null, true)
-        }
-      } else {
-        if (
-          currentDirectoryData &&
-          Array.isArray(currentDirectoryData.contents)
-        ) {
-          const sorted = sortContents(
-            currentDirectoryData.contents,
-            currentSort,
-            currentSortDir
-          )
-          currentDirectoryData.contents = sorted
-          renderDirectory(sorted, currentDirectoryData.path || '')
-        } else {
-          loadDirectory('', null, true)
-        }
-      }
-    })
-  })
-  const refreshButton = document.getElementById('refreshDirectory')
-  if (refreshButton) {
-    refreshButton.addEventListener('click', () => {
-      loadDirectory(
-        currentDirectoryData ? currentDirectoryData.path : '',
-        null,
-        true
-      )
-    })
-  }
-  const searchInput = document.getElementById('searchDirectory')
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      const query = searchInput.value.toLowerCase()
-      const fileItems = document.querySelectorAll('.file-item')
-      fileItems.forEach((item) => {
-        const fileName = item.querySelector('.text-white')?.textContent || ''
-        const matches = query === '' || fileName.toLowerCase().includes(query)
-        item.style.display = matches ? '' : 'none'
-      })
-    })
-  }
-}
-
-async function renderDirectory(contents, path) {
-  const hasFiles = contents.some((item) => item.type === 'file')
-  const hasDirectories = contents.some((item) => item.type === 'directory')
-  fileList.className = ''
-  fileList.style.gridAutoFlow = ''
-  if (hasFiles) {
-    fileList.classList.add(
-      'grid-view',
-      'grid',
-      '[grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]',
-      'auto-rows-[200px]',
-      'items-start',
-      'justify-items-stretch',
-      'gap-3'
     )
-    fileList.style.gridAutoFlow = 'dense'
-  } else if (hasDirectories) {
-    fileList.classList.remove(
-      'grid-view',
-      'grid',
-      'sm:grid-cols-2',
-      'md:grid-cols-4',
-      'lg:grid-cols-6'
-    )
-    fileList.style.gridAutoFlow = ''
-    fileList.style.gridAutoRows = ''
-    fileList.classList.add('flex', 'flex-col', 'items-start', 'gap-4')
+    card.append(icon, details)
+    return card
   }
-  const sortedContents = contents
-  renderSortToolbar()
-  const goBack = document.getElementById('goBack')
-  if (goBack) {
-    goBack.addEventListener('click', async () => {
-      const parentPath = currentDirectoryData.path
-        .split('/')
-        .slice(0, -1)
-        .join('/')
-      const url = new URL(window.location.href)
-      url.searchParams.set('page', '1')
-      if (PAGINATION.enabled && PAGINATION.limit) {
-        url.searchParams.set('limit', PAGINATION.limit)
-      }
-      const params = url.search
-      window.history.pushState(
-        {},
-        '',
-        `${frontendBasePath}/${parentPath}${params}`
-      )
-      loadDirectory(parentPath, null, true)
-    })
-    window.addEventListener('keydown', async (e) => {
-      if (e.key === 'Backspace') {
-        e.preventDefault()
-        const parentPath = currentDirectoryData.path
-          .split('/')
-          .slice(0, -1)
-          .join('/')
-        const url = new URL(window.location.href)
-        url.searchParams.set('page', '1')
-        if (PAGINATION.enabled && PAGINATION.limit) {
-          url.searchParams.set('limit', PAGINATION.limit)
-        }
-        const params = url.search
-        window.history.pushState(
-          {},
-          '',
-          `${frontendBasePath}/${parentPath}${params}`
-        )
-        loadDirectory(parentPath, null, true)
-      }
-    })
-  }
-  await setupFileClickHandlers('#file-list')
-  let html = ''
-  for (const item of sortedContents) {
-    const itemPath = path ? `${path}/${item.name}` : item.name
-    const itemType =
-      item.type === 'directory' ? 'directory' : getFileType(item.mime)
-    const itemUuid =
-      typeof item.uuid === 'string' &&
-      item.uuid.trim() &&
-      item.uuid.trim() !== 'null' &&
-      item.uuid.trim() !== 'undefined'
-        ? item.uuid.trim()
-        : ''
-    const itemHash =
-      typeof item.hash === 'string' &&
-      item.hash.trim() &&
-      item.hash.trim() !== 'null' &&
-      item.hash.trim() !== 'undefined'
-        ? item.hash.trim()
-        : ''
-    let previewUrl = null
-    if (
-      item.type === 'file' &&
-      (itemType === 'image' || itemType === 'video' || itemType === 'audio')
-    ) {
-      const candidateUrl = item.url
-        ? item.url
-        : itemPath
-          ? `${apiBasePath}/${itemPath
-              .split('/')
-              .map((p) => encodeURIComponent(p))
-              .join('/')}`
-          : null
-      previewUrl = candidateUrl ? safeMediaUrl(candidateUrl) : null
-      if (itemType === 'image' && previewUrl) {
-        const imageParams = {}
-        if (MIN_IMAGE_SCALE != null) imageParams.scale = MIN_IMAGE_SCALE
-        if (IMAGE_KERNEL != null) imageParams.kernel = IMAGE_KERNEL
-        previewUrl = utils.constructURL(previewUrl, imageParams) ?? previewUrl
-      }
-    }
-    let cursorClass = ''
-    if (item.type === 'directory') {
-      cursorClass = 'cursor-pointer'
-    } else {
-      cursorClass = 'cursor-pointer'
-    }
-    if (itemType === 'directory') {
-      if (hasDirectories && !hasFiles) {
-        html += `
-        <div class="file-item directory group bg-black/80 flex items-center h-auto w-full p-4 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
-          <div class="file-icon ${itemType} flex flex-shrink-0 w-8 h-8 mr-3 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
-          <div class="flex-1 min-w-0 overflow-hidden">
-            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
-            <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-              <span>${utils.formatDate(item.modified)}</span>
-              <br />
-              <span>${utils.formatSize(item.size)}</span>
-            </div>
-          </div>
-        </div>
-      `
-      } else {
-        html += `
-        <div class="file-item directory group place-items-start bg-black/80 flex-row h-auto w-full p-0 m-0 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
-          <div class="group w-full min-w-0 p-2 mr-2 overflow-hidden">
-            <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${(icons && icons[itemType]) || (icons && icons.directory) || (icons && icons.other) || ''}</div>
-            <div class="flex-col text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
-            <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-              <span>${utils.formatDate(item.modified)}</span>
-              <br />
-              <span>${utils.formatSize(item.size)}</span>
-            </div>
-          </div>
-        </div>
-      `
-      }
-    } else if (
-      (itemType === 'image' || itemType === 'video' || itemType === 'audio') &&
-      previewUrl
-    ) {
-      html += `
-        <div class="file-item ${itemType} group relative bg-black/80 block w-full h-full align-middle items-center justify-center p-0 break-inside-avoid border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
-          <div class="w-full h-full">
-            ${(() => {
-              const iconPlaceholder = `<div class="file-icon-placeholder absolute inset-0 flex items-center justify-center w-full h-full pointer-events-none z-10"><span class="w-16 h-16 opacity-50">${(icons && icons[itemType]) || (icons && icons.other) || ''}</span></div>`
-              if (itemType === 'audio') {
-                return `
-                  ${iconPlaceholder}
-                  <div class="audio-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <audio class="file-preview audio loading w-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false"></audio>
-                  </div>
-                `
-              }
-              if (itemType === 'image') {
-                return `
-                  ${iconPlaceholder}
-                  <div class="image-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <img class="file-preview image loading w-full h-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" draggable="false" onerror="this.style.display='none'">
-                  </div>
-                `
-              }
-              if (itemType === 'video') {
-                return `
-                  ${iconPlaceholder}
-                  <div class="video-preview-container aspect-video h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <video class="file-preview video loading w-full h-full object-contain select-none" data-src="${h(previewUrl)}" alt="${h(item.name)}" preload="none" onmouseover="if(this.src){const p=this.play();if(p&&typeof p.catch==='function')p.catch(()=>{});this.muted=false;}" onmouseout="if(this.src) { this.pause(); this.currentTime=0; this.muted=true; }" draggable="false" onerror="this.style.display='none'"></video>
-                  </div>
-                `
-              }
-              if (itemType === 'text') {
-                return `
-                  <div class="text-preview-container aspect-auto h-full w-full bg-transparent flex items-center justify-center overflow-hidden select-none">
-                    <div class="file-preview text loading w-full h-full object-contain select-none flex items-center justify-center p-4 text-sm text-gray-300 bg-black/50 border border-white/10 rounded">${(icons && icons.text) || ''}</div>
-                  </div>
-                `
-              }
-              return ''
-            })()}
-          </div>
-          <div class="file-details absolute inset-x-0 bottom-0 duration-300 z-20 bg-black/85 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
-            <div class="flex-col text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-              <span>${utils.formatDate(item.modified)}</span><br>
-              <span>${utils.formatSize(item.size)}</span>
-            </div>
-          </div>
-        </div>
-      `
-    } else {
-      html += `
-        <div class="file-item other group bg-black/80 relative flex w-full h-auto p-3 border border-white/20 rounded-xl text-white pointer-events-auto box-border overflow-hidden select-none ${cursorClass}" data-type="${itemType}" data-file-type="${itemType}" data-path="${itemPath}" data-size="${item.size || 0}" data-uuid="${itemUuid}" data-hash="${itemHash}" data-modified="${item.modified}">
-          <div class="flex items-center w-full gap-3">
-            <div class="file-icon ${itemType} flex flex-shrink-0 w-6 h-6 items-center justify-center">${icons?.[itemType] || icons?.other || ''}</div>
-            <div class="file-details flex-1 min-w-0">
-              <div class="text-white text-decoration-none text-nowrap overflow-hidden text-ellipsis">${h(item.name)}</div>
-              <div class="text-gray-300 text-sm text-nowrap overflow-hidden text-ellipsis">
-                <span>${utils.formatDate(item.modified)}</span><br>
-                <span>${utils.formatSize(item.size)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-    }
-  }
-  const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = html
-  fileList.innerHTML = ''
-  while (tempDiv.firstChild) {
-    fileList.appendChild(tempDiv.firstChild)
-  }
-  setupSortButtons()
-  fileList
-    .querySelectorAll('.file-item[data-file-type="audio"]')
-    .forEach((item) => {
-      const audio = item.querySelector('.file-preview.audio')
-      if (!audio) return
-      item.addEventListener('mouseenter', function () {
-        if (audio.src) {
-          const playPromise = audio.play()
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {})
-          }
-        }
-      })
-      item.addEventListener('mouseleave', function () {
-        audio.pause()
-        audio.currentTime = 0
-      })
-    })
-  setupLazyLoading()
-  renderPaginationUI(contents)
-}
 
-function renderPaginationUI(contents) {
-  try {
-    const controls =
-      document.getElementById('pagination-controls') ||
-      document.getElementById('pagination-container')
-    if (!controls) return
-    const url = new URL(window.location.href)
-    const limitRaw = parseInt(url.searchParams.get('limit'), 10)
-    if (isNaN(limitRaw) || limitRaw <= 0) {
-      controls.hidden = true
-      return
-    }
-    const limit = limitRaw
-    controls.hidden = false
-    const page = Math.max(
-      1,
-      parseInt(url.searchParams.get('page') || '1', 10) || 1
-    )
-    const disablePrev = page <= 1
-    const disableNext = Array.isArray(contents) ? contents.length < limit : true
-    const prevBtn = document.getElementById('pager-prev')
-    const nextBtn = document.getElementById('pager-next')
-    const currentSpan = document.getElementById('pager-current')
-    if (prevBtn) {
-      prevBtn.innerHTML = ''
-      if (icons?.nav?.prev)
-        prevBtn.insertAdjacentHTML('afterbegin', icons.nav.prev)
-      else
-        prevBtn.insertAdjacentHTML('afterbegin', prevBtn.innerHTML || '&#8249;')
-      const prevSvg = prevBtn.querySelector('svg')
-      if (prevSvg) {
-        prevSvg.style.display = 'block'
-        prevSvg.style.width = prevSvg.style.width || '20px'
-        prevSvg.style.height = prevSvg.style.height || '20px'
-        prevSvg.setAttribute('focusable', 'false')
-      }
-      if (disablePrev) {
-        prevBtn.classList.add('opacity-50')
-        prevBtn.classList.add('pointer-events-none')
-        prevBtn.classList.add('cursor-not-allowed')
-      } else {
-        prevBtn.classList.remove('opacity-50')
-        prevBtn.classList.remove('pointer-events-none')
-        prevBtn.classList.remove('cursor-not-allowed')
-      }
-      prevBtn.onclick = () => {
-        if (disablePrev) return
-        const u = new URL(window.location.href)
-        u.searchParams.set('page', String(Math.max(1, page - 1)))
-        if (PAGINATION.enabled && PAGINATION.limit) {
-          u.searchParams.set('limit', PAGINATION.limit)
-        }
-        window.history.replaceState({}, '', u.pathname + u.search)
-        loadDirectory(
-          currentDirectoryData ? currentDirectoryData.path : '',
-          null,
-          true
-        )
-      }
-    }
-    if (nextBtn) {
-      nextBtn.innerHTML = ''
-      if (icons?.nav?.next)
-        nextBtn.insertAdjacentHTML('afterbegin', icons.nav.next)
-      else
-        nextBtn.insertAdjacentHTML('afterbegin', nextBtn.innerHTML || '&#8250;')
-      const nextSvg = nextBtn.querySelector('svg')
-      if (nextSvg) {
-        nextSvg.style.display = 'block'
-        nextSvg.style.width = nextSvg.style.width || '20px'
-        nextSvg.style.height = nextSvg.style.height || '20px'
-        nextSvg.setAttribute('focusable', 'false')
-      }
-      if (disableNext) {
-        nextBtn.classList.add('opacity-50')
-        nextBtn.classList.add('pointer-events-none')
-        nextBtn.classList.add('cursor-not-allowed')
-      } else {
-        nextBtn.classList.remove('opacity-50')
-        nextBtn.classList.remove('pointer-events-none')
-        nextBtn.classList.remove('cursor-not-allowed')
-      }
-      nextBtn.onclick = () => {
-        if (disableNext) return
-        const u = new URL(window.location.href)
-        u.searchParams.set('page', String(page + 1))
-        if (PAGINATION.enabled && PAGINATION.limit) {
-          u.searchParams.set('limit', PAGINATION.limit)
-        }
-        window.history.replaceState({}, '', u.pathname + u.search)
-        loadDirectory(
-          currentDirectoryData ? currentDirectoryData.path : '',
-          null,
-          true
-        )
-      }
-    }
-    if (currentSpan) currentSpan.textContent = `Page ${String(page)}`
-  } catch (err) {
-    console.error('Failed to render pagination UI:', err)
-  }
-}
-
-function getSortFromQuery() {
-  const params = new URLSearchParams(window.location.search)
-  let found = false
-  ;['name', 'size', 'type', 'modified', 'created'].forEach((param) => {
-    const dir = params.get(param)
-    if (dir === 'asc' || dir === 'desc') {
-      currentSort = param
-      currentSortDir = dir
-      Object.keys(SORT_STATES).forEach((key) => (SORT_STATES[key] = 'none'))
-      SORT_STATES[param] = dir
-      found = true
-    }
-  })
-  if (!found) {
-    loadSortState()
-    if (currentSortDir !== 'none') {
-      const url = new URL(window.location.href)
-      url.searchParams.set(currentSort, currentSortDir)
-      window.history.replaceState({}, '', url.pathname + url.search)
-    }
+  const previewUrl = getPreviewUrl(entry, itemPath, kind)
+  if (previewUrl && kind === 'image') {
+    const image = document.createElement('img')
+    image.className = 'file-preview h-full w-full object-contain'
+    image.src = previewUrl
+    image.alt = entry.name
+    image.loading = 'lazy'
+    image.draggable = false
+    card.append(image)
+  } else if (previewUrl && kind === 'video') {
+    const video = document.createElement('video')
+    video.className = 'file-preview h-full w-full object-contain'
+    video.preload = 'metadata'
+    video.muted = true
+    video.src = previewUrl
+    video.addEventListener('mouseenter', playPreview)
+    video.addEventListener('mouseleave', resetPreview)
+    card.append(video)
+  } else if (previewUrl && kind === 'audio') {
+    const audio = document.createElement('audio')
+    audio.className = 'file-preview w-full'
+    audio.controls = true
+    audio.preload = 'metadata'
+    audio.src = previewUrl
+    card.append(icon, audio)
   } else {
-    saveSortState()
+    card.append(icon)
+  }
+  const details = document.createElement('div')
+  details.className =
+    'file-details absolute inset-x-0 bottom-0 z-10 bg-black/85 p-2 transition-opacity md:opacity-0 md:group-hover:opacity-100'
+  details.append(
+    createTextElement(
+      'div',
+      entry.name,
+      'overflow-hidden text-ellipsis text-nowrap'
+    ),
+    createTextElement(
+      'div',
+      utils.formatDate(entry.modified) || '',
+      'text-sm text-gray-300'
+    ),
+    createTextElement(
+      'div',
+      utils.formatSize(entry.size) || '',
+      'text-sm text-gray-300'
+    )
+  )
+  card.append(details)
+  return card
+}
+
+/** @param {Event} event Mouse-enter event. @returns {void} */
+function playPreview(event) {
+  const video = event.currentTarget
+  if (!(video instanceof HTMLVideoElement)) return
+  void video.play().catch(() => {})
+}
+
+/** @param {Event} event Mouse-leave event. @returns {void} */
+function resetPreview(event) {
+  const video = event.currentTarget
+  if (!(video instanceof HTMLVideoElement)) return
+  video.pause()
+  video.currentTime = 0
+}
+
+/** @param {FileEntry} entry Listing entry. @param {SortField} field Sort field. @returns {string | number} Comparable value. */
+function getSortValue(entry, field) {
+  if (field === 'size') return entry.size || 0
+  if (field === 'modified')
+    return entry.modified ? new Date(entry.modified).getTime() : 0
+  if (field === 'created')
+    return entry.created ? new Date(entry.created).getTime() : 0
+  if (field === 'type') return entry.name.split('.').pop()?.toLowerCase() || ''
+  return entry.name
+}
+
+/** @param {FileEntry[]} entries Listing entries. @returns {FileEntry[]} Sorted copy. */
+function sortEntries(entries) {
+  const { sort, direction } = currentSort
+  return [...entries].sort((left, right) => {
+    if (left.type !== right.type) return left.type === 'directory' ? -1 : 1
+    const leftValue = getSortValue(left, sort)
+    const rightValue = getSortValue(right, sort)
+    const comparison =
+      typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : String(leftValue).localeCompare(String(rightValue), undefined, {
+            numeric: true,
+          })
+    return direction === 'desc' ? -comparison : comparison
+  })
+}
+
+/** @param {string} message Status text. @param {boolean} [isError=false] Whether it is a failure. @returns {void} */
+function renderStatus(message, isError = false) {
+  const fileList = getFileList()
+  if (!fileList) return
+  fileList.replaceChildren(
+    createTextElement(
+      'div',
+      message,
+      isError ? 'error text-red-200' : 'loading text-white'
+    )
+  )
+}
+
+/** Renders toolbar controls for the active listing. @returns {void} */
+function renderToolbar() {
+  const toolbar = document.getElementById('sort-toolbar')
+  if (!(toolbar instanceof HTMLElement)) return
+  toolbar.replaceChildren()
+  toolbar.classList.remove('invisible')
+  if (currentDirectoryData?.path) {
+    const back = document.createElement('button')
+    back.type = 'button'
+    back.className = toolbarButtonClass
+    back.append(createTextElement('span', 'Back'))
+    appendIcon(back, icons.back)
+    back.addEventListener('click', goToParentDirectory)
+    toolbar.append(back)
+  }
+  for (const field of SORT_FIELDS) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = toolbarButtonClass
+    button.dataset.sort = field
+    button.append(
+      createTextElement('span', field[0].toUpperCase() + field.slice(1))
+    )
+    appendIcon(
+      button,
+      icons.sort[currentSort.sort === field ? currentSort.direction : 'none']
+    )
+    button.addEventListener('click', selectSort)
+    toolbar.append(button)
+  }
+  const refresh = document.createElement('button')
+  refresh.type = 'button'
+  refresh.className = toolbarButtonClass
+  refresh.title = 'Refresh directory'
+  refresh.append(createTextElement('span', 'Refresh'))
+  appendIcon(refresh, icons.nav.refresh)
+  refresh.addEventListener('click', refreshDirectory)
+  toolbar.append(refresh)
+}
+
+/** @param {Event} event Sort button click. @returns {void} */
+function selectSort(event) {
+  const button = event.currentTarget
+  if (!(button instanceof HTMLButtonElement)) return
+  const field = button.dataset.sort
+  if (!field || !SORT_FIELDS.includes(/** @type {SortField} */ (field))) return
+  const typedField = /** @type {SortField} */ (field)
+  const next =
+    currentSort.sort !== typedField || currentSort.direction === 'none'
+      ? 'asc'
+      : currentSort.direction === 'asc'
+        ? 'desc'
+        : 'none'
+  currentSort = { sort: typedField, direction: next }
+  writeJsonCookie('fileSortState', currentSort)
+  void navigateTo(currentDirectoryData?.path || '', true)
+}
+
+/** Navigates to the parent of the current directory. @returns {void} */
+function goToParentDirectory() {
+  const parent = (currentDirectoryData?.path || '')
+    .split('/')
+    .slice(0, -1)
+    .join('/')
+  void navigateTo(parent, true)
+}
+
+/** Reloads the active directory while bypassing its listing cache. @returns {void} */
+function refreshDirectory() {
+  void loadDirectory(currentDirectoryData?.path || '', true)
+}
+
+/** @param {URLSearchParams} search Query parameters. @param {string} key Parameter name. @param {number} fallback Fallback value. @returns {number} Parsed positive integer. */
+function getPositiveInteger(search, key, fallback) {
+  const value = Number.parseInt(search.get(key) || '', 10)
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback
+}
+
+/** @param {URL} url URL to update. @param {boolean} resetPage Whether to reset the page number. @returns {void} */
+function applyListingQuery(url, resetPage) {
+  if (resetPage) url.searchParams.set('page', '1')
+  if (PAGINATION.enabled && PAGINATION.limit > 0)
+    url.searchParams.set('limit', String(PAGINATION.limit))
+  else url.searchParams.delete('limit')
+  for (const field of SORT_FIELDS) url.searchParams.delete(field)
+  if (currentSort.direction !== 'none')
+    url.searchParams.set(currentSort.sort, currentSort.direction)
+}
+
+/** @param {string} path Target relative directory. @param {boolean} [resetPage=false] Whether to reset pagination. @returns {Promise<void>} Resolves after rendering. */
+async function navigateTo(path, resetPage = false) {
+  const url = new URL(window.location.href)
+  url.pathname = getDirectoryUrl(path)
+  applyListingQuery(url, resetPage)
+  window.history.pushState({}, '', url.pathname + url.search)
+  await loadDirectory(path)
+}
+
+/** @param {string} path Relative directory. @param {boolean} forceRefresh Whether to bypass server cache. @returns {URL} API listing URL. */
+function createListingUrl(path, forceRefresh) {
+  const url = new URL(getFileUrl(path))
+  const pageUrl = new URL(window.location.href)
+  pageUrl.searchParams.forEach((value, key) => url.searchParams.set(key, value))
+  applyListingQuery(url, false)
+  if (forceRefresh) url.searchParams.set('cache', 'false')
+  return url
+}
+
+/** @param {string} path Relative directory. @param {boolean} [forceRefresh=false] Whether to bypass server cache. @returns {Promise<void>} Resolves after rendering or a handled error. */
+async function loadDirectory(path, forceRefresh = false) {
+  if (!getFileList()) return
+  const normalizedPath = normalizePath(path)
+  currentFetchController?.abort()
+  currentFetchController = new AbortController()
+  renderStatus('Loading...')
+  try {
+    const response = await fetch(
+      createListingUrl(normalizedPath, forceRefresh),
+      {
+        credentials: 'same-origin',
+        signal: currentFetchController.signal,
+      }
+    )
+    if (!response.ok)
+      throw new Error(`Unable to load directory (HTTP ${response.status})`)
+    currentDirectoryData = {
+      path: normalizedPath,
+      contents: normalizeListing(await response.json()),
+    }
+    renderDirectory(currentDirectoryData.contents)
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') return
+    utils.handleError(error, 'Directory listing failed')
+    renderStatus(
+      utils.getErrorMessage(error, 'Unable to load directory contents'),
+      true
+    )
   }
 }
 
-async function init() {
-  if (isInitialized) return
-  isInitialized = true
-  try {
-    await loadIcons()
-    setContextIcons(icons)
-    setContextBasePaths(frontendBasePath, apiBasePath)
-    await initViewer({ fileListSelector: '#file-list' })
-    getSortFromQuery()
-    setupFileItemContextMenu()
-  } catch (error) {
-    console.warn('Files page initialization failed:', error)
-    try {
-      utils.handleError(error)
-    } catch (error) {
-      console.warn('Error handler failed:', error)
-    }
+/** @param {FileEntry[]} contents Current directory contents. @returns {void} */
+function renderDirectory(contents) {
+  const fileList = getFileList()
+  if (!fileList || !currentDirectoryData) return
+  const directoryPath = currentDirectoryData.path
+  const sorted = sortEntries(contents)
+  const directoryOnly =
+    sorted.length > 0 && sorted.every((entry) => entry.type === 'directory')
+  fileList.className = directoryOnly
+    ? 'flex flex-col items-start gap-4'
+    : 'grid grid-flow-dense auto-rows-[200px] grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3'
+  if (sorted.length === 0)
+    fileList.replaceChildren(
+      createTextElement('div', 'This directory is empty.', 'text-white')
+    )
+  else
+    fileList.replaceChildren(
+      ...sorted.map((entry) =>
+        createFileCard(entry, directoryPath, directoryOnly)
+      )
+    )
+  renderToolbar()
+  void setupFileClickHandlers(FILE_LIST_SELECTOR)
+  renderPagination(sorted.length)
+}
+
+/** @param {MouseEvent} event Listing click event. @returns {void} */
+function handleDirectoryClick(event) {
+  const target = event.target
+  const card =
+    target instanceof HTMLElement
+      ? target.closest('.file-item[data-file-type="directory"]')
+      : null
+  if (!(card instanceof HTMLElement)) return
+  const path = optionalString(card.dataset.path)
+  if (!path) return
+  event.preventDefault()
+  void navigateTo(path, true)
+}
+
+/** @param {number} itemCount Entry count returned for the current page. @returns {void} */
+function renderPagination(itemCount) {
+  const controls = document.getElementById('pagination-controls')
+  const previous = document.getElementById('pager-prev')
+  const next = document.getElementById('pager-next')
+  const label = document.getElementById('pager-current')
+  if (
+    !(controls instanceof HTMLElement) ||
+    !(previous instanceof HTMLButtonElement) ||
+    !(next instanceof HTMLButtonElement) ||
+    !(label instanceof HTMLElement)
+  )
+    return
+  if (!PAGINATION.enabled || PAGINATION.limit <= 0) {
+    controls.hidden = true
     return
   }
-  const frontendBasePathEscaped = escapeRegExp(frontendBasePath)
-  const initialPath = window.location.pathname
-    .replace(new RegExp(`^${frontendBasePathEscaped}/?`), '')
-    .replace(/\/+/g, '/')
-    .replace(/^\/|\/$/g, '')
-    .replace(/^files\/?/, '')
-  document.addEventListener('click', handleDirectoryClick)
-  const url = new URL(window.location.href)
-  let hasChanges = false
-  if (!url.searchParams.has('page')) {
-    url.searchParams.set('page', '1')
-    hasChanges = true
+  const page = getPositiveInteger(
+    new URL(window.location.href).searchParams,
+    'page',
+    1
+  )
+  const previousDisabled = page <= 1
+  const nextDisabled = itemCount < PAGINATION.limit
+  controls.hidden = false
+  label.textContent = `Page ${page}`
+  previous.replaceChildren()
+  next.replaceChildren()
+  appendIcon(previous, icons.nav.prev)
+  appendIcon(next, icons.nav.next)
+  if (!previous.textContent && !previous.querySelector('svg'))
+    previous.textContent = 'Previous'
+  if (!next.textContent && !next.querySelector('svg')) next.textContent = 'Next'
+  previous.disabled = previousDisabled
+  next.disabled = nextDisabled
+  previous.onclick = () => {
+    if (!previousDisabled) void changePage(page - 1)
   }
-  if (
-    PAGINATION.enabled &&
-    PAGINATION.limit &&
-    !url.searchParams.has('limit')
-  ) {
-    url.searchParams.set('limit', PAGINATION.limit)
-    hasChanges = true
+  next.onclick = () => {
+    if (!nextDisabled) void changePage(page + 1)
   }
-  if (hasChanges) {
-    window.history.replaceState({}, '', url.pathname + url.search)
-  }
-  await loadDirectory(initialPath)
 }
 
-document.addEventListener('DOMContentLoaded', init)
+/** @param {number} page Target page. @returns {Promise<void>} Resolves after the new page loads. */
+async function changePage(page) {
+  const url = new URL(window.location.href)
+  url.searchParams.set('page', String(Math.max(1, page)))
+  applyListingQuery(url, false)
+  window.history.replaceState({}, '', url.pathname + url.search)
+  await loadDirectory(currentDirectoryData?.path || '')
+}
+
+/** Loads and narrows the icon catalog to the keys used by this page. @returns {Promise<void>} Resolves when icon loading completes. */
+async function loadIcons() {
+  const catalog = await utils.getIcons()
+  /** @param {string} key Catalog group. @param {string} child Icon name. @returns {string} Icon markup. */
+  const nested = (key, child) =>
+    optionalString(getRecordValue(getRecordValue(catalog, key), child)) || ''
+  icons = {
+    directory: optionalString(getRecordValue(catalog, 'folder')) || '',
+    image: nested('file', 'image'),
+    video: nested('file', 'video'),
+    audio: nested('file', 'audio'),
+    text: nested('file', 'text'),
+    other: nested('file', 'default'),
+    back: nested('nav', 'back'),
+    sort: {
+      asc: nested('arrow', 'asc'),
+      desc: nested('arrow', 'desc'),
+      none: nested('arrow', 'default'),
+    },
+    nav: {
+      next: nested('nav', 'next'),
+      prev: nested('nav', 'prev'),
+      link: nested('nav', 'link'),
+      copy: nested('nav', 'copy'),
+      download: nested('nav', 'download'),
+      refresh: nested('arrow', 'refresh'),
+    },
+  }
+}
+
+/** Reads a valid persisted sort preference, then lets an explicit URL win. @returns {void} */
+function loadSortState() {
+  const saved = readJsonCookie(
+    'fileSortState',
+    /** @type {SortState} */ ({ sort: 'name', direction: 'none' })
+  )
+  if (
+    SORT_FIELDS.includes(saved.sort) &&
+    ['asc', 'desc', 'none'].includes(saved.direction)
+  )
+    currentSort = saved
+  const url = new URL(window.location.href)
+  for (const field of SORT_FIELDS) {
+    const direction = url.searchParams.get(field)
+    if (direction === 'asc' || direction === 'desc') {
+      currentSort = { sort: field, direction }
+      writeJsonCookie('fileSortState', currentSort)
+      return
+    }
+  }
+}
+
+/** @returns {string} Initial relative directory path. */
+function getInitialPath() {
+  const filesBase = getDirectoryUrl('')
+  const pathname = window.location.pathname
+  return normalizePath(
+    pathname.startsWith(filesBase) ? pathname.slice(filesBase.length) : ''
+  )
+}
+
+/** Initializes the files page once after its DOM has loaded. @returns {Promise<void>} Resolves after the first listing request completes. */
+async function init() {
+  if (initialized) return
+  initialized = true
+  if (!getFileList()) return
+  try {
+    await loadIcons()
+    setContextIcons({
+      directory: icons.directory,
+      image: icons.image,
+      video: icons.video,
+      audio: icons.audio,
+      text: icons.text,
+      other: icons.other,
+      nav: icons.nav,
+    })
+    setContextBasePaths(
+      `${window.location.origin}${getDirectoryUrl('')}`,
+      `${window.location.origin}${utils.getAppUrl('/api/files')}`
+    )
+    createContextMenu()
+    setupFileItemContextMenu()
+    await initViewer({ fileListSelector: FILE_LIST_SELECTOR })
+    loadSortState()
+    document.addEventListener('click', handleDirectoryClick)
+    window.addEventListener('popstate', () => {
+      void loadDirectory(getInitialPath())
+    })
+    const url = new URL(window.location.href)
+    applyListingQuery(url, false)
+    window.history.replaceState({}, '', url.pathname + url.search)
+    await loadDirectory(getInitialPath())
+  } catch (error) {
+    utils.handleError(error, 'Files page initialization failed')
+    renderStatus(
+      utils.getErrorMessage(error, 'Unable to initialize file browser'),
+      true
+    )
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  void init()
+})

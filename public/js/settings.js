@@ -1,205 +1,216 @@
-'use strict'
-const settingsButton = document.getElementById('settings-button')
-const settingsContainer = document.getElementById('settings-container')
-const closeSettings = document.getElementById('close-settings')
-const onekoToggle = document.getElementById('oneko-toggle')
-const serverSortToggle = document.getElementById('server-sort-toggle')
-const imageScaleMinInput = document.getElementById('image-scale-min-input')
-const imageScaleDefaultInput = document.getElementById(
-  'image-scale-default-input'
-)
-const imageScaleMaxInput = document.getElementById('image-scale-max-input')
-const paginationToggle = document.getElementById('pagination-toggle')
-const paginationInput = document.getElementById('pagination-items-select')
-const containerWidthInput = document.getElementById('container-width-input')
-const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
-const resetSettingsButton = document.getElementById('reset-settings-button')
-const imageKernelSelect = document.getElementById('image-kernel-select')
-const transcodeVideoToggle = document.getElementById('transcode-video-toggle')
-const transcodeVideoCodecSelect = document.getElementById(
-  'transcode-video-codec-select'
-)
-const transcodeAudioToggle = document.getElementById('transcode-audio-toggle')
-const transcodeAudioCodecSelect = document.getElementById(
-  'transcode-audio-codec-select'
-)
+import { requestJson } from './helpers/api.js'
+import { getSupportedTranscodeFormats } from './helpers/media.js'
+import { readJsonCookie, writeJsonCookie } from './helpers/storage.js'
+import { handleError } from './helpers/ui.js'
+import { getAppUrl } from './helpers/url.js'
+
+/**
+ * @typedef {{bg: string, color: string}} ThemeSettings
+ */
+
+/**
+ * @typedef {{enabled: boolean, limit: number}} PaginationSettings
+ */
+
+/**
+ * @typedef {{min: number, default: number, max: number}} ImageScaleSettings
+ */
+
+/**
+ * @typedef {{enabled: boolean, codec: string}} TranscodeSettings
+ */
+
+/**
+ * @typedef {{theme: ThemeSettings, oneko: boolean, serverSort: boolean, pagination: PaginationSettings, lang: string, imageScale: ImageScaleSettings, containerWidth: number, imageKernel: string, bytesBits: boolean, transcode: {video: TranscodeSettings, audio: TranscodeSettings}}} Settings
+ */
+
+/** @type {Settings} */
 const FALLBACK_DEFAULTS = {
-  theme: {
-    bg: 'auto',
-    color: 'bg',
-  },
+  theme: { bg: 'auto', color: 'bg' },
   oneko: false,
   serverSort: true,
-  pagination: {
-    enabled: true,
-    limit: 100,
-  },
+  pagination: { enabled: true, limit: 100 },
   lang: 'en',
-  imageScale: {
-    max: 200,
-    default: 100,
-    min: 50,
-  },
+  imageScale: { min: 50, default: 100, max: 200 },
   containerWidth: 65,
   imageKernel: 'lanczos3',
   bytesBits: false,
   transcode: {
-    video: {
-      enabled: true,
-      codec: 'h264',
-    },
-    audio: {
-      enabled: true,
-      codec: 'aac',
-    },
+    video: { enabled: true, codec: 'h264' },
+    audio: { enabled: true, codec: 'aac' },
   },
 }
-let defaults = { ...FALLBACK_DEFAULTS }
-async function loadDefaultSettings() {
-  try {
-    const res = await fetch('/json/default.json')
-    const fetchedDefaults = await res.json()
-    defaults = {
-      ...FALLBACK_DEFAULTS,
-      ...fetchedDefaults,
-      theme: { ...FALLBACK_DEFAULTS.theme, ...fetchedDefaults.theme },
-      pagination: {
-        ...FALLBACK_DEFAULTS.pagination,
-        ...fetchedDefaults.pagination,
-      },
-      imageScale: {
-        ...FALLBACK_DEFAULTS.imageScale,
-        ...fetchedDefaults.imageScale,
-      },
-    }
-  } catch {
-    return console.error('couldnt load default configurations for the settings')
-  }
+
+/**
+ * Determines whether a value is an object-shaped settings payload.
+ *
+ * @param {unknown} value Candidate value.
+ * @returns {value is Record<string, unknown>} Whether the value is a record.
+ */
+function isRecord(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
 }
-function setCookie(name, value, expires = '') {
-  let date = new Date()
-  if (!expires) {
-    date.setTime(date.getTime() + 1 * 365 * 24 * 60 * 60 * 1000) // 1 year
-  }
-  if (expires) {
-    date.setTime(date.getTime() + expires * 1000)
-  }
-  let exp = 'expires=' + date.toUTCString()
-  document.cookie = `${name}=${value};${exp};path=/`
-}
-function getCookie(name) {
-  const cname = name + '='
-  const decodedCookie = decodeURIComponent(document.cookie)
-  const ca = decodedCookie.split(';')
-  for (let c of ca) {
-    c = c.trim()
-    if (c.indexOf(cname) === 0) {
-      return c.substring(cname.length, c.length)
-    }
-  }
-  return ''
-}
-function loadSettings() {
-  const baseSettings = {
-    theme: { ...defaults.theme },
-    oneko: defaults.oneko,
-    serverSort: defaults.serverSort,
-    pagination: { ...defaults.pagination },
-    lang: defaults.lang,
-    imageScale: { ...defaults.imageScale },
-    containerWidth: defaults.containerWidth,
-    bytesBits: defaults.bytesBits,
-    imageKernel: defaults.imageKernel,
+
+/**
+ * Copies settings so consumers cannot mutate the defaults by reference.
+ *
+ * @param {Settings} value Settings to copy.
+ * @returns {Settings} Independent settings copy.
+ */
+function cloneSettings(value) {
+  return {
+    ...value,
+    theme: { ...value.theme },
+    pagination: { ...value.pagination },
+    imageScale: { ...value.imageScale },
     transcode: {
-      video: { ...defaults.transcode.video },
-      audio: { ...defaults.transcode.audio },
+      video: { ...value.transcode.video },
+      audio: { ...value.transcode.audio },
     },
   }
-  const saved = getCookie('settings')
-  if (!saved) return baseSettings
-  try {
-    const parsed = JSON.parse(saved)
-    return {
-      ...baseSettings,
-      theme: { ...defaults.theme, ...parsed.theme },
-      oneko: typeof parsed.oneko === 'boolean' ? parsed.oneko : defaults.oneko,
-      serverSort:
-        typeof parsed.serverSort === 'boolean'
-          ? parsed.serverSort
-          : defaults.serverSort,
-      pagination: { ...defaults.pagination, ...parsed.pagination },
-      lang: parsed.lang || defaults.lang,
-      imageScale: { ...defaults.imageScale, ...parsed.imageScale },
-      containerWidth:
-        typeof parsed.containerWidth === 'number'
-          ? parsed.containerWidth
-          : defaults.containerWidth,
-      bytesBits:
-        typeof parsed.bytesBits === 'boolean'
-          ? parsed.bytesBits
-          : defaults.bytesBits,
-      imageKernel:
-        typeof parsed.imageKernel === 'string'
-          ? parsed.imageKernel
-          : defaults.imageKernel,
-      transcode: {
-        video: {
-          enabled:
-            typeof parsed.transcode?.video?.enabled === 'boolean'
-              ? parsed.transcode.video.enabled
-              : defaults.transcode.video.enabled,
-          codec:
-            typeof parsed.transcode?.video?.codec === 'string'
-              ? parsed.transcode.video.codec
-              : defaults.transcode.video.codec,
-        },
-        audio: {
-          enabled:
-            typeof parsed.transcode?.audio?.enabled === 'boolean'
-              ? parsed.transcode.audio.enabled
-              : defaults.transcode.audio.enabled,
-          codec:
-            typeof parsed.transcode?.audio?.codec === 'string'
-              ? parsed.transcode.audio.codec
-              : defaults.transcode.audio.codec,
-        },
+}
+
+/**
+ * Selects a safe finite number from a settings payload.
+ *
+ * @param {unknown} value Candidate numeric value.
+ * @param {number} fallback Default value.
+ * @param {number} min Minimum accepted value.
+ * @param {number} max Maximum accepted value.
+ * @returns {number} A bounded numeric setting.
+ */
+function getNumber(value, fallback, min, max) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, value))
+    : fallback
+}
+
+/**
+ * Builds complete, validated settings from an unknown source.
+ *
+ * @param {unknown} source API or cookie value.
+ * @param {Settings} [fallback=FALLBACK_DEFAULTS] Defaults to merge against.
+ * @returns {Settings} Complete settings object.
+ */
+function normalizeSettings(source, fallback = FALLBACK_DEFAULTS) {
+  const candidate = isRecord(source) ? source : {}
+  const theme = isRecord(candidate.theme) ? candidate.theme : {}
+  const pagination = isRecord(candidate.pagination) ? candidate.pagination : {}
+  const imageScale = isRecord(candidate.imageScale) ? candidate.imageScale : {}
+  const transcode = isRecord(candidate.transcode) ? candidate.transcode : {}
+  const video = isRecord(transcode.video) ? transcode.video : {}
+  const audio = isRecord(transcode.audio) ? transcode.audio : {}
+
+  const min = getNumber(imageScale.min, fallback.imageScale.min, 10, 400)
+  const max = getNumber(imageScale.max, fallback.imageScale.max, min, 800)
+  const defaultScale = getNumber(
+    imageScale.default,
+    fallback.imageScale.default,
+    min,
+    max
+  )
+
+  return {
+    theme: {
+      bg: typeof theme.bg === 'string' ? theme.bg : fallback.theme.bg,
+      color:
+        typeof theme.color === 'string' ? theme.color : fallback.theme.color,
+    },
+    oneko:
+      typeof candidate.oneko === 'boolean' ? candidate.oneko : fallback.oneko,
+    serverSort:
+      typeof candidate.serverSort === 'boolean'
+        ? candidate.serverSort
+        : fallback.serverSort,
+    pagination: {
+      enabled:
+        typeof pagination.enabled === 'boolean'
+          ? pagination.enabled
+          : fallback.pagination.enabled,
+      limit: getNumber(pagination.limit, fallback.pagination.limit, 1, 1000),
+    },
+    lang: typeof candidate.lang === 'string' ? candidate.lang : fallback.lang,
+    imageScale: { min, default: defaultScale, max },
+    containerWidth: getNumber(
+      candidate.containerWidth,
+      fallback.containerWidth,
+      50,
+      100
+    ),
+    imageKernel:
+      typeof candidate.imageKernel === 'string'
+        ? candidate.imageKernel
+        : fallback.imageKernel,
+    bytesBits:
+      typeof candidate.bytesBits === 'boolean'
+        ? candidate.bytesBits
+        : fallback.bytesBits,
+    transcode: {
+      video: {
+        enabled:
+          typeof video.enabled === 'boolean'
+            ? video.enabled
+            : fallback.transcode.video.enabled,
+        codec:
+          typeof video.codec === 'string'
+            ? video.codec
+            : fallback.transcode.video.codec,
       },
-    }
-  } catch (e) {
-    console.error('Failed to parse settings:', e)
-    return { ...defaults }
+      audio: {
+        enabled:
+          typeof audio.enabled === 'boolean'
+            ? audio.enabled
+            : fallback.transcode.audio.enabled,
+        codec:
+          typeof audio.codec === 'string'
+            ? audio.codec
+            : fallback.transcode.audio.codec,
+      },
+    },
   }
 }
-function saveSettings(settings) {
+
+/** @type {Settings} */
+export let defaults = cloneSettings(FALLBACK_DEFAULTS)
+
+/**
+ * Loads the defaults shipped with the application.
+ *
+ * @returns {Promise<Settings>} Active defaults, with fallback values on failure.
+ */
+export async function loadDefaultSettings() {
   try {
-    const json = JSON.stringify(settings)
-    setCookie('settings', encodeURIComponent(json))
-  } catch (e) {
-    console.error('Failed to save settings:', e)
+    const payload = await requestJson(getAppUrl('/json/default.json'), {
+      credentials: 'same-origin',
+    })
+    defaults = normalizeSettings(payload, FALLBACK_DEFAULTS)
+  } catch (error) {
+    handleError(error, 'Could not load default settings')
   }
+  return defaults
 }
-const settings = loadSettings()
-function toggleOneko(toggle) {
-  const onekoEl = document.getElementById('oneko')
-  const onekoScript = document.getElementById('oneko-script')
-  if (toggle) {
-    if (onekoScript) return
-    if (!onekoScript) {
-      const script = document.createElement('script')
-      script.id = 'oneko-script'
-      script.src = 'https://sleepie.uk/oneko.js'
-      script.async = true
-      document.body.appendChild(script)
-    }
-  }
-  if (!toggle) {
-    if (!onekoScript) return
-    if (onekoScript) {
-      document.body.removeChild(onekoScript)
-      document.body.removeChild(onekoEl)
-    }
-  }
+
+/**
+ * Reads persisted settings without allowing invalid cookies to break a page.
+ *
+ * @returns {Settings} Complete validated settings.
+ */
+function loadSettings() {
+  return normalizeSettings(readJsonCookie('settings', null), defaults)
 }
+
+/**
+ * Persists the current settings object.
+ *
+ * @returns {boolean} Whether storage succeeded.
+ */
+function saveSettings() {
+  return writeJsonCookie('settings', settings)
+}
+
+/** @type {Settings} */
+export const settings = loadSettings()
+
 export let MIN_IMAGE_SCALE = settings.imageScale.min
 export let IMAGE_SCALE = settings.imageScale.default
 export let MAX_IMAGE_SCALE = settings.imageScale.max
@@ -215,340 +226,382 @@ export let TRANSCODE_VIDEO_CODEC = settings.transcode.video.codec
 export let TRANSCODE_VIDEO_ENABLED = settings.transcode.video.enabled
 export let TRANSCODE_AUDIO_CODEC = settings.transcode.audio.codec
 export let TRANSCODE_AUDIO_ENABLED = settings.transcode.audio.enabled
-function setExportVals(min, def, max) {
-  MIN_IMAGE_SCALE = min
-  IMAGE_SCALE = def
-  MAX_IMAGE_SCALE = max
+
+/**
+ * Synchronizes exported compatibility values with the settings object.
+ *
+ * @returns {void}
+ */
+function applyRuntimeSettings() {
+  MIN_IMAGE_SCALE = settings.imageScale.min
+  IMAGE_SCALE = settings.imageScale.default
+  MAX_IMAGE_SCALE = settings.imageScale.max
+  SERVER_SIDE_SORT = settings.serverSort
+  PAGINATION.enabled = settings.pagination.enabled
+  PAGINATION.limit = settings.pagination.limit
+  CONTAINER_WIDTH = settings.containerWidth
+  BYTES_BITS = settings.bytesBits
+  IMAGE_KERNEL = settings.imageKernel
+  TRANSCODE_VIDEO_CODEC = settings.transcode.video.codec
+  TRANSCODE_VIDEO_ENABLED = settings.transcode.video.enabled
+  TRANSCODE_AUDIO_CODEC = settings.transcode.audio.codec
+  TRANSCODE_AUDIO_ENABLED = settings.transcode.audio.enabled
+}
+
+/**
+ * Updates image-scale exports while keeping their ordering valid.
+ *
+ * @param {number} min Minimum scale.
+ * @param {number} defaultScale Default scale.
+ * @param {number} max Maximum scale.
+ * @returns {{MIN_IMAGE_SCALE: number, IMAGE_SCALE: number, MAX_IMAGE_SCALE: number}} Current scale values.
+ */
+export function setExportVals(min, defaultScale, max) {
+  settings.imageScale = normalizeSettings(
+    { imageScale: { min, default: defaultScale, max } },
+    settings
+  ).imageScale
+  applyRuntimeSettings()
   return { MIN_IMAGE_SCALE, IMAGE_SCALE, MAX_IMAGE_SCALE }
 }
+
+let containerWidthListenerBound = false
+
+/**
+ * Applies the selected maximum content width to the main page container.
+ *
+ * @param {number} width Maximum width percentage.
+ * @returns {number} Applied width.
+ */
 function setContainerWidth(width) {
-  CONTAINER_WIDTH = width
+  settings.containerWidth = getNumber(width, defaults.containerWidth, 50, 100)
+  CONTAINER_WIDTH = settings.containerWidth
   const container = document.getElementById('container')
-  if (container) {
-    const applyWidth = () => {
-      const isDesktop = window.matchMedia('(min-width: 48rem)').matches
-      container.style.maxWidth = isDesktop ? `${CONTAINER_WIDTH}%` : ''
-    }
-    applyWidth()
-    if (!container._containerWidthListener) {
-      container._containerWidthListener = () => {
-        applyWidth()
-      }
-      window.addEventListener('resize', container._containerWidthListener)
-    }
+  if (!(container instanceof HTMLElement)) return CONTAINER_WIDTH
+
+  /** @returns {void} */
+  const applyWidth = () => {
+    const isDesktop = window.matchMedia('(min-width: 48rem)').matches
+    container.style.maxWidth = isDesktop ? `${CONTAINER_WIDTH}%` : ''
+  }
+  applyWidth()
+
+  if (!containerWidthListenerBound) {
+    window.addEventListener('resize', applyWidth)
+    containerWidthListenerBound = true
   }
   return CONTAINER_WIDTH
 }
+
+/**
+ * Toggles the optional Oneko script without removing unrelated DOM nodes.
+ *
+ * @param {boolean} enabled Whether Oneko should be active.
+ * @returns {void}
+ */
+function toggleOneko(enabled) {
+  const script = document.getElementById('oneko-script')
+  if (enabled && !script) {
+    const nextScript = document.createElement('script')
+    nextScript.id = 'oneko-script'
+    nextScript.src = 'https://sleepie.uk/oneko.js'
+    nextScript.async = true
+    document.body.appendChild(nextScript)
+    return
+  }
+  if (!enabled) {
+    script?.remove()
+    document.getElementById('oneko')?.remove()
+  }
+}
+
+/**
+ * Resets persisted settings and reloads the page to reinitialize dependent modules.
+ *
+ * @returns {void}
+ */
 function resetAllSettings() {
-  const defaultSettings = { ...defaults }
-  Object.keys(defaultSettings).forEach((key) => {
-    settings[key] = defaultSettings[key]
-  })
-  saveSettings(settings)
+  Object.assign(settings, cloneSettings(defaults))
+  applyRuntimeSettings()
+  saveSettings()
   window.location.reload()
 }
-async function isCodecSupported(codec, type) {
-  if (!navigator.mediaCapabilities) {
-    return true
+
+/**
+ * Fills a transcode selector with actual browser-playable options.
+ *
+ * @param {HTMLSelectElement | null} select Select element.
+ * @param {'video' | 'audio'} kind Transcode media kind.
+ * @param {string} preferredValue Persisted selector value.
+ * @returns {Promise<string>} Selected supported value, or an empty string.
+ */
+async function populateSupportedCodecs(select, kind, preferredValue) {
+  if (!select) return ''
+
+  const formats = await getSupportedTranscodeFormats(kind)
+  select.replaceChildren()
+
+  if (formats.length === 0) {
+    const unavailable = document.createElement('option')
+    unavailable.value = ''
+    unavailable.textContent = 'No supported playback format'
+    select.appendChild(unavailable)
+    select.disabled = true
+    return ''
   }
-  try {
-    let config
-    if (type === 'audio') {
-      const audioCodecMap = {
-        aac: 'audio/mp4;codecs="mp4a.40.2"',
-        mp3: 'audio/mpeg',
-        opus: 'audio/ogg;codecs="opus"',
-        flac: 'audio/flac',
-      }
-      const mimeType = audioCodecMap[codec]
-      if (!mimeType) return false
-      config = {
-        type: 'file',
-        audio: {
-          contentType: mimeType,
-          channels: 2,
-          bitrate: 128000,
-          samplerate: 44100,
-        },
-      }
-    } else {
-      const videoCodecMap = {
-        h264: 'video/mp4;codecs="avc1.42E01E"',
-        h265: 'video/mp4;codecs="hev1.1.6.L93.B0"',
-        vp9: 'video/webm;codecs="vp9"',
-        vp8: 'video/webm;codecs="vp8"',
-        av1: 'video/mp4;codecs="av01.0.05M.08"',
-        mov: 'video/quicktime',
-        mkv: 'video/x-matroska',
-        webm: 'video/webm',
-      }
-      const mimeType = videoCodecMap[codec]
-      if (!mimeType) return false
-      config = {
-        type: 'file',
-        video: {
-          contentType: mimeType,
-          width: 1280,
-          height: 720,
-          bitrate: 2500000,
-          framerate: 24,
-        },
-      }
-    }
-    const result = await navigator.mediaCapabilities.encodingInfo(config)
-    return result && result.supported
-  } catch (error) {
-    console.debug(`Could not check codec support for ${codec}:`, error)
-    return true
+
+  for (const format of formats) {
+    const option = document.createElement('option')
+    option.value = format.value
+    option.textContent = format.label
+    option.dataset.category = format.category
+    select.appendChild(option)
   }
+
+  const selected = formats.some((format) => format.value === preferredValue)
+    ? preferredValue
+    : formats[0].value
+  select.value = selected
+  select.disabled = false
+  return selected
 }
-async function populateSupportedCodecs() {
-  const videoCodecs = ['h264', 'h265', 'vp9', 'vp8', 'av1']
-  const videoContainers = ['mov', 'mkv', 'webm']
-  const audioCodecs = ['aac', 'mp3', 'opus', 'flac']
-  if (transcodeVideoCodecSelect) {
-    const supportedVideoCodecs = []
-    for (const codec of videoCodecs) {
-      const supported = await isCodecSupported(codec, 'video')
-      if (supported) {
-        supportedVideoCodecs.push(codec)
-      }
-    }
-    supportedVideoCodecs.push(...videoContainers)
-    transcodeVideoCodecSelect.innerHTML = ''
-    supportedVideoCodecs.forEach((codec) => {
-      const option = document.createElement('option')
-      option.value = codec
-      option.textContent = codec
-      transcodeVideoCodecSelect.appendChild(option)
-    })
-    transcodeVideoCodecSelect.value =
-      settings.transcode.video.codec || supportedVideoCodecs[0] || 'h264'
+
+/**
+ * Reads a numeric input, clamps it through settings normalization, and saves the result.
+ *
+ * @param {HTMLInputElement} input Input element.
+ * @param {'min' | 'default' | 'max'} key Image scale property.
+ * @returns {void}
+ */
+function bindImageScaleInput(input, key) {
+  /** Updates this image-scale setting and persists the normalized values. @returns {void} */
+  const apply = () => {
+    const nextScale = { ...settings.imageScale, [key]: Number(input.value) }
+    settings.imageScale = normalizeSettings(
+      { imageScale: nextScale },
+      settings
+    ).imageScale
+    applyRuntimeSettings()
+    saveSettings()
   }
-  if (transcodeAudioCodecSelect) {
-    const supportedAudioCodecs = []
-    for (const codec of audioCodecs) {
-      const supported = await isCodecSupported(codec, 'audio')
-      if (supported) {
-        supportedAudioCodecs.push(codec)
-      }
-    }
-    transcodeAudioCodecSelect.innerHTML = ''
-    supportedAudioCodecs.forEach((codec) => {
-      const option = document.createElement('option')
-      option.value = codec
-      option.textContent = codec
-      transcodeAudioCodecSelect.appendChild(option)
-    })
-    transcodeAudioCodecSelect.value =
-      settings.transcode.audio.codec || supportedAudioCodecs[0] || 'aac'
-  }
+  input.addEventListener('change', apply)
+  input.addEventListener('input', apply)
 }
-async function updateSettings() {
-  onekoToggle.addEventListener('change', async (e) => {
-    settings.oneko = e.target.checked
-    saveSettings(settings)
+
+/**
+ * Binds the settings panel and synchronizes its values with the shared state.
+ *
+ * @returns {Promise<void>} Resolves after async codec capability checks finish.
+ */
+export async function updateSettings() {
+  const settingsButton = document.getElementById('settings-button')
+  const settingsContainer = document.getElementById('settings-container')
+  const closeSettings = document.getElementById('close-settings')
+  const onekoToggle = document.getElementById('oneko-toggle')
+  const serverSortToggle = document.getElementById('server-sort-toggle')
+  const paginationToggle = document.getElementById('pagination-toggle')
+  const paginationInput = document.getElementById('pagination-items-select')
+  const imageKernelSelect = document.getElementById('image-kernel-select')
+  const imageScaleMinInput = document.getElementById('image-scale-min-input')
+  const imageScaleDefaultInput = document.getElementById(
+    'image-scale-default-input'
+  )
+  const imageScaleMaxInput = document.getElementById('image-scale-max-input')
+  const containerWidthInput = document.getElementById('container-width-input')
+  const bytesBitsToggle = document.getElementById('bytes-bits-toggle')
+  const resetSettingsButton = document.getElementById('reset-settings-button')
+  const transcodeVideoToggle = document.getElementById('transcode-video-toggle')
+  const transcodeVideoCodecSelect = document.getElementById(
+    'transcode-video-codec-select'
+  )
+  const transcodeAudioToggle = document.getElementById('transcode-audio-toggle')
+  const transcodeAudioCodecSelect = document.getElementById(
+    'transcode-audio-codec-select'
+  )
+
+  if (onekoToggle instanceof HTMLInputElement) {
+    onekoToggle.checked = settings.oneko
+    onekoToggle.addEventListener('change', () => {
+      settings.oneko = onekoToggle.checked
+      toggleOneko(settings.oneko)
+      saveSettings()
+    })
     toggleOneko(settings.oneko)
-  })
-  if (settings.oneko) {
-    onekoToggle.checked = true
-    toggleOneko(true)
-  } else {
-    onekoToggle.checked = false
-    toggleOneko(false)
   }
-  if (serverSortToggle) {
+
+  if (serverSortToggle instanceof HTMLInputElement) {
     serverSortToggle.checked = settings.serverSort
-    serverSortToggle.addEventListener('change', (e) => {
-      settings.serverSort = e.target.checked
-      SERVER_SIDE_SORT = settings.serverSort
-      saveSettings(settings)
+    serverSortToggle.addEventListener('change', () => {
+      settings.serverSort = serverSortToggle.checked
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (paginationToggle) {
+
+  if (paginationToggle instanceof HTMLInputElement) {
     paginationToggle.checked = settings.pagination.enabled
-    paginationToggle.addEventListener('change', (e) => {
-      settings.pagination.enabled = e.target.checked
-      PAGINATION.enabled = settings.pagination.enabled
-      saveSettings(settings)
+    paginationToggle.addEventListener('change', () => {
+      settings.pagination.enabled = paginationToggle.checked
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (paginationInput) {
+
+  if (paginationInput instanceof HTMLSelectElement) {
     paginationInput.value = String(settings.pagination.limit)
-    paginationInput.addEventListener('change', (e) => {
-      const v = parseInt(e.target.value, 10)
-      settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
-      PAGINATION.limit = settings.pagination.limit
-      saveSettings(settings)
-    })
-    paginationInput.addEventListener('input', (e) => {
-      const v = parseInt(e.target.value, 10)
-      settings.pagination.limit = isNaN(v) ? defaults.pagination.limit : v
-      PAGINATION.limit = settings.pagination.limit
-      saveSettings(settings)
+    paginationInput.addEventListener('change', () => {
+      settings.pagination.limit = getNumber(
+        Number(paginationInput.value),
+        defaults.pagination.limit,
+        1,
+        1000
+      )
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (imageKernelSelect) {
+
+  if (imageKernelSelect instanceof HTMLSelectElement) {
     imageKernelSelect.value = settings.imageKernel
-    imageKernelSelect.addEventListener('change', (e) => {
-      settings.imageKernel = e.target.value
-      IMAGE_KERNEL = settings.imageKernel
-      saveSettings(settings)
+    imageKernelSelect.addEventListener('change', () => {
+      settings.imageKernel = imageKernelSelect.value || defaults.imageKernel
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  try {
-    const minVal = parseInt(settings.imageScale.min, 10)
-    const defaultVal = parseInt(settings.imageScale.default, 10)
-    const maxVal = parseInt(settings.imageScale.max, 10)
-    setExportVals(minVal, defaultVal, maxVal)
-    if (imageScaleMinInput) {
-      imageScaleMinInput.value = String(minVal)
-      const applyMin = (val) => {
-        settings.imageScale.min = isNaN(val) ? defaults.imageScale.min : val
-        saveSettings(settings)
-        if (imageScaleDefaultInput)
-          imageScaleDefaultInput.min = String(settings.imageScale.min)
-        if (imageScaleMaxInput)
-          imageScaleMaxInput.min = String(settings.imageScale.min)
-        setExportVals(
-          settings.imageScale.min,
-          settings.imageScale.default,
-          settings.imageScale.max
-        )
-      }
-      imageScaleMinInput.addEventListener('change', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        applyMin(v)
-      })
-      imageScaleMinInput.addEventListener('input', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        if (!isNaN(v)) applyMin(v)
-      })
-    }
-    if (imageScaleDefaultInput) {
-      imageScaleDefaultInput.value = String(defaultVal)
-      imageScaleDefaultInput.min = String(minVal)
-      imageScaleDefaultInput.max = String(maxVal)
-      imageScaleDefaultInput.addEventListener('change', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        settings.imageScale.default = isNaN(v) ? defaults.imageScale.default : v
-        saveSettings(settings)
-        setExportVals(
-          settings.imageScale.min,
-          settings.imageScale.default,
-          settings.imageScale.max
-        )
-      })
-      imageScaleDefaultInput.addEventListener('input', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        if (!isNaN(v)) {
-          setExportVals(settings.imageScale.min, v, settings.imageScale.max)
-        }
-      })
-    }
-    if (imageScaleMaxInput) {
-      imageScaleMaxInput.value = String(maxVal)
-      const applyMax = (val) => {
-        settings.imageScale.max = isNaN(val) ? defaults.imageScale.max : val
-        saveSettings(settings)
-        if (imageScaleDefaultInput)
-          imageScaleDefaultInput.max = String(settings.imageScale.max)
-        if (imageScaleMinInput)
-          imageScaleMinInput.max = String(settings.imageScale.max)
-        setExportVals(
-          settings.imageScale.min,
-          settings.imageScale.default,
-          settings.imageScale.max
-        )
-      }
-      imageScaleMaxInput.addEventListener('change', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        applyMax(v)
-      })
-      imageScaleMaxInput.addEventListener('input', (ev) => {
-        const v = parseInt(ev.target.value, 10)
-        if (!isNaN(v)) applyMax(v)
-      })
-    }
-  } catch {
-    window.IMAGE_SCALE = defaults.imageScale.default
+
+  if (imageScaleMinInput instanceof HTMLInputElement) {
+    imageScaleMinInput.value = String(settings.imageScale.min)
+    bindImageScaleInput(imageScaleMinInput, 'min')
   }
-  if (containerWidthInput) {
+  if (imageScaleDefaultInput instanceof HTMLInputElement) {
+    imageScaleDefaultInput.value = String(settings.imageScale.default)
+    bindImageScaleInput(imageScaleDefaultInput, 'default')
+  }
+  if (imageScaleMaxInput instanceof HTMLInputElement) {
+    imageScaleMaxInput.value = String(settings.imageScale.max)
+    bindImageScaleInput(imageScaleMaxInput, 'max')
+  }
+
+  if (containerWidthInput instanceof HTMLInputElement) {
     containerWidthInput.value = String(settings.containerWidth)
     setContainerWidth(settings.containerWidth)
-    const applyContainerWidth = (e) => {
-      const v = parseInt(e.target.value, 10)
-      settings.containerWidth = isNaN(v) ? defaults.containerWidth : v
-      setContainerWidth(settings.containerWidth)
-      saveSettings(settings)
+    /** Applies and persists the selected content-width setting. @returns {void} */
+    const apply = () => {
+      setContainerWidth(Number(containerWidthInput.value))
+      saveSettings()
     }
-    containerWidthInput.addEventListener('change', applyContainerWidth)
-    containerWidthInput.addEventListener('input', applyContainerWidth)
+    containerWidthInput.addEventListener('change', apply)
+    containerWidthInput.addEventListener('input', apply)
   }
-  if (bytesBitsToggle) {
+
+  if (bytesBitsToggle instanceof HTMLInputElement) {
     bytesBitsToggle.checked = settings.bytesBits
-    bytesBitsToggle.addEventListener('change', (e) => {
-      settings.bytesBits = e.target.checked
-      BYTES_BITS = settings.bytesBits
-      saveSettings(settings)
+    bytesBitsToggle.addEventListener('change', () => {
+      settings.bytesBits = bytesBitsToggle.checked
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (resetSettingsButton) {
+
+  if (resetSettingsButton instanceof HTMLButtonElement) {
     resetSettingsButton.addEventListener('click', () => {
-      if (confirm('Reset all settings to defaults?')) {
-        resetAllSettings()
-      }
+      if (confirm('Reset all settings to defaults?')) resetAllSettings()
     })
   }
-  await populateSupportedCodecs()
-  if (transcodeVideoToggle) {
-    transcodeVideoToggle.checked = settings.transcode.video.enabled
-    transcodeVideoToggle.addEventListener('change', (e) => {
-      settings.transcode.video.enabled = e.target.checked
-      TRANSCODE_VIDEO_ENABLED = settings.transcode.video.enabled
-      saveSettings(settings)
+
+  const videoValue = await populateSupportedCodecs(
+    transcodeVideoCodecSelect instanceof HTMLSelectElement
+      ? transcodeVideoCodecSelect
+      : null,
+    'video',
+    settings.transcode.video.codec
+  )
+  if (transcodeVideoToggle instanceof HTMLInputElement) {
+    transcodeVideoToggle.disabled = !videoValue
+    transcodeVideoToggle.checked = Boolean(
+      videoValue && settings.transcode.video.enabled
+    )
+    settings.transcode.video.enabled = transcodeVideoToggle.checked
+    transcodeVideoToggle.addEventListener('change', () => {
+      settings.transcode.video.enabled = transcodeVideoToggle.checked
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (transcodeVideoCodecSelect) {
-    transcodeVideoCodecSelect.addEventListener('change', (e) => {
-      settings.transcode.video.codec = e.target.value
-      TRANSCODE_VIDEO_CODEC = settings.transcode.video.codec
-      saveSettings(settings)
+  if (transcodeVideoCodecSelect instanceof HTMLSelectElement) {
+    settings.transcode.video.codec = videoValue
+    transcodeVideoCodecSelect.addEventListener('change', () => {
+      settings.transcode.video.codec = transcodeVideoCodecSelect.value
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (transcodeAudioToggle) {
-    transcodeAudioToggle.checked = settings.transcode.audio.enabled
-    transcodeAudioToggle.addEventListener('change', (e) => {
-      settings.transcode.audio.enabled = e.target.checked
-      TRANSCODE_AUDIO_ENABLED = settings.transcode.audio.enabled
-      saveSettings(settings)
+
+  const audioValue = await populateSupportedCodecs(
+    transcodeAudioCodecSelect instanceof HTMLSelectElement
+      ? transcodeAudioCodecSelect
+      : null,
+    'audio',
+    settings.transcode.audio.codec
+  )
+  if (transcodeAudioToggle instanceof HTMLInputElement) {
+    transcodeAudioToggle.disabled = !audioValue
+    transcodeAudioToggle.checked = Boolean(
+      audioValue && settings.transcode.audio.enabled
+    )
+    settings.transcode.audio.enabled = transcodeAudioToggle.checked
+    transcodeAudioToggle.addEventListener('change', () => {
+      settings.transcode.audio.enabled = transcodeAudioToggle.checked
+      applyRuntimeSettings()
+      saveSettings()
     })
   }
-  if (transcodeAudioCodecSelect) {
-    transcodeAudioCodecSelect.addEventListener('change', (e) => {
-      settings.transcode.audio.codec = e.target.value
-      TRANSCODE_AUDIO_CODEC = settings.transcode.audio.codec
-      saveSettings(settings)
+  if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
+    settings.transcode.audio.codec = audioValue
+    transcodeAudioCodecSelect.addEventListener('change', () => {
+      settings.transcode.audio.codec = transcodeAudioCodecSelect.value
+      applyRuntimeSettings()
+      saveSettings()
+    })
+  }
+
+  applyRuntimeSettings()
+  saveSettings()
+
+  if (
+    settingsButton instanceof HTMLButtonElement &&
+    settingsContainer instanceof HTMLElement
+  ) {
+    settingsButton.addEventListener('click', () => {
+      settingsContainer.hidden = !settingsContainer.hidden
+      settingsButton.hidden = settingsContainer.hidden === false
+    })
+  }
+  if (
+    closeSettings instanceof HTMLElement &&
+    settingsContainer instanceof HTMLElement &&
+    settingsButton instanceof HTMLButtonElement
+  ) {
+    closeSettings.addEventListener('click', () => {
+      settingsContainer.hidden = true
+      settingsButton.hidden = false
     })
   }
 }
-document.addEventListener('DOMContentLoaded', async () => {
+
+/**
+ * Initializes settings after the settings partial is present in the DOM.
+ *
+ * @returns {Promise<void>} Resolves after controls are bound.
+ */
+async function initSettings() {
   await loadDefaultSettings()
   Object.assign(settings, loadSettings())
+  applyRuntimeSettings()
   await updateSettings()
-  settingsButton.addEventListener('click', async () => {
-    settingsContainer.hidden = !settingsContainer.hidden
-    settingsButton.hidden = !settingsButton.hidden
-  })
-  closeSettings.addEventListener('click', async () => {
-    settingsContainer.hidden = !settingsContainer.hidden
-    settingsButton.hidden = !settingsButton.hidden
-  })
-})
-export {
-  setExportVals,
-  loadDefaultSettings,
-  updateSettings,
-  defaults,
-  settings,
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  void initSettings()
+})
