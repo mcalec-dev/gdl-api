@@ -35,6 +35,7 @@ let currentDirectoryData = null
 let currentFetchController = null
 /** @type {SortState} */
 let currentSort = { sort: 'name', direction: 'none' }
+let currentSearch = ''
 /** @type {FileIcons} */
 let icons = {
   directory: '',
@@ -149,7 +150,11 @@ function createTextElement(tag, text, className = '') {
 
 /** @param {HTMLElement} element Icon wrapper. @param {string} icon Trusted application icon SVG. @returns {void} */
 function appendIcon(element, icon) {
-  if (icon) element.insertAdjacentHTML('beforeend', icon)
+  if (!icon) return
+  element.insertAdjacentHTML('beforeend', icon)
+  const svg = element.lastElementChild
+  if (svg?.tagName.toLowerCase() === 'svg')
+    svg.classList.add('h-4', 'w-4', 'shrink-0')
 }
 
 /** @param {FileEntry} entry Listing entry. @param {string} itemPath Relative entry path. @param {FileKind} kind Entry kind. @returns {string | null} Preview URL, or null. */
@@ -183,6 +188,7 @@ function createFileCard(entry, directory, directoryOnly) {
   card.dataset.fileType = kind
   card.dataset.type = kind
   card.dataset.path = itemPath
+  card.dataset.name = entry.name
   card.dataset.size = String(entry.size || 0)
   card.dataset.modified = entry.modified === null ? '' : String(entry.modified)
   if (entry.uuid) card.dataset.uuid = entry.uuid
@@ -330,6 +336,21 @@ function renderToolbar() {
   if (!(toolbar instanceof HTMLElement)) return
   toolbar.replaceChildren()
   toolbar.classList.remove('invisible')
+  const search = document.createElement('input')
+  search.id = 'file-search'
+  search.type = 'search'
+  search.placeholder = 'Filter current page'
+  search.setAttribute('aria-label', 'Filter current page')
+  search.value = currentSearch
+  search.className =
+    'rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white placeholder:text-gray-400 focus:border-white/50 focus:outline-none'
+  search.addEventListener('input', () => {
+    currentSearch = search.value.trim().toLocaleLowerCase()
+    applySearchFilter()
+  })
+  const sortControls = document.createElement('div')
+  sortControls.id = 'sort-controls'
+  toolbar.append(sortControls, search)
   if (currentDirectoryData?.path) {
     const back = document.createElement('button')
     back.type = 'button'
@@ -337,7 +358,7 @@ function renderToolbar() {
     back.append(createTextElement('span', 'Back'))
     appendIcon(back, icons.back)
     back.addEventListener('click', goToParentDirectory)
-    toolbar.append(back)
+    sortControls.append(back)
   }
   for (const field of SORT_FIELDS) {
     const button = document.createElement('button')
@@ -352,16 +373,47 @@ function renderToolbar() {
       icons.sort[currentSort.sort === field ? currentSort.direction : 'none']
     )
     button.addEventListener('click', selectSort)
-    toolbar.append(button)
+    sortControls.append(button)
   }
   const refresh = document.createElement('button')
   refresh.type = 'button'
+  refresh.id = 'file-refresh'
   refresh.className = toolbarButtonClass
   refresh.title = 'Refresh directory'
   refresh.append(createTextElement('span', 'Refresh'))
   appendIcon(refresh, icons.nav.refresh)
   refresh.addEventListener('click', refreshDirectory)
   toolbar.append(refresh)
+}
+
+/** Filters rendered file cards without changing the server-paginated listing. @returns {void} */
+function applySearchFilter() {
+  const fileList = getFileList()
+  if (!fileList) return
+  const cards = [...fileList.querySelectorAll('.file-item')]
+  let visibleCount = 0
+  for (const card of cards) {
+    if (!(card instanceof HTMLElement)) continue
+    const matches = (card.dataset.name || '')
+      .toLocaleLowerCase()
+      .includes(currentSearch)
+    card.hidden = !matches
+    if (matches) visibleCount += 1
+  }
+  let emptyMessage = fileList.querySelector('[data-search-empty]')
+  if (currentSearch && cards.length > 0 && visibleCount === 0) {
+    if (!emptyMessage) {
+      emptyMessage = createTextElement(
+        'div',
+        'No matching files.',
+        'text-white'
+      )
+      emptyMessage.setAttribute('data-search-empty', 'true')
+      fileList.append(emptyMessage)
+    }
+  } else {
+    emptyMessage?.remove()
+  }
 }
 
 /** @param {Event} event Sort button click. @returns {void} */
@@ -486,6 +538,7 @@ function renderDirectory(contents) {
       )
     )
   renderToolbar()
+  applySearchFilter()
   void setupFileClickHandlers(FILE_LIST_SELECTOR)
   renderPagination(sorted.length)
 }
@@ -612,9 +665,21 @@ function loadSortState() {
 function getInitialPath() {
   const filesBase = getDirectoryUrl('')
   const pathname = window.location.pathname
-  return normalizePath(
-    pathname.startsWith(filesBase) ? pathname.slice(filesBase.length) : ''
-  )
+  const encodedPath = pathname.startsWith(filesBase)
+    ? pathname.slice(filesBase.length)
+    : ''
+  const decodedPath = encodedPath
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment)
+      } catch {
+        return segment
+      }
+    })
+    .join('/')
+  return normalizePath(decodedPath)
 }
 
 /** Initializes the files page once after its DOM has loaded. @returns {Promise<void>} Resolves after the first listing request completes. */

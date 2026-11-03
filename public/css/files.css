@@ -1,3 +1,47 @@
+.file-browser #sort-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+#sort-controls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#file-search {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+}
+
+#file-refresh {
+  grid-column: 2;
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+@media (min-width: 1280px) {
+  .file-browser #sort-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 20rem) auto;
+    align-items: center;
+  }
+
+  #file-search {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  #file-refresh {
+    grid-column: 3;
+  }
+}
+
 .file-item img {
   image-rendering: auto;
 }
