@@ -12,5 +12,5 @@
     "checkJs": true
   },
   "include": ["**/*.js"],
-  "exclude": ["node_modules/**/*", "min/**/*"]
+  "exclude": ["node_modules/**/*", "**/min/**/*"]
 }

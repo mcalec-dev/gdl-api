@@ -3,7 +3,7 @@ const { getMimeType } = require('../file/mimeAndHash')
 const { spawnFfmpeg } = require('../ffmpeg/ffmpeg')
 /**
  * @typedef {'audio' | 'video' | 'video_audio'} TranscodeMode
- * @typedef {{mode: 'audio', audioCodec: string, container: string} | {mode: 'video', videoCodec: string, container: string} | {mode: 'video_audio', videoCodec: string, audioCodec: string, container: string}} TranscodeOptions
+ * @typedef {{mode: 'audio', audioCodec: string, container: string, muxer: string, extension: string} | {mode: 'video', videoCodec: string, container: string, muxer: string, extension: string} | {mode: 'video_audio', videoCodec: string, audioCodec: string, container: string, muxer: string, extension: string}} TranscodeOptions
  */
 /**
  * @param {string | undefined} convertParam
@@ -17,26 +17,120 @@ function parseConvertParam(convertParam) {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
   if (tokens.length === 0 || tokens.length > 2) return null
-  /** @type {Record<string, {codec: string, container: string, type: 'audio' | 'video'}>} */
+  /** @type {Record<string, {codec: string, container: string, muxer: string, extension: string, type: 'audio' | 'video'}>} */
   const codecMap = {
-    // Video
-    mp4: { codec: 'h264', container: 'mp4', type: 'video' },
-    h264: { codec: 'h264', container: 'mp4', type: 'video' },
-    h265: { codec: 'hevc', container: 'mp4', type: 'video' },
-    vp9: { codec: 'vp9', container: 'webm', type: 'video' },
-    vp8: { codec: 'vp8', container: 'webm', type: 'video' },
-    av1: { codec: 'av1', container: 'mp4', type: 'video' },
-    mov: { codec: 'h264', container: 'mov', type: 'video' },
-    mkv: { codec: 'h264', container: 'mkv', type: 'video' },
-    webm: { codec: 'vp9', container: 'webm', type: 'video' },
-    // Audio
-    aac: { codec: 'aac', container: 'm4a', type: 'audio' },
-    mp3: { codec: 'libmp3lame', container: 'mp3', type: 'audio' },
-    opus: { codec: 'libopus', container: 'opus', type: 'audio' },
-    vorbis: { codec: 'libvorbis', container: 'ogg', type: 'audio' },
-    flac: { codec: 'flac', container: 'flac', type: 'audio' },
-    ogg: { codec: 'libvorbis', container: 'ogg', type: 'audio' },
-    m4a: { codec: 'aac', container: 'm4a', type: 'audio' },
+    mp4: {
+      codec: 'h264',
+      container: 'mp4',
+      muxer: 'mp4',
+      extension: 'mp4',
+      type: 'video',
+    },
+    h264: {
+      codec: 'h264',
+      container: 'mp4',
+      muxer: 'mp4',
+      extension: 'mp4',
+      type: 'video',
+    },
+    h265: {
+      codec: 'h265',
+      container: 'mp4',
+      muxer: 'mp4',
+      extension: 'mp4',
+      type: 'video',
+    },
+    vp9: {
+      codec: 'vp9',
+      container: 'webm',
+      muxer: 'webm',
+      extension: 'webm',
+      type: 'video',
+    },
+    vp8: {
+      codec: 'vp8',
+      container: 'webm',
+      muxer: 'webm',
+      extension: 'webm',
+      type: 'video',
+    },
+    av1: {
+      codec: 'av1',
+      container: 'mp4',
+      muxer: 'mp4',
+      extension: 'mp4',
+      type: 'video',
+    },
+    mov: {
+      codec: 'h264',
+      container: 'mov',
+      muxer: 'mov',
+      extension: 'mov',
+      type: 'video',
+    },
+    mkv: {
+      codec: 'h264',
+      container: 'mkv',
+      muxer: 'matroska',
+      extension: 'mkv',
+      type: 'video',
+    },
+    webm: {
+      codec: 'vp9',
+      container: 'webm',
+      muxer: 'webm',
+      extension: 'webm',
+      type: 'video',
+    },
+    aac: {
+      codec: 'aac',
+      container: 'm4a',
+      muxer: 'ipod',
+      extension: 'm4a',
+      type: 'audio',
+    },
+    mp3: {
+      codec: 'mp3',
+      container: 'mp3',
+      muxer: 'mp3',
+      extension: 'mp3',
+      type: 'audio',
+    },
+    opus: {
+      codec: 'opus',
+      container: 'opus',
+      muxer: 'opus',
+      extension: 'opus',
+      type: 'audio',
+    },
+    vorbis: {
+      codec: 'vorbis',
+      container: 'ogg',
+      muxer: 'ogg',
+      extension: 'ogg',
+      type: 'audio',
+    },
+    flac: {
+      codec: 'flac',
+      container: 'flac',
+      muxer: 'flac',
+      extension: 'flac',
+      type: 'audio',
+    },
+    ogg: {
+      codec: 'vorbis',
+      container: 'ogg',
+      muxer: 'ogg',
+      extension: 'ogg',
+      type: 'audio',
+    },
+    m4a: {
+      codec: 'aac',
+      container: 'm4a',
+      muxer: 'ipod',
+      extension: 'm4a',
+      type: 'audio',
+    },
   }
 
   const first = codecMap[tokens[0]]
@@ -48,16 +142,29 @@ function parseConvertParam(convertParam) {
         mode: 'audio',
         audioCodec: first.codec,
         container: first.container,
+        muxer: first.muxer,
+        extension: first.extension,
       }
     }
     return {
       mode: 'video',
       videoCodec: first.codec,
       container: first.container,
+      muxer: first.muxer,
+      extension: first.extension,
     }
   }
   const second = codecMap[tokens[1]]
   if (!second || first.type !== 'video' || second.type !== 'audio') {
+    return null
+  }
+  const validAudioForVideo = /** @type {Record<string, Set<string>>} */ ({
+    mp4: new Set(['aac', 'mp3']),
+    webm: new Set(['opus', 'vorbis']),
+    mov: new Set(['aac', 'mp3']),
+    mkv: new Set(['aac', 'mp3', 'opus', 'flac']),
+  })
+  if (!validAudioForVideo[first.container]?.has(tokens[1])) {
     return null
   }
   return {
@@ -65,6 +172,8 @@ function parseConvertParam(convertParam) {
     videoCodec: first.codec,
     audioCodec: second.codec,
     container: first.container,
+    muxer: first.muxer,
+    extension: first.extension,
   }
 }
 /**
@@ -115,7 +224,13 @@ function shouldConvertAudio(convertParam, isVideoFile, isAudioFile) {
  * @param {string} container
  * @returns {TranscodeStream}
  */
-function convertVideo(inputPath, videoCodec, audioCodec, container) {
+function convertVideo(
+  inputPath,
+  videoCodec,
+  audioCodec,
+  container,
+  muxer = container
+) {
   /** @type {string[]} */
   const args = [
     '-i',
@@ -129,11 +244,11 @@ function convertVideo(inputPath, videoCodec, audioCodec, container) {
     '-movflags',
     'frag_keyframe+empty_moov',
     '-f',
-    container,
+    muxer,
     'pipe:1',
   ]
   log.debug(
-    `FFmpeg video conversion: ${videoCodec} video, ${audioCodec} audio -> ${container}`
+    `FFmpeg video conversion: ${videoCodec} video, ${audioCodec} audio -> ${container} (${muxer})`
   )
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
@@ -156,7 +271,7 @@ function convertVideo(inputPath, videoCodec, audioCodec, container) {
  * @param {string} container
  * @returns {TranscodeStream}
  */
-function convertAudio(inputPath, audioCodec, container) {
+function convertAudio(inputPath, audioCodec, container, muxer = container) {
   /** @type {string[]} */
   const args = [
     '-i',
@@ -167,10 +282,12 @@ function convertAudio(inputPath, audioCodec, container) {
     '-q:a',
     '4', // quality (0-9 for VBR, lower is better)
     '-f',
-    container,
+    muxer,
     'pipe:1',
   ]
-  log.debug(`FFmpeg audio conversion: ${audioCodec} audio -> ${container}`)
+  log.debug(
+    `FFmpeg audio conversion: ${audioCodec} audio -> ${container} (${muxer})`
+  )
   const ffmpegProcess =
     /** @type {import('child_process').ChildProcessWithoutNullStreams} */ (
       /** @type {unknown} */ (spawnFfmpeg(args))

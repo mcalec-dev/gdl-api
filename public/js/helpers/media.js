@@ -173,6 +173,58 @@ export function getMediaKind(value) {
 }
 
 /**
+ * Resolves the valid browser-safe container for a given video/audio transcode pair.
+ *
+ * @param {string | undefined} videoCodec Candidate video codec.
+ * @param {string | undefined} audioCodec Candidate audio codec.
+ * @returns {{container: string, videoCodec: string, audioCodec: string} | null} Compatible pair, or null when the combination is invalid.
+ */
+export function getCompatibleTranscodePair(videoCodec, audioCodec) {
+  const nextVideo =
+    typeof videoCodec === 'string' ? videoCodec.toLowerCase() : ''
+  const nextAudio =
+    typeof audioCodec === 'string' ? audioCodec.toLowerCase() : ''
+  if (!nextVideo) return null
+
+  /** @type {Record<string, string[]>} */
+  const compatibleAudio = {
+    h264: ['aac', 'mp3'],
+    h265: ['aac', 'mp3'],
+    av1: ['aac', 'mp3'],
+    vp9: ['opus', 'vorbis'],
+    vp8: ['opus', 'vorbis'],
+    mov: ['aac', 'mp3'],
+    mkv: ['aac', 'mp3', 'opus', 'flac'],
+    webm: ['opus', 'vorbis'],
+  }
+
+  const container =
+    nextVideo === 'h264' || nextVideo === 'h265' || nextVideo === 'av1'
+      ? 'mp4'
+      : nextVideo === 'vp9' || nextVideo === 'vp8'
+        ? 'webm'
+        : nextVideo === 'mov'
+          ? 'mov'
+          : nextVideo === 'mkv'
+            ? 'mkv'
+            : nextVideo === 'webm'
+              ? 'webm'
+              : null
+
+  if (!container) return null
+  if (!nextAudio) return { container, videoCodec: nextVideo, audioCodec: '' }
+
+  const supportedAudio = compatibleAudio[nextVideo]
+  if (!supportedAudio || !supportedAudio.includes(nextAudio)) return null
+
+  return {
+    container,
+    videoCodec: nextVideo,
+    audioCodec: nextAudio,
+  }
+}
+
+/**
  * Checks playback support for a concrete codec/container format.
  *
  * @param {TranscodeFormat} format Candidate output format.

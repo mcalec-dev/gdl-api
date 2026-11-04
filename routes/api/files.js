@@ -77,12 +77,18 @@ function streamTranscodedMedia(req, res, filePath, options) {
   })
   const transcode =
     options.mode === 'audio'
-      ? convertAudio(filePath, options.audioCodec, options.container)
+      ? convertAudio(
+          filePath,
+          options.audioCodec,
+          options.container,
+          options.muxer
+        )
       : convertVideo(
           filePath,
           options.videoCodec,
           options.mode === 'video' ? 'copy' : options.audioCodec,
-          options.container
+          options.container,
+          options.muxer
         )
   const ffmpegProcess = transcode.process
   const stream = transcode.stream
@@ -247,6 +253,14 @@ router.get(
         log.error('Error syncing entries to database:', syncError)
       }
       const responseData = req.user ? paginatedFiltered : paginatedFiles
+      if (hasPagination) {
+        res.set('X-Total-Count', String(sortedFiltered.length))
+        res.set('X-Has-More', String(sortedFiltered.length > page * limit))
+        res.set(
+          'X-Page-Count',
+          String(Math.max(1, Math.ceil(sortedFiltered.length / limit)))
+        )
+      }
       if (hasPagination && cacheMode.useCache) {
         await setCachedPaginationResult(
           normalizedDir,
@@ -432,6 +446,14 @@ router.get(
         }
       } catch (syncError) {
         log.error('Error syncing directory entries to database:', syncError)
+      }
+      if (hasPagination) {
+        res.set('X-Total-Count', String(sorted.length))
+        res.set('X-Has-More', String(sorted.length > page * limit))
+        res.set(
+          'X-Page-Count',
+          String(Math.max(1, Math.ceil(sorted.length / limit)))
+        )
       }
       if (hasPagination && cacheMode.useCache) {
         await setCachedPaginationResult(

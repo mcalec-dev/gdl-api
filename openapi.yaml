@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: gdl-api
   description: gdl-api express server
-  version: '0.8.5'
+  version: '0.8.6'
 servers:
   - url: https://gdl.mcalec.dev/api
     description: production server

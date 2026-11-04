@@ -1,5 +1,8 @@
 import { requestJson } from './helpers/api.js'
-import { getSupportedTranscodeFormats } from './helpers/media.js'
+import {
+  getCompatibleTranscodePair,
+  getSupportedTranscodeFormats,
+} from './helpers/media.js'
 import { readJsonCookie, writeJsonCookie } from './helpers/storage.js'
 import { handleError } from './helpers/ui.js'
 import { getAppUrl } from './helpers/url.js'
@@ -517,10 +520,25 @@ export async function updateSettings() {
     'video',
     settings.transcode.video.codec
   )
+  const audioValue = await populateSupportedCodecs(
+    transcodeAudioCodecSelect instanceof HTMLSelectElement
+      ? transcodeAudioCodecSelect
+      : null,
+    'audio',
+    settings.transcode.audio.codec
+  )
+  const compatiblePair = getCompatibleTranscodePair(videoValue, audioValue)
+  const safeVideoCodec =
+    compatiblePair?.videoCodec || videoValue || defaults.transcode.video.codec
+  const safeAudioCodec =
+    compatiblePair?.audioCodec || audioValue || defaults.transcode.audio.codec
+  settings.transcode.video.codec = safeVideoCodec
+  settings.transcode.audio.codec = safeAudioCodec
+
   if (transcodeVideoToggle instanceof HTMLInputElement) {
-    transcodeVideoToggle.disabled = !videoValue
+    transcodeVideoToggle.disabled = !safeVideoCodec
     transcodeVideoToggle.checked = Boolean(
-      videoValue && settings.transcode.video.enabled
+      safeVideoCodec && settings.transcode.video.enabled
     )
     settings.transcode.video.enabled = transcodeVideoToggle.checked
     transcodeVideoToggle.addEventListener('change', () => {
@@ -530,7 +548,7 @@ export async function updateSettings() {
     })
   }
   if (transcodeVideoCodecSelect instanceof HTMLSelectElement) {
-    settings.transcode.video.codec = videoValue
+    transcodeVideoCodecSelect.value = safeVideoCodec
     transcodeVideoCodecSelect.addEventListener('change', () => {
       settings.transcode.video.codec = transcodeVideoCodecSelect.value
       applyRuntimeSettings()
@@ -538,17 +556,10 @@ export async function updateSettings() {
     })
   }
 
-  const audioValue = await populateSupportedCodecs(
-    transcodeAudioCodecSelect instanceof HTMLSelectElement
-      ? transcodeAudioCodecSelect
-      : null,
-    'audio',
-    settings.transcode.audio.codec
-  )
   if (transcodeAudioToggle instanceof HTMLInputElement) {
-    transcodeAudioToggle.disabled = !audioValue
+    transcodeAudioToggle.disabled = !safeAudioCodec
     transcodeAudioToggle.checked = Boolean(
-      audioValue && settings.transcode.audio.enabled
+      safeAudioCodec && settings.transcode.audio.enabled
     )
     settings.transcode.audio.enabled = transcodeAudioToggle.checked
     transcodeAudioToggle.addEventListener('change', () => {
@@ -558,7 +569,7 @@ export async function updateSettings() {
     })
   }
   if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
-    settings.transcode.audio.codec = audioValue
+    transcodeAudioCodecSelect.value = safeAudioCodec
     transcodeAudioCodecSelect.addEventListener('change', () => {
       settings.transcode.audio.codec = transcodeAudioCodecSelect.value
       applyRuntimeSettings()

@@ -14,7 +14,7 @@ import { readJsonCookie, writeJsonCookie } from './helpers/storage.js'
 /** @typedef {'asc' | 'desc' | 'none'} SortDirection */
 /** @typedef {'directory' | 'image' | 'video' | 'audio' | 'text' | 'other'} FileKind */
 /** @typedef {{name: string, type: 'file' | 'directory', size: number | null, modified: string | number | null, created: string | number | null, mime: string | null, url: string | null, uuid: string | null, hash: string | null}} FileEntry */
-/** @typedef {{path: string, contents: FileEntry[]}} DirectoryData */
+/** @typedef {{path: string, contents: FileEntry[], totalCount?: number}} DirectoryData */
 /** @typedef {{directory: string, image: string, video: string, audio: string, text: string, other: string, back: string, sort: Record<SortDirection, string>, nav: Record<string, string>}} FileIcons */
 /** @typedef {{sort: SortField, direction: SortDirection}} SortState */
 
@@ -339,8 +339,8 @@ function renderToolbar() {
   const search = document.createElement('input')
   search.id = 'file-search'
   search.type = 'search'
-  search.placeholder = 'Filter current page'
-  search.setAttribute('aria-label', 'Filter current page')
+  search.placeholder = 'Filter'
+  search.setAttribute('aria-label', 'Filter')
   search.value = currentSearch
   search.className =
     'rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white placeholder:text-gray-400 focus:border-white/50 focus:outline-none'
@@ -380,7 +380,7 @@ function renderToolbar() {
   refresh.id = 'file-refresh'
   refresh.className = toolbarButtonClass
   refresh.title = 'Refresh directory'
-  refresh.append(createTextElement('span', 'Refresh'))
+  refresh.setAttribute('aria-label', 'Refresh directory')
   appendIcon(refresh, icons.nav.refresh)
   refresh.addEventListener('click', refreshDirectory)
   toolbar.append(refresh)
@@ -501,9 +501,18 @@ async function loadDirectory(path, forceRefresh = false) {
     )
     if (!response.ok)
       throw new Error(`Unable to load directory (HTTP ${response.status})`)
+    const body = await response.json()
+    const totalCount = Number.parseInt(
+      response.headers.get('x-total-count') || '',
+      10
+    )
+    const normalizedContents = normalizeListing(body)
     currentDirectoryData = {
       path: normalizedPath,
-      contents: normalizeListing(await response.json()),
+      contents: normalizedContents,
+      totalCount: Number.isFinite(totalCount)
+        ? totalCount
+        : normalizedContents.length,
     }
     renderDirectory(currentDirectoryData.contents)
   } catch (error) {
@@ -579,8 +588,12 @@ function renderPagination(itemCount) {
     'page',
     1
   )
+  const totalCount =
+    currentDirectoryData && Number.isFinite(currentDirectoryData.totalCount)
+      ? /** @type {number} */ (currentDirectoryData.totalCount)
+      : Math.max(itemCount, 0)
+  const nextDisabled = totalCount <= page * PAGINATION.limit
   const previousDisabled = page <= 1
-  const nextDisabled = itemCount < PAGINATION.limit
   controls.hidden = false
   label.textContent = `Page ${page}`
   previous.replaceChildren()

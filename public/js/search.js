@@ -1,4 +1,5 @@
 import * as utils from './index.js'
+import { getMediaKind } from './helpers/media.js'
 import { MIN_IMAGE_SCALE } from './settings.js'
 
 /** @typedef {'all' | 'file' | 'directory' | 'uuid' | 'hash'} SearchType */
@@ -30,10 +31,18 @@ function formattedUrl(value) {
   if (!text) return ''
   try {
     const url = new URL(text, window.location.origin)
-    const filesPath = utils.getAppUrl('/api/files/')
-    if (url.pathname.startsWith(filesPath)) {
-      url.pathname =
-        utils.getAppUrl('/files/') + url.pathname.slice(filesPath.length)
+    const apiRoot = utils.getAppUrl('/api/files')
+    const browserRoot = utils.getAppUrl('/files')
+    const normalizedPath = url.pathname
+    if (
+      normalizedPath === apiRoot ||
+      normalizedPath.startsWith(`${apiRoot}/`)
+    ) {
+      const relativePath =
+        normalizedPath === apiRoot ? '' : normalizedPath.slice(apiRoot.length)
+      const browserPath = `${browserRoot}${relativePath || ''}`
+      url.pathname = browserPath
+      return url.toString()
     }
     return url.toString()
   } catch {
@@ -94,15 +103,22 @@ function createResultCard(result) {
       'div',
       'aspect-square w-full overflow-hidden bg-gray-900/50'
     )
-    const isVideo = /\.(mp4|webm|mkv)$/i.test(name)
-    if (isVideo) {
+    const kind = getMediaKind(name)
+    if (kind === 'video') {
       const video = document.createElement('video')
       video.src = rawUrl
       video.controls = true
       video.preload = 'metadata'
       video.className = 'w-full h-full object-contain select-none'
       preview.appendChild(video)
-    } else {
+    } else if (kind === 'audio') {
+      const audio = document.createElement('audio')
+      audio.src = rawUrl
+      audio.controls = true
+      audio.preload = 'metadata'
+      audio.className = 'w-full h-full object-contain select-none'
+      preview.appendChild(audio)
+    } else if (kind === 'image') {
       const image = document.createElement('img')
       image.src =
         utils.constructURL(rawUrl, { scale: MIN_IMAGE_SCALE }) || rawUrl
@@ -111,6 +127,14 @@ function createResultCard(result) {
       image.className =
         'w-full h-full object-contain pointer-events-none select-none'
       preview.appendChild(image)
+    } else {
+      const fallback = element(
+        'div',
+        'flex h-full w-full items-center justify-center bg-gray-950 text-2xl font-semibold text-gray-300'
+      )
+      const label = (name.split('.').pop() || 'file').slice(0, 4).toUpperCase()
+      fallback.textContent = label || 'FILE'
+      preview.appendChild(fallback)
     }
     card.appendChild(preview)
   }

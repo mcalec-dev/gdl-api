@@ -7,14 +7,21 @@
 
 #sort-controls {
   display: flex;
+  grid-column: 1 / -1;
+  grid-row: 1;
   min-width: 0;
-  flex-wrap: wrap;
+  max-width: 100%;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  touch-action: pan-x;
 }
 
 #file-search {
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 2;
   width: 100%;
   min-width: 0;
@@ -22,7 +29,18 @@
 
 #file-refresh {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
+  display: flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  white-space: nowrap;
+}
+
+#sort-controls > button {
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
@@ -32,6 +50,11 @@
     align-items: center;
   }
 
+  #sort-controls {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
   #file-search {
     grid-column: 2;
     grid-row: 1;
@@ -39,6 +62,7 @@
 
   #file-refresh {
     grid-column: 3;
+    grid-row: 1;
   }
 }
 
@@ -49,12 +73,17 @@
 /* File Icon Styles */
 .file-icon {
   margin-right: 12px;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #66b3ff;
+}
+.file-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .grid-view .file-icon-placeholder svg {
   width: 64px;

@@ -1,5 +1,6 @@
 import * as utils from './index.js'
 import { lockScroll, unlockScroll } from './helpers/scroll.js'
+import { getCompatibleTranscodePair } from './helpers/media.js'
 import {
   IMAGE_KERNEL,
   IMAGE_SCALE,
@@ -135,10 +136,16 @@ function getPlaybackUrl(item, url) {
     TRANSCODE_VIDEO_ENABLED &&
     TRANSCODE_VIDEO_CODEC
   ) {
-    const convert =
+    const compatible =
       TRANSCODE_AUDIO_ENABLED && TRANSCODE_AUDIO_CODEC
-        ? `${TRANSCODE_VIDEO_CODEC},${TRANSCODE_AUDIO_CODEC}`
-        : TRANSCODE_VIDEO_CODEC
+        ? getCompatibleTranscodePair(
+            TRANSCODE_VIDEO_CODEC,
+            TRANSCODE_AUDIO_CODEC
+          )
+        : null
+    const videoCodec = compatible?.videoCodec || TRANSCODE_VIDEO_CODEC
+    const audioCodec = compatible?.audioCodec || ''
+    const convert = audioCodec ? `${videoCodec},${audioCodec}` : videoCodec
     return utils.constructURL(url, { convert }) || url
   }
   if (
@@ -395,12 +402,17 @@ async function setupFileClickHandlers(fileListSelector = '#fileList') {
       media.dataset.fileType === 'directory'
     )
       return
-    const items = Array.from(
-      fileList.querySelectorAll('.file-item[data-file-type]')
+    const visibleItems = /** @type {HTMLElement[]} */ (
+      Array.from(
+        fileList.querySelectorAll('.file-item[data-file-type]')
+      ).filter(
+        (element) =>
+          element instanceof HTMLElement &&
+          !element.hidden &&
+          !element.closest('[hidden]')
+      )
     )
-      .filter((element) => element instanceof HTMLElement)
-      .map(toViewerItem)
-      .filter((item) => item !== null)
+    const items = visibleItems.map(toViewerItem).filter((item) => item !== null)
     const selectedPath = media.dataset.path
     const index = items.findIndex((item) => item.path === selectedPath)
     if (index < 0) return
