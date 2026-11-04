@@ -26,22 +26,26 @@ function normalizeSearchType(value) {
  * @param {unknown} value Candidate result URL.
  * @returns {string} Safe URL for opening the result.
  */
-function formattedUrl(value) {
+function formattedUrl(value, kind = 'file') {
   const text = utils.toDisplayText(value)
   if (!text) return ''
   try {
     const url = new URL(text, window.location.origin)
+    if (url.origin !== window.location.origin) return ''
     const apiRoot = utils.getAppUrl('/api/files')
     const browserRoot = utils.getAppUrl('/files')
     const normalizedPath = url.pathname
-    if (
-      normalizedPath === apiRoot ||
-      normalizedPath.startsWith(`${apiRoot}/`)
-    ) {
-      const relativePath =
-        normalizedPath === apiRoot ? '' : normalizedPath.slice(apiRoot.length)
-      const browserPath = `${browserRoot}${relativePath || ''}`
-      url.pathname = browserPath
+    if (kind === 'directory') {
+      if (
+        normalizedPath === apiRoot ||
+        normalizedPath.startsWith(`${apiRoot}/`)
+      ) {
+        const relativePath =
+          normalizedPath === apiRoot ? '' : normalizedPath.slice(apiRoot.length)
+        const browserPath = `${browserRoot}${relativePath || ''}`
+        url.pathname = browserPath
+        return url.toString()
+      }
       return url.toString()
     }
     return url.toString()
@@ -95,7 +99,7 @@ function createResultCard(result) {
   const name = utils.toDisplayText(result.name, 'Untitled')
   const type = result.type === 'directory' ? 'directory' : 'file'
   const rawUrl = utils.toDisplayText(result.url)
-  const destination = formattedUrl(rawUrl)
+  const destination = formattedUrl(rawUrl, type)
   const relevancy = Math.max(0, Math.min(100, Number(result.relevancy) || 0))
 
   if (type === 'file' && rawUrl) {

@@ -60,6 +60,25 @@ function listingETag(entries) {
 }
 
 /**
+ * @param {import('express').Response} res
+ * @param {number} totalCount
+ * @param {number} page
+ * @param {number} limit
+ * @returns {void}
+ */
+function setPaginationHeaders(res, totalCount, page, limit) {
+  const safeTotal = Number.isFinite(totalCount) ? Math.max(0, totalCount) : 0
+  const safePage = Number.isFinite(page) && page > 0 ? page : 1
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 1
+  const pageCount =
+    safeTotal > 0 ? Math.max(1, Math.ceil(safeTotal / safeLimit)) : 1
+  const hasMore = safeTotal > safePage * safeLimit
+  res.set('X-Total-Count', String(safeTotal))
+  res.set('X-Has-More', String(hasMore))
+  res.set('X-Page-Count', String(pageCount))
+}
+
+/**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  * @param {string} filePath
@@ -188,6 +207,7 @@ router.get(
         )
         if (cached) {
           log.debug('Returning cached pagination result for root directory')
+          setPaginationHeaders(res, cached.totalCount || 0, page, limit)
           if (checkETag(req, res, listingETag(cached.items))) return
           return sendResponse(res, 200).json(cached.items)
         }
@@ -254,12 +274,7 @@ router.get(
       }
       const responseData = req.user ? paginatedFiltered : paginatedFiles
       if (hasPagination) {
-        res.set('X-Total-Count', String(sortedFiltered.length))
-        res.set('X-Has-More', String(sortedFiltered.length > page * limit))
-        res.set(
-          'X-Page-Count',
-          String(Math.max(1, Math.ceil(sortedFiltered.length / limit)))
-        )
+        setPaginationHeaders(res, sortedFiltered.length, page, limit)
       }
       if (hasPagination && cacheMode.useCache) {
         await setCachedPaginationResult(
@@ -396,6 +411,7 @@ router.get(
             'Returning cached pagination result for directory:',
             relativePath
           )
+          setPaginationHeaders(res, cached.totalCount || 0, page, limit)
           if (checkETag(req, res, listingETag(cached.items))) return
           return sendResponse(res, 200).json(cached.items)
         }
@@ -448,12 +464,7 @@ router.get(
         log.error('Error syncing directory entries to database:', syncError)
       }
       if (hasPagination) {
-        res.set('X-Total-Count', String(sorted.length))
-        res.set('X-Has-More', String(sorted.length > page * limit))
-        res.set(
-          'X-Page-Count',
-          String(Math.max(1, Math.ceil(sorted.length / limit)))
-        )
+        setPaginationHeaders(res, sorted.length, page, limit)
       }
       if (hasPagination && cacheMode.useCache) {
         await setCachedPaginationResult(

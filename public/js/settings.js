@@ -535,6 +535,49 @@ export async function updateSettings() {
   settings.transcode.video.codec = safeVideoCodec
   settings.transcode.audio.codec = safeAudioCodec
 
+  const reconcileTranscodeState = () => {
+    const currentVideo =
+      transcodeVideoCodecSelect instanceof HTMLSelectElement
+        ? transcodeVideoCodecSelect.value
+        : settings.transcode.video.codec
+    const currentAudio =
+      transcodeAudioCodecSelect instanceof HTMLSelectElement
+        ? transcodeAudioCodecSelect.value
+        : settings.transcode.audio.codec
+    const nextPair = getCompatibleTranscodePair(currentVideo, currentAudio)
+    const resolvedVideo = nextPair?.videoCodec || currentVideo || safeVideoCodec
+    const resolvedAudio =
+      nextPair?.audioCodec ||
+      (getCompatibleTranscodePair(currentVideo, defaults.transcode.audio.codec)
+        ?.audioCodec ??
+        '')
+
+    settings.transcode.video.codec = resolvedVideo
+    settings.transcode.audio.codec = resolvedAudio
+
+    if (transcodeVideoCodecSelect instanceof HTMLSelectElement) {
+      transcodeVideoCodecSelect.value = resolvedVideo
+    }
+    if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
+      const audioOptions = Array.from(
+        transcodeAudioCodecSelect.options,
+        (option) => option.value
+      )
+      const nextAudioValue = audioOptions.includes(resolvedAudio)
+        ? resolvedAudio
+        : audioOptions[0] || ''
+      transcodeAudioCodecSelect.value = nextAudioValue
+      settings.transcode.audio.codec = nextAudioValue
+    }
+    if (!settings.transcode.audio.codec) {
+      settings.transcode.audio.enabled = false
+    }
+    applyRuntimeSettings()
+    saveSettings()
+  }
+
+  reconcileTranscodeState()
+
   if (transcodeVideoToggle instanceof HTMLInputElement) {
     transcodeVideoToggle.disabled = !safeVideoCodec
     transcodeVideoToggle.checked = Boolean(
@@ -550,7 +593,30 @@ export async function updateSettings() {
   if (transcodeVideoCodecSelect instanceof HTMLSelectElement) {
     transcodeVideoCodecSelect.value = safeVideoCodec
     transcodeVideoCodecSelect.addEventListener('change', () => {
-      settings.transcode.video.codec = transcodeVideoCodecSelect.value
+      const selectedVideoCodec = transcodeVideoCodecSelect.value
+      const compatibleAudio = getCompatibleTranscodePair(
+        selectedVideoCodec,
+        settings.transcode.audio.codec
+      )?.audioCodec
+      const nextAudio =
+        compatibleAudio ||
+        getCompatibleTranscodePair(
+          selectedVideoCodec,
+          defaults.transcode.audio.codec
+        )?.audioCodec ||
+        ''
+      settings.transcode.video.codec = selectedVideoCodec
+      settings.transcode.audio.codec = nextAudio
+      if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
+        transcodeAudioCodecSelect.value = nextAudio || ''
+      }
+      if (!nextAudio) {
+        settings.transcode.audio.enabled = false
+        if (transcodeAudioToggle instanceof HTMLInputElement) {
+          transcodeAudioToggle.checked = false
+        }
+      }
+      reconcileTranscodeState()
       applyRuntimeSettings()
       saveSettings()
     })
@@ -563,6 +629,29 @@ export async function updateSettings() {
     )
     settings.transcode.audio.enabled = transcodeAudioToggle.checked
     transcodeAudioToggle.addEventListener('change', () => {
+      const selectedAudioCodec =
+        transcodeAudioCodecSelect instanceof HTMLSelectElement
+          ? transcodeAudioCodecSelect.value
+          : settings.transcode.audio.codec
+      const compatible = getCompatibleTranscodePair(
+        settings.transcode.video.codec,
+        selectedAudioCodec
+      )
+      if (!compatible && settings.transcode.video.codec) {
+        const fallbackAudio =
+          getCompatibleTranscodePair(
+            settings.transcode.video.codec,
+            defaults.transcode.audio.codec
+          )?.audioCodec || ''
+        settings.transcode.audio.codec = fallbackAudio
+        if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
+          transcodeAudioCodecSelect.value = fallbackAudio || ''
+        }
+        if (!fallbackAudio) {
+          settings.transcode.audio.enabled = false
+          transcodeAudioToggle.checked = false
+        }
+      }
       settings.transcode.audio.enabled = transcodeAudioToggle.checked
       applyRuntimeSettings()
       saveSettings()
@@ -571,7 +660,22 @@ export async function updateSettings() {
   if (transcodeAudioCodecSelect instanceof HTMLSelectElement) {
     transcodeAudioCodecSelect.value = safeAudioCodec
     transcodeAudioCodecSelect.addEventListener('change', () => {
-      settings.transcode.audio.codec = transcodeAudioCodecSelect.value
+      const selectedAudioCodec = transcodeAudioCodecSelect.value
+      const compatible = getCompatibleTranscodePair(
+        settings.transcode.video.codec,
+        selectedAudioCodec
+      )
+      const resolvedAudio = compatible?.audioCodec || selectedAudioCodec
+      settings.transcode.audio.codec = resolvedAudio
+      if (transcodeAudioToggle instanceof HTMLInputElement) {
+        transcodeAudioToggle.disabled = !resolvedAudio
+        transcodeAudioToggle.checked = Boolean(
+          resolvedAudio && settings.transcode.audio.enabled
+        )
+      }
+      if (!compatible) {
+        settings.transcode.audio.enabled = false
+      }
       applyRuntimeSettings()
       saveSettings()
     })

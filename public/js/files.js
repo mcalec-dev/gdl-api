@@ -14,7 +14,7 @@ import { readJsonCookie, writeJsonCookie } from './helpers/storage.js'
 /** @typedef {'asc' | 'desc' | 'none'} SortDirection */
 /** @typedef {'directory' | 'image' | 'video' | 'audio' | 'text' | 'other'} FileKind */
 /** @typedef {{name: string, type: 'file' | 'directory', size: number | null, modified: string | number | null, created: string | number | null, mime: string | null, url: string | null, uuid: string | null, hash: string | null}} FileEntry */
-/** @typedef {{path: string, contents: FileEntry[], totalCount?: number}} DirectoryData */
+/** @typedef {{path: string, contents: FileEntry[], totalCount?: number, hasMore?: boolean}} DirectoryData */
 /** @typedef {{directory: string, image: string, video: string, audio: string, text: string, other: string, back: string, sort: Record<SortDirection, string>, nav: Record<string, string>}} FileIcons */
 /** @typedef {{sort: SortField, direction: SortDirection}} SortState */
 
@@ -502,17 +502,36 @@ async function loadDirectory(path, forceRefresh = false) {
     if (!response.ok)
       throw new Error(`Unable to load directory (HTTP ${response.status})`)
     const body = await response.json()
-    const totalCount = Number.parseInt(
-      response.headers.get('x-total-count') || '',
-      10
-    )
+    const totalCountHeader = response.headers.get('x-total-count')
+    const hasMoreHeader = response.headers.get('x-has-more')
+    const totalCount = totalCountHeader
+      ? Number.parseInt(totalCountHeader, 10)
+      : Number.NaN
+    const hasMore =
+      hasMoreHeader === null
+        ? null
+        : hasMoreHeader.toLowerCase() === 'true' || hasMoreHeader === '1'
+          ? true
+          : hasMoreHeader.toLowerCase() === 'false' || hasMoreHeader === '0'
+            ? false
+            : null
     const normalizedContents = normalizeListing(body)
+    const safeTotalCount = Number.isFinite(totalCount)
+      ? totalCount
+      : normalizedContents.length
     currentDirectoryData = {
       path: normalizedPath,
       contents: normalizedContents,
-      totalCount: Number.isFinite(totalCount)
-        ? totalCount
-        : normalizedContents.length,
+      totalCount: safeTotalCount,
+      hasMore:
+        hasMore ??
+        safeTotalCount >
+          PAGINATION.limit *
+            getPositiveInteger(
+              new URL(window.location.href).searchParams,
+              'page',
+              1
+            ),
     }
     renderDirectory(currentDirectoryData.contents)
   } catch (error) {
@@ -592,7 +611,11 @@ function renderPagination(itemCount) {
     currentDirectoryData && Number.isFinite(currentDirectoryData.totalCount)
       ? /** @type {number} */ (currentDirectoryData.totalCount)
       : Math.max(itemCount, 0)
-  const nextDisabled = totalCount <= page * PAGINATION.limit
+  const hasMore =
+    currentDirectoryData && typeof currentDirectoryData.hasMore === 'boolean'
+      ? currentDirectoryData.hasMore
+      : totalCount > page * PAGINATION.limit
+  const nextDisabled = !hasMore
   const previousDisabled = page <= 1
   controls.hidden = false
   label.textContent = `Page ${page}`

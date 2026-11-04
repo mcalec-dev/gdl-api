@@ -5,6 +5,35 @@ const { spawnFfmpeg } = require('../ffmpeg/ffmpeg')
  * @typedef {'audio' | 'video' | 'video_audio'} TranscodeMode
  * @typedef {{mode: 'audio', audioCodec: string, container: string, muxer: string, extension: string} | {mode: 'video', videoCodec: string, container: string, muxer: string, extension: string} | {mode: 'video_audio', videoCodec: string, audioCodec: string, container: string, muxer: string, extension: string}} TranscodeOptions
  */
+
+/**
+ * Maps the public codec identifiers used by API clients to the encoder names that
+ * the installed FFmpeg binary accepts. The public values remain stable for
+ * compatibility, but the actual command arguments are valid for the runtime build.
+ *
+ * @param {string | undefined} codec Candidate codec identifier.
+ * @returns {string} Actual FFmpeg encoder name or the original value.
+ */
+function resolveFfmpegEncoder(codec) {
+  if (!codec || typeof codec !== 'string') return 'copy'
+  const normalized = codec.trim().toLowerCase()
+  /** @type {Record<string, string>} */
+  const encoderMap = {
+    h264: 'libx264',
+    h265: 'libx265',
+    vp9: 'libvpx-vp9',
+    vp8: 'libvpx',
+    av1: 'libaom-av1',
+    aac: 'aac',
+    mp3: 'libmp3lame',
+    opus: 'libopus',
+    vorbis: 'libvorbis',
+    flac: 'flac',
+    copy: 'copy',
+  }
+  return encoderMap[normalized] || normalized
+}
+
 /**
  * @param {string | undefined} convertParam
  * @returns {TranscodeOptions | null}
@@ -169,8 +198,8 @@ function parseConvertParam(convertParam) {
   }
   return {
     mode: 'video_audio',
-    videoCodec: first.codec,
-    audioCodec: second.codec,
+    videoCodec: resolveFfmpegEncoder(first.codec),
+    audioCodec: resolveFfmpegEncoder(second.codec),
     container: first.container,
     muxer: first.muxer,
     extension: first.extension,
@@ -189,6 +218,121 @@ function getTranscodeOptions(convertParam, isVideoFile, isAudioFile) {
     return isAudioFile || isVideoFile ? options : null
   }
   return isVideoFile ? options : null
+}
+
+/**
+ * Builds a codec-specific FFmpeg audio-transcoding command.
+ *
+ * @param {string} inputPath Source audio file.
+ * @param {string} audioCodec Requested public codec identifier.
+ * @param {string} container Output container.
+ * @param {string} muxer Muxer to write through.
+ * @returns {string[]} FFmpeg arguments for the requested audio conversion.
+ */
+function buildAudioArgs(inputPath, audioCodec, container, muxer) {
+  const encoder = resolveFfmpegEncoder(audioCodec)
+  const normalizedCodec = String(audioCodec || '')
+    .trim()
+    .toLowerCase()
+  /** @type {Record<string, string>} */
+  const codecAliasMap = {
+    libmp3lame: 'mp3',
+    libopus: 'opus',
+    libvorbis: 'vorbis',
+    aac: 'aac',
+    flac: 'flac',
+  }
+  const normalizedAudioCodec = codecAliasMap[normalizedCodec] || normalizedCodec
+  const args = ['-i', inputPath, '-vn']
+
+  if (container === 'm4a' || container === 'mp4' || muxer === 'ipod') {
+    args.push(
+      '-c:a',
+      encoder,
+      '-movflags',
+      'frag_keyframe+empty_moov+separate_moof',
+      '-f',
+      muxer || 'ipod'
+    )
+    return args.concat('pipe:1')
+  }
+
+  if (normalizedAudioCodec === 'mp3') {
+    args.push('-c:a', encoder, '-b:a', '192k', '-f', muxer || container)
+    return args.concat('pipe:1')
+  }
+
+  if (normalizedAudioCodec === 'opus') {
+    args.push(
+      '-c:a',
+      encoder,
+      '-b:a',
+      '128k',
+      '-vbr',
+      'on',
+      '-ar',
+      '48000',
+      '-f',
+      muxer || 'opus'
+    )
+    return args.concat('pipe:1')
+  }
+
+  if (normalizedAudioCodec === 'vorbis') {
+    args.push('-c:a', encoder, '-q:a', '5', '-f', muxer || 'ogg')
+    return args.concat('pipe:1')
+  }
+
+  if (normalizedAudioCodec === 'flac') {
+    args.push('-c:a', encoder, '-f', muxer || 'flac')
+    return args.concat('pipe:1')
+  }
+
+  args.push('-c:a', encoder, '-q:a', '4', '-f', muxer || container)
+  return args.concat('pipe:1')
+}
+
+/**
+ * Builds a codec-specific FFmpeg video-transcoding command.
+ *
+ * @param {string} inputPath Source video file.
+ * @param {string} videoCodec Requested public video codec identifier.
+ * @param {string} audioCodec Requested public audio codec identifier or 'copy'.
+ * @param {string} container Output container.
+ * @param {string} muxer Muxer to write through.
+ * @returns {string[]} FFmpeg arguments for the requested video conversion.
+ */
+function buildVideoArgs(inputPath, videoCodec, audioCodec, container, muxer) {
+  const videoEncoder = resolveFfmpegEncoder(videoCodec)
+  const audioEncoder =
+    audioCodec === 'copy' ? 'copy' : resolveFfmpegEncoder(audioCodec)
+  const args = [
+    '-i',
+    inputPath,
+    '-map',
+    '0:v:0',
+    '-map',
+    '0:a?',
+    '-c:v',
+    videoEncoder,
+  ]
+
+  if (audioCodec === 'copy') {
+    args.push('-c:a', 'copy')
+  } else {
+    args.push('-c:a', audioEncoder)
+  }
+
+  if (container === 'mp4' || container === 'mov' || muxer === 'ipod') {
+    args.push('-movflags', 'frag_keyframe+empty_moov+separate_moof')
+  }
+
+  if (container === 'webm' || muxer === 'webm') {
+    args.push('-b:v', '2M', '-b:a', '128k')
+  }
+
+  args.push('-f', muxer || container, 'pipe:1')
+  return args
 }
 /**
  * @param {string | undefined} convertParam
@@ -231,22 +375,13 @@ function convertVideo(
   container,
   muxer = container
 ) {
-  /** @type {string[]} */
-  const args = [
-    '-i',
+  const args = buildVideoArgs(
     inputPath,
-    '-c:v',
     videoCodec,
-    '-c:a',
     audioCodec,
-    '-preset',
-    'fast',
-    '-movflags',
-    'frag_keyframe+empty_moov',
-    '-f',
-    muxer,
-    'pipe:1',
-  ]
+    container,
+    muxer
+  )
   log.debug(
     `FFmpeg video conversion: ${videoCodec} video, ${audioCodec} audio -> ${container} (${muxer})`
   )
@@ -272,19 +407,7 @@ function convertVideo(
  * @returns {TranscodeStream}
  */
 function convertAudio(inputPath, audioCodec, container, muxer = container) {
-  /** @type {string[]} */
-  const args = [
-    '-i',
-    inputPath,
-    '-vn',
-    '-c:a',
-    audioCodec,
-    '-q:a',
-    '4', // quality (0-9 for VBR, lower is better)
-    '-f',
-    muxer,
-    'pipe:1',
-  ]
+  const args = buildAudioArgs(inputPath, audioCodec, container, muxer)
   log.debug(
     `FFmpeg audio conversion: ${audioCodec} audio -> ${container} (${muxer})`
   )
